@@ -55,6 +55,9 @@ describe('electron main process', () => {
 
     createMainProcess(win);
 
+    // Wait for async SDK initialization (CopilotSDKImpl starts async with mock fallback)
+    await new Promise((r) => setTimeout(r, 3000));
+
     // Verify the handler was registered
     const handler = ipcHandlers.get(IPC_CHANNELS.AGENT_SEND_MESSAGE);
     expect(handler).toBeDefined();
@@ -75,7 +78,7 @@ describe('electron main process', () => {
     const eventTypes = agentEventCalls.map((call: unknown[]) => (call[1] as { type: string }).type);
     expect(eventTypes).toContain('text_delta');
     expect(eventTypes).toContain('done');
-  }, 10000);
+  }, 15000);
 
   it('AGENT_CANCEL handler does not throw', async () => {
     ipcHandlers.clear();

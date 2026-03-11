@@ -27,7 +27,7 @@ import type {
 import {
   ConversationServiceImpl,
   IConversationService,
-  MockCopilotSDK,
+  CopilotSDKImpl,
   AgentServiceImpl,
   ICopilotSDK,
   IAgentService,
@@ -123,10 +123,21 @@ export function createMainProcess(
   services.set(IIPCMain, ipcMainAdapter);
 
   // --- Agent service (runs in main process for now, will move to utility process later) ---
-  const mockSDK = new MockCopilotSDK();
-  void mockSDK.start();
-  const agentService = new AgentServiceImpl(mockSDK);
-  services.set(ICopilotSDK, mockSDK);
+  const sdk = new CopilotSDKImpl({ cwd: process.cwd() });
+
+  // Start SDK async — CopilotSDKImpl.start() has built-in mock fallback
+  void (async () => {
+    const token = await authService.getAccessToken();
+    if (token) {
+      (sdk as any)._options.githubToken = token;
+    }
+    await sdk.start();
+    const mode = sdk.isMockFallback ? 'Mock (no GitHub auth)' : 'Copilot SDK';
+    console.log(`[main] Agent started in ${mode} mode`);
+  })();
+
+  const agentService = new AgentServiceImpl(sdk);
+  services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
   // --- Set up IPC handlers ---
@@ -218,14 +229,24 @@ export function createMainProcess(
 
   // Model handlers
   ipcMainAdapter.handle(IPC_CHANNELS.MODEL_LIST, async () => {
-    // Return available models (mock for now, will be populated from SDK later)
-    return {
-      models: [
-        { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
-        { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
-        { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'anthropic' },
-      ],
-    };
+    try {
+      const models = await sdk.listModels();
+      return {
+        models: models.map((m) => ({
+          id: m.id,
+          name: m.name,
+          provider: m.id.startsWith('claude') ? 'anthropic' : 'openai',
+        })),
+      };
+    } catch {
+      return {
+        models: [
+          { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+          { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
+          { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'anthropic' },
+        ],
+      };
+    }
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.MODEL_SELECT, async (...args: unknown[]) => {
