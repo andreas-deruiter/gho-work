@@ -114,6 +114,10 @@ Use these skills at the appropriate points in the development cycle:
 - **verify-task** — Evidence-based verification against acceptance criteria
 - **retrospective** — End-of-session learning capture
 - **vscode-patterns** — Reference guide for VS Code patterns (consult before implementing DI, events, disposables, services, widgets, IPC)
+- **electron-hardening** — Security, packaging, signing, native modules, safeStorage, multi-process, crash recovery
+- **mcp-client** — MCP protocol client: transports, tool management, sampling, elicitation, OAuth, health monitoring
+- **accessibility-patterns** — ARIA roles, keyboard navigation, screen reader support for every widget type
+- **sqlite-patterns** — better-sqlite3 setup, schema design, migrations, performance tuning
 
 ### Quality gates
 Every code change must pass before moving on:
