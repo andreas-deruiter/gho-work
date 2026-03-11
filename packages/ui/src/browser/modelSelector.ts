@@ -39,6 +39,11 @@ export class ModelSelector extends Disposable {
     }
   }
 
+  focus(): void {
+    const select = this._container?.querySelector('select');
+    if (select) { (select as HTMLElement).focus(); }
+  }
+
   private _updateUI(): void {
     if (!this._container) { return; }
     this._clearElement(this._container);

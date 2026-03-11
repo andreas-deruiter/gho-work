@@ -7,6 +7,7 @@ import { Disposable, Emitter, generateUUID } from '@gho-work/base';
 import type { Event, AgentEvent } from '@gho-work/base';
 import type { IIPCRenderer } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
+import { ModelSelector } from './modelSelector.js';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -39,6 +40,7 @@ export class ChatPanel extends Disposable {
   private _isProcessing = false;
   private _currentAssistantMessage: ChatMessage | null = null;
 
+  private _modelSelector!: ModelSelector;
   private _conversationId: string = generateUUID();
   private _model: string = 'gpt-4o';
 
@@ -85,10 +87,17 @@ export class ChatPanel extends Disposable {
     headerTitle.textContent = 'New Conversation';
     header.appendChild(headerTitle);
 
-    const modelBadge = document.createElement('span');
-    modelBadge.className = 'chat-model-badge';
-    modelBadge.textContent = this._model;
-    header.appendChild(modelBadge);
+    const modelSelectorContainer = document.createElement('div');
+    this._modelSelector = this._register(new ModelSelector());
+    this._modelSelector.render(modelSelectorContainer);
+    this._modelSelector.onDidSelectModel((modelId) => {
+      this._model = modelId;
+      void this._ipc.invoke(IPC_CHANNELS.MODEL_SELECT, { modelId });
+    });
+    header.appendChild(modelSelectorContainer);
+
+    // Load models from main process
+    void this._loadModels();
 
     panel.appendChild(header);
 
@@ -162,6 +171,17 @@ export class ChatPanel extends Disposable {
 
     panel.appendChild(inputArea);
     container.appendChild(panel);
+  }
+
+  private async _loadModels(): Promise<void> {
+    try {
+      const response = await this._ipc.invoke<{
+        models: Array<{ id: string; name: string; provider: string }>;
+      }>(IPC_CHANNELS.MODEL_LIST);
+      this._modelSelector.setModels(response.models);
+    } catch (err) {
+      console.error('Failed to load models:', err);
+    }
   }
 
   async loadConversation(conversationId: string): Promise<void> {
