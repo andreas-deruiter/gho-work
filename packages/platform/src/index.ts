@@ -1,3 +1,4 @@
+export * from './auth/common/auth.js';
 export * from './ipc/common/ipc.js';
 export * from './ipc/common/ipcService.js';
 export * from './ipc/common/messagePortChannel.js';
