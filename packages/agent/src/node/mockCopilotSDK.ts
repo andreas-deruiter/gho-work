@@ -1,10 +1,11 @@
 /**
  * Mock implementation of ICopilotSDK and ISDKSession for testing and development.
  * Simulates the Copilot SDK agent loop with streaming events and fake tool calls.
+ * Events use the `data` payload shape matching the real @github/copilot-sdk.
  */
 import { generateUUID } from '@gho-work/base';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
-import type { SessionConfig, SendOptions, SessionEvent, SDKMessage, SessionMetadata } from '../common/types.js';
+import type { SessionConfig, MessageOptions, SessionEvent, SessionMetadata, ModelInfo, PingResponse } from '../common/types.js';
 
 type EventHandler = (event: SessionEvent) => void;
 
@@ -15,55 +16,50 @@ interface StoredHandler {
 
 class MockSDKSession implements ISDKSession {
   readonly sessionId: string;
-  readonly model: string;
+  private _model: string;
   readonly createdAt: number;
 
-  private messages: SDKMessage[] = [];
+  private messages: Array<{ id: string; role: string; content: string }> = [];
   private handlers: StoredHandler[] = [];
   private abortController: AbortController = new AbortController();
 
   constructor(sessionId: string, model: string) {
     this.sessionId = sessionId;
-    this.model = model;
+    this._model = model;
     this.createdAt = Date.now();
   }
 
-  async send(options: SendOptions): Promise<string> {
+  async send(options: MessageOptions): Promise<string> {
     const messageId = generateUUID();
 
-    // Store user message
     this.messages.push({
       id: generateUUID(),
       role: 'user',
       content: options.prompt,
     });
 
-    // Reset abort controller for new send
     this.abortController = new AbortController();
-
-    // Start async simulation (non-blocking)
     void this.simulateResponse(options.prompt, messageId);
-
     return messageId;
   }
 
-  async sendAndWait(options: SendOptions, timeout?: number): Promise<SDKMessage> {
-    return new Promise<SDKMessage>((resolve, reject) => {
+  async sendAndWait(options: MessageOptions, timeout?: number): Promise<SessionEvent | undefined> {
+    return new Promise<SessionEvent | undefined>((resolve, reject) => {
       const timeoutMs = timeout ?? 30000;
       // eslint-disable-next-line prefer-const
       let timer: ReturnType<typeof setTimeout> | undefined;
 
       const unsubscribe = this.on('session.idle', () => {
-        if (timer !== undefined) {
-          clearTimeout(timer);
-        }
+        if (timer !== undefined) { clearTimeout(timer); }
         unsubscribe();
-        // Return the last assistant message
         const lastAssistant = [...this.messages].reverse().find((m) => m.role === 'assistant');
         if (lastAssistant) {
-          resolve(lastAssistant);
+          resolve({
+            type: 'assistant.message',
+            data: { messageId: lastAssistant.id, content: lastAssistant.content },
+          });
         } else {
-          reject(new Error('No assistant message received'));
+          resolve(undefined);
         }
       });
 
@@ -73,9 +69,7 @@ class MockSDKSession implements ISDKSession {
       }, timeoutMs);
 
       void this.send(options).catch((err) => {
-        if (timer !== undefined) {
-          clearTimeout(timer);
-        }
+        if (timer !== undefined) { clearTimeout(timer); }
         unsubscribe();
         reject(err);
       });
@@ -84,6 +78,10 @@ class MockSDKSession implements ISDKSession {
 
   async abort(): Promise<void> {
     this.abortController.abort();
+  }
+
+  async setModel(model: string): Promise<void> {
+    this._model = model;
   }
 
   on(event: string, handler: EventHandler): () => void;
@@ -98,14 +96,15 @@ class MockSDKSession implements ISDKSession {
     this.handlers.push(stored);
     return () => {
       const index = this.handlers.indexOf(stored);
-      if (index !== -1) {
-        this.handlers.splice(index, 1);
-      }
+      if (index !== -1) { this.handlers.splice(index, 1); }
     };
   }
 
-  async getMessages(): Promise<SDKMessage[]> {
-    return [...this.messages];
+  async getMessages(): Promise<SessionEvent[]> {
+    return this.messages.map((m) => ({
+      type: m.role === 'user' ? 'user.message' : 'assistant.message',
+      data: { messageId: m.id, content: m.content },
+    }));
   }
 
   async disconnect(): Promise<void> {
@@ -125,7 +124,10 @@ class MockSDKSession implements ISDKSession {
     const signal = this.abortController.signal;
 
     // Reasoning delta
-    this.emit({ type: 'assistant.reasoning_delta', content: `Analyzing: "${prompt}"` });
+    this.emit({
+      type: 'assistant.reasoning_delta',
+      data: { content: `Analyzing: "${prompt}"` },
+    });
     await this.delay(50, signal);
     if (signal.aborted) { return; }
 
@@ -135,18 +137,22 @@ class MockSDKSession implements ISDKSession {
       const toolCallId = generateUUID();
       this.emit({
         type: 'tool.execution_start',
-        toolCallId,
-        toolName: 'FileRead',
-        arguments: { path: './example.md' },
+        data: {
+          toolCallId,
+          toolName: 'FileRead',
+          arguments: { path: './example.md' },
+        },
       });
       await this.delay(80, signal);
       if (signal.aborted) { return; }
 
       this.emit({
         type: 'tool.execution_complete',
-        toolCallId,
-        toolName: 'FileRead',
-        result: { success: true, content: '# Example Document\n\nThis is mock file content.' },
+        data: {
+          toolCallId,
+          success: true,
+          result: { content: '# Example Document\n\nThis is mock file content.' },
+        },
       });
       await this.delay(30, signal);
       if (signal.aborted) { return; }
@@ -157,22 +163,22 @@ class MockSDKSession implements ISDKSession {
     const words = response.split(' ');
     for (const word of words) {
       if (signal.aborted) { return; }
-      this.emit({ type: 'assistant.message_delta', content: word + ' ' });
+      this.emit({
+        type: 'assistant.message_delta',
+        data: { messageId, deltaContent: word + ' ' },
+      });
       await this.delay(10 + Math.random() * 20, signal);
     }
 
     if (signal.aborted) { return; }
 
-    // Store assistant message
-    this.messages.push({
-      id: messageId,
-      role: 'assistant',
-      content: response,
-    });
+    this.messages.push({ id: messageId, role: 'assistant', content: response });
 
-    // Final events
-    this.emit({ type: 'assistant.message', messageId, content: response });
-    this.emit({ type: 'session.idle' });
+    this.emit({
+      type: 'assistant.message',
+      data: { messageId, content: response },
+    });
+    this.emit({ type: 'session.idle', data: {} });
   }
 
   private generateResponse(input: string): string {
@@ -191,10 +197,7 @@ class MockSDKSession implements ISDKSession {
 
   private delay(ms: number, signal: AbortSignal): Promise<void> {
     return new Promise((resolve) => {
-      if (signal.aborted) {
-        resolve();
-        return;
-      }
+      if (signal.aborted) { resolve(); return; }
       const timer = setTimeout(resolve, ms);
       signal.addEventListener('abort', () => { clearTimeout(timer); resolve(); }, { once: true });
     });
@@ -209,23 +212,24 @@ export class MockCopilotSDK implements ICopilotSDK {
     this.started = true;
   }
 
-  async stop(): Promise<void> {
+  async stop(): Promise<Error[]> {
     for (const session of this.sessions.values()) {
       await session.disconnect();
     }
     this.sessions.clear();
     this.started = false;
+    return [];
   }
 
   async createSession(config: SessionConfig): Promise<ISDKSession> {
     this.ensureStarted();
     const sessionId = config.sessionId ?? generateUUID();
-    const session = new MockSDKSession(sessionId, config.model);
+    const session = new MockSDKSession(sessionId, config.model ?? 'gpt-4o');
     this.sessions.set(sessionId, session);
     return session;
   }
 
-  async resumeSession(sessionId: string): Promise<ISDKSession> {
+  async resumeSession(sessionId: string, _config?: Partial<SessionConfig>): Promise<ISDKSession> {
     this.ensureStarted();
     const session = this.sessions.get(sessionId);
     if (!session) {
@@ -238,8 +242,8 @@ export class MockCopilotSDK implements ICopilotSDK {
     this.ensureStarted();
     return Array.from(this.sessions.values()).map((s) => ({
       sessionId: s.sessionId,
-      model: s.model,
-      createdAt: s.createdAt,
+      startTime: new Date(s.createdAt),
+      modifiedTime: new Date(s.createdAt),
     }));
   }
 
@@ -252,8 +256,40 @@ export class MockCopilotSDK implements ICopilotSDK {
     }
   }
 
-  async ping(): Promise<string> {
-    return 'pong';
+  async listModels(): Promise<ModelInfo[]> {
+    return [
+      {
+        id: 'gpt-4o',
+        name: 'GPT-4o',
+        capabilities: {
+          supports: { vision: true, reasoningEffort: false },
+          limits: { max_context_window_tokens: 128000 },
+        },
+        policy: { state: 'enabled' },
+      },
+      {
+        id: 'gpt-4o-mini',
+        name: 'GPT-4o Mini',
+        capabilities: {
+          supports: { vision: true, reasoningEffort: false },
+          limits: { max_context_window_tokens: 128000 },
+        },
+        policy: { state: 'enabled' },
+      },
+      {
+        id: 'claude-sonnet-4-20250514',
+        name: 'Claude Sonnet 4',
+        capabilities: {
+          supports: { vision: true, reasoningEffort: false },
+          limits: { max_context_window_tokens: 200000 },
+        },
+        policy: { state: 'enabled' },
+      },
+    ];
+  }
+
+  async ping(message?: string): Promise<PingResponse> {
+    return { message: message ?? 'pong', timestamp: Date.now() };
   }
 
   private ensureStarted(): void {

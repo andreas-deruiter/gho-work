@@ -2,37 +2,54 @@ import { createServiceIdentifier } from '@gho-work/base';
 import type { ConnectorConfig } from '@gho-work/base';
 
 export interface SessionConfig {
-  model: string;
+  model?: string;
   sessionId?: string;
-  systemMessage?: { content: string };
-  mcpServers?: MCPServerConfig[];
+  systemMessage?: SystemMessageConfig;
+  mcpServers?: Record<string, MCPServerConfig>;
   streaming?: boolean;
+  workingDirectory?: string;
+  availableTools?: string[];
+  excludedTools?: string[];
 }
 
-export interface SendOptions {
+export type SystemMessageConfig =
+  | { mode?: 'append'; content?: string }
+  | { mode: 'replace'; content: string };
+
+export interface MessageOptions {
   prompt: string;
-  attachments?: Array<{ type: 'file'; path: string; displayName?: string }>;
+  attachments?: Array<
+    | { type: 'file'; path: string; displayName?: string }
+    | { type: 'directory'; path: string; displayName?: string }
+  >;
   mode?: 'enqueue' | 'immediate';
 }
 
 export interface MCPServerConfig {
-  name: string;
-  transport: 'stdio' | 'streamable_http';
+  type?: 'local' | 'stdio' | 'http' | 'sse';
+  // stdio/local fields
   command?: string;
   args?: string[];
   env?: Record<string, string>;
+  cwd?: string;
+  // http/sse fields
   url?: string;
   headers?: Record<string, string>;
+  // common
+  tools: string[];
+  timeout?: number;
 }
 
 export interface SessionMetadata {
   sessionId: string;
-  model: string;
-  createdAt: number;
+  startTime: Date;
+  modifiedTime: Date;
+  summary?: string;
 }
 
 export interface SessionEvent {
   type: string;
+  data?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -40,6 +57,21 @@ export interface SDKMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+}
+
+export interface ModelInfo {
+  id: string;
+  name: string;
+  capabilities: {
+    supports: { vision: boolean; reasoningEffort: boolean };
+    limits: { max_context_window_tokens: number };
+  };
+  policy?: { state: 'enabled' | 'disabled' | 'unconfigured' };
+}
+
+export interface PingResponse {
+  message: string;
+  timestamp: number;
 }
 
 export interface IMCPManager {

@@ -37,7 +37,7 @@ export class AgentServiceImpl implements IAgentService {
       const session = await this._sdk.createSession({
         model: context.model ?? 'gpt-4o',
         sessionId: context.conversationId,
-        systemMessage: systemContent ? { content: systemContent } : undefined,
+        systemMessage: systemContent ? { mode: 'append', content: systemContent } : undefined,
         streaming: true,
       });
       this._activeSession = session;
@@ -87,37 +87,40 @@ export class AgentServiceImpl implements IAgentService {
   }
 
   private _mapEvent(event: SessionEvent): AgentEvent | null {
+    const data = (event.data ?? {}) as Record<string, unknown>;
     switch (event.type) {
       case 'assistant.message_delta':
-        return { type: 'text_delta', content: event.content as string };
+        return { type: 'text_delta', content: (data.deltaContent as string) ?? '' };
       case 'assistant.message':
-        return { type: 'text', content: event.content as string };
+        return { type: 'text', content: (data.content as string) ?? '' };
       case 'assistant.reasoning_delta':
-        return { type: 'thinking', content: event.content as string };
+        return { type: 'thinking', content: (data.content as string) ?? '' };
       case 'tool.execution_start':
         return {
           type: 'tool_call_start',
           toolCall: {
-            id: (event.toolCallId as string) ?? generateUUID(),
+            id: (data.toolCallId as string) ?? generateUUID(),
             messageId: '',
-            toolName: event.toolName as string,
-            serverName: (event.serverName as string) ?? 'built-in',
-            arguments: (event.arguments as Record<string, unknown>) ?? {},
+            toolName: (data.toolName as string) ?? 'unknown',
+            serverName: (data.mcpServerName as string) ?? 'built-in',
+            arguments: (data.arguments as Record<string, unknown>) ?? {},
             permission: 'allow_once',
             status: 'executing',
             timestamp: Date.now(),
           },
         };
-      case 'tool.execution_complete':
+      case 'tool.execution_complete': {
+        const result = (data.result as { content?: string }) ?? {};
         return {
           type: 'tool_call_result',
-          toolCallId: event.toolCallId as string,
-          result: (event.result as { success: boolean; content: string }) ?? { success: true, content: '' },
+          toolCallId: data.toolCallId as string,
+          result: { success: (data.success as boolean) ?? true, content: result.content ?? '' },
         };
+      }
       case 'session.idle':
-        return { type: 'done', messageId: (event.messageId as string) ?? generateUUID() };
+        return { type: 'done', messageId: generateUUID() };
       case 'session.error':
-        return { type: 'error', error: (event.error as string) ?? 'Unknown error' };
+        return { type: 'error', error: (data.message as string) ?? 'Unknown error' };
       default:
         return null;
     }

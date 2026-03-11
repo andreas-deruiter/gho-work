@@ -7,13 +7,14 @@ describe('MockCopilotSDK', () => {
     const sdk = new MockCopilotSDK();
     await sdk.start();
     const result = await sdk.ping();
-    expect(result).toBe('pong');
+    expect(result.message).toBe('pong');
+    expect(typeof result.timestamp).toBe('number');
     await sdk.stop();
   });
 
   it('should throw if not started', async () => {
     const sdk = new MockCopilotSDK();
-    await expect(sdk.createSession({ model: 'gpt-4' })).rejects.toThrow('SDK not started');
+    await expect(sdk.createSession({})).rejects.toThrow('SDK not started');
   });
 
   it('should create a session and receive events', async () => {
@@ -28,7 +29,7 @@ describe('MockCopilotSDK', () => {
       events.push(event);
     });
 
-    await session.sendAndWait({ prompt: 'hello world' });
+    const result = await session.sendAndWait({ prompt: 'hello world' });
 
     unsubscribe();
 
@@ -41,11 +42,16 @@ describe('MockCopilotSDK', () => {
     expect(types).toContain('assistant.message');
     expect(types).toContain('session.idle');
 
-    // Messages should include both user and assistant
+    // sendAndWait returns SessionEvent with data payload
+    expect(result).toBeDefined();
+    expect(result!.type).toBe('assistant.message');
+    expect((result!.data as Record<string, unknown>).content).toBeTruthy();
+
+    // Messages should include both user and assistant (as SessionEvents)
     const messages = await session.getMessages();
     expect(messages).toHaveLength(2);
-    expect(messages[0].role).toBe('user');
-    expect(messages[1].role).toBe('assistant');
+    expect(messages[0].type).toBe('user.message');
+    expect(messages[1].type).toBe('assistant.message');
 
     await sdk.stop();
   });
@@ -66,6 +72,10 @@ describe('MockCopilotSDK', () => {
 
     expect(deltas.length).toBeGreaterThan(0);
     expect(deltas.every((e) => e.type === 'assistant.message_delta')).toBe(true);
+    // Verify data payload shape
+    for (const delta of deltas) {
+      expect((delta.data as Record<string, unknown>).deltaContent).toBeTruthy();
+    }
 
     await sdk.stop();
   });
@@ -83,6 +93,14 @@ describe('MockCopilotSDK', () => {
     const types = events.map((e) => e.type);
     expect(types).toContain('tool.execution_start');
     expect(types).toContain('tool.execution_complete');
+
+    // Verify tool events use data payload
+    const toolStart = events.find((e) => e.type === 'tool.execution_start')!;
+    expect((toolStart.data as Record<string, unknown>).toolName).toBe('FileRead');
+    expect((toolStart.data as Record<string, unknown>).toolCallId).toBeTruthy();
+
+    const toolComplete = events.find((e) => e.type === 'tool.execution_complete')!;
+    expect((toolComplete.data as Record<string, unknown>).success).toBe(true);
 
     await sdk.stop();
   });
@@ -122,8 +140,9 @@ describe('MockCopilotSDK', () => {
     expect(list).toHaveLength(2);
     expect(list.map((s) => s.sessionId)).toContain(session1.sessionId);
     expect(list.map((s) => s.sessionId)).toContain(session2.sessionId);
-    expect(list.find((s) => s.sessionId === session1.sessionId)?.model).toBe('gpt-4');
-    expect(list.find((s) => s.sessionId === session2.sessionId)?.model).toBe('gpt-3.5');
+    // SessionMetadata now uses startTime/modifiedTime (Date)
+    expect(list[0].startTime).toBeInstanceOf(Date);
+    expect(list[0].modifiedTime).toBeInstanceOf(Date);
 
     await sdk.deleteSession(session1.sessionId);
 
@@ -152,5 +171,22 @@ describe('MockCopilotSDK', () => {
     await expect(sdk.resumeSession('non-existent')).rejects.toThrow('Session not found');
 
     await sdk.stop();
+  });
+
+  it('should list models', async () => {
+    const sdk = new MockCopilotSDK();
+    const models = await sdk.listModels();
+    expect(models).toHaveLength(3);
+    expect(models.map((m) => m.id)).toContain('gpt-4o');
+    expect(models.map((m) => m.id)).toContain('gpt-4o-mini');
+    expect(models.map((m) => m.id)).toContain('claude-sonnet-4-20250514');
+    expect(models[0].capabilities.supports.vision).toBe(true);
+  });
+
+  it('should stop and return empty error array', async () => {
+    const sdk = new MockCopilotSDK();
+    await sdk.start();
+    const errors = await sdk.stop();
+    expect(errors).toEqual([]);
   });
 });
