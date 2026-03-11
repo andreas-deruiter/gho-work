@@ -26,7 +26,7 @@ vi.mock('electron', () => ({
   },
 }));
 
-import { createMainProcess } from '../main-process.js';
+import { createMainProcess } from '../main/mainProcess.js';
 import { BrowserWindow } from 'electron';
 
 describe('electron main process', () => {

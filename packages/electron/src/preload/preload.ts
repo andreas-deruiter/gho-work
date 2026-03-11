@@ -23,7 +23,9 @@ const ALLOWED_LISTEN_CHANNELS = [
 
 // Map from caller-provided callback to the wrapped ipcRenderer handler,
 // so removeListener can correctly deregister the wrapper (not the raw callback).
-const _listenerMap = new Map<Function, Function>();
+type IPCCallback = (...args: unknown[]) => void;
+type IPCHandler = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => void;
+const _listenerMap = new Map<IPCCallback, IPCHandler>();
 
 export function createPreloadScript(): void {
   contextBridge.exposeInMainWorld('ghoWorkIPC', {
@@ -44,7 +46,7 @@ export function createPreloadScript(): void {
     removeListener: (channel: string, callback: (...args: unknown[]) => void) => {
       const handler = _listenerMap.get(callback);
       if (handler) {
-        ipcRenderer.removeListener(channel, handler as any);
+        ipcRenderer.removeListener(channel, handler);
         _listenerMap.delete(callback);
       }
     },

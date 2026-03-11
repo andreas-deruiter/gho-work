@@ -5,6 +5,7 @@ export type { ThemeKind, IThemeService } from './browser/theme.js';
 export { Workbench } from './browser/workbench.js';
 export { ActivityBar } from './browser/activityBar.js';
 export type { ActivityBarItem } from './browser/activityBar.js';
+export { Sidebar } from './browser/sidebar.js';
 export { StatusBar } from './browser/statusBar.js';
 export { ChatPanel } from './browser/chatPanel.js';
 export { KeyboardShortcuts } from './browser/keyboardShortcuts.js';
