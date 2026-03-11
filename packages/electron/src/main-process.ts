@@ -2,7 +2,7 @@
  * Main process setup — wires up IPC handlers, DI container, and agent service.
  * This runs in Electron's main process.
  */
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import { ServiceCollection } from '@gho-work/base';
 import type { AgentContext, AgentEvent } from '@gho-work/base';
 import { IPC_CHANNELS, IIPCMain } from '@gho-work/platform';

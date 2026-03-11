@@ -3,7 +3,6 @@
  * These define the contract between main process and renderer.
  */
 import { createServiceId } from '@gho-work/base';
-import type { AgentEvent, Message } from '@gho-work/base';
 
 // --- IPC Channel Names ---
 

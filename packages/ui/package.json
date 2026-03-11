@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "echo 'UI is bundled by electron-vite via apps/desktop'",
-    "clean": "echo 'nothing to clean'"
+    "clean": "echo 'nothing to clean'",
+    "lint": "eslint 'src/**/*.ts'"
   },
   "dependencies": {
     "@gho-work/base": "*",

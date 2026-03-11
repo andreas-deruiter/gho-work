@@ -127,7 +127,7 @@ export class ChatPanel {
 
   private async sendMessage(): Promise<void> {
     const content = this.inputEl.value.trim();
-    if (!content || this.isProcessing) return;
+    if (!content || this.isProcessing) { return; }
 
     this.isProcessing = true;
     this.sendBtnEl.disabled = true;
@@ -136,7 +136,7 @@ export class ChatPanel {
 
     // Clear welcome on first message
     const welcome = this.messageListEl.querySelector('.chat-welcome');
-    if (welcome) welcome.remove();
+    if (welcome) { welcome.remove(); }
 
     // Add user message
     const userMsg: ChatMessage = { id: generateUUID(), role: 'user', content };
@@ -166,7 +166,7 @@ export class ChatPanel {
   }
 
   private handleAgentEvent(event: AgentEvent): void {
-    if (!this.currentAssistantMessage) return;
+    if (!this.currentAssistantMessage) { return; }
 
     switch (event.type) {
       case 'thinking': {
@@ -262,9 +262,9 @@ export class ChatPanel {
   }
 
   private updateAssistantContent(): void {
-    if (!this.currentAssistantMessage) return;
+    if (!this.currentAssistantMessage) { return; }
     const el = document.getElementById(`msg-${this.currentAssistantMessage.id}`);
-    if (!el) return;
+    if (!el) { return; }
     const contentEl = el.querySelector('.chat-message-content');
     if (contentEl) {
       // Simple markdown-like rendering
@@ -277,9 +277,9 @@ export class ChatPanel {
   }
 
   private updateAssistantStatus(status: string): void {
-    if (!this.currentAssistantMessage) return;
+    if (!this.currentAssistantMessage) { return; }
     const el = document.getElementById(`msg-${this.currentAssistantMessage.id}`);
-    if (!el) return;
+    if (!el) { return; }
     const statusEl = el.querySelector('.chat-message-status');
     if (statusEl) {
       statusEl.textContent = status;
@@ -287,9 +287,9 @@ export class ChatPanel {
   }
 
   private updateAssistantToolCalls(): void {
-    if (!this.currentAssistantMessage) return;
+    if (!this.currentAssistantMessage) { return; }
     const el = document.getElementById(`msg-${this.currentAssistantMessage.id}`);
-    if (!el) return;
+    if (!el) { return; }
     const toolCallsEl = el.querySelector('.chat-tool-calls');
     if (toolCallsEl && this.currentAssistantMessage.toolCalls?.length) {
       toolCallsEl.innerHTML = this.currentAssistantMessage.toolCalls

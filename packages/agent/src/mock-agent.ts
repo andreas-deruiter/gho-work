@@ -3,7 +3,7 @@
  * Simulates the Copilot SDK agent loop with streaming responses
  * and fake tool calls.
  */
-import { generateUUID, Emitter } from '@gho-work/base';
+import { generateUUID } from '@gho-work/base';
 import type { AgentContext, AgentEvent } from '@gho-work/base';
 import type { ICopilotSDK, IAgentService } from './interfaces.js';
 
@@ -20,7 +20,7 @@ export class MockCopilotSDK implements ICopilotSDK {
 
   async *sendMessage(sessionId: string, content: string): AsyncIterable<AgentEvent> {
     const controller = this.activeSessions.get(sessionId);
-    if (!controller) throw new Error(`No session: ${sessionId}`);
+    if (!controller) { throw new Error(`No session: ${sessionId}`); }
 
     // Simulate thinking
     yield { type: 'thinking', content: `Analyzing request: "${content}"` };
@@ -55,7 +55,7 @@ export class MockCopilotSDK implements ICopilotSDK {
     const response = this.generateResponse(content);
     const words = response.split(' ');
     for (const word of words) {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted) { return; }
       yield { type: 'text_delta', content: word + ' ' };
       await this.delay(30 + Math.random() * 50, controller.signal);
     }
@@ -94,7 +94,7 @@ export class MockCopilotSDK implements ICopilotSDK {
   }
 
   private delay(ms: number, signal: AbortSignal): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
       if (signal.aborted) { resolve(); return; }
       const timer = setTimeout(resolve, ms);
       signal.addEventListener('abort', () => { clearTimeout(timer); resolve(); }, { once: true });
