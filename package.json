@@ -21,7 +21,8 @@
     "format": "prettier --write 'packages/*/src/**/*.ts' 'apps/*/src/**/*.ts'",
     "format:check": "prettier --check 'packages/*/src/**/*.ts' 'apps/*/src/**/*.ts'",
     "e2e": "playwright test",
-    "e2e:headed": "playwright test --headed"
+    "e2e:headed": "playwright test --headed",
+    "type-check": "turbo build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
