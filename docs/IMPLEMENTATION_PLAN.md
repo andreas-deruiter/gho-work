@@ -82,26 +82,26 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 
 **Deliverables:**
 
-- [ ] 1. **Dependency injection system** (`packages/base`)
+- [x] 1. **Dependency injection system** (`packages/base`)
    - `createServiceIdentifier<T>()` decorator factory
    - `ServiceCollection` for registration
    - `InstantiationService` for resolution (constructor injection)
    - `Disposable` base class and `IDisposable` interface
    - `Event<T>` and `Emitter<T>` for typed events
 
-- [ ] 2. **IPC infrastructure** (`packages/platform`)
+- [x] 2. **IPC infrastructure** (`packages/platform`)
    - Typed IPC channel definitions (Main <-> Renderer via contextBridge)
    - MessagePort creation and handoff (Renderer <-> Agent Host, Renderer <-> MCP Manager)
    - `IIPCService` interface and implementation for each process
    - Serialization/deserialization with type safety (zod schemas)
 
-- [ ] 3. **Multi-process bootstrap**
+- [x] 3. **Multi-process bootstrap**
    - Main process: app lifecycle, window management, tray icon, native menus
    - Renderer process: workbench shell (empty layout with sidebar, main panel, status bar)
    - Agent Host: utility process spawned from Main, MessagePort connected to Renderer
    - (MCP Manager deferred -- starts inside Agent Host, separated in Phase 3 if needed)
 
-- [ ] 4. **Authentication** (`packages/platform`)
+- [x] 4. **Authentication** (`packages/platform`)
    - `IAuthService` interface and implementation
    - GitHub OAuth PKCE flow (localhost redirect)
    - Token storage via Electron safeStorage
@@ -109,14 +109,14 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Login/logout UI in Renderer
    - Auth state observable via `Event<AuthState>`
 
-- [ ] 5. **Storage layer** (`packages/platform`)
+- [x] 5. **Storage layer** (`packages/platform`)
    - `IStorageService` interface
    - Global SQLite database (better-sqlite3): user, preferences, connector configs, permission rules
    - Per-workspace SQLite database: conversations, messages, tool calls
    - `ISecureStorageService` wrapping Electron safeStorage
    - `IFileService` abstraction over Node.js fs
 
-- [ ] 6. **Workbench shell** (`packages/ui`) — see [UX Tutorial Site](tutorial/index.html#workbench) for visual spec
+- [x] 6. **Workbench shell** (`packages/ui`) — see [UX Tutorial Site](tutorial/index.html#workbench) for visual spec
    - VS Code-style layout: activity bar (48px), sidebar (240px, collapsible via Cmd+B), main content area, status bar (24px)
    - Activity bar with icon buttons: Chat, Tool Activity, Connectors, Documents, Settings (bottom)
    - Status bar: workspace path, connector count/status, active model, agent state, Copilot usage meter, user avatar
@@ -124,7 +124,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - CSS custom properties for theming (light/dark/system)
    - Keyboard navigation foundation (Cmd+B, Cmd+N, Cmd+K, Cmd+L, Cmd+1-4, Cmd+,, Esc)
 
-- [ ] 7. **Test infrastructure and Phase 1 tests**
+- [x] 7. **Test infrastructure and Phase 1 tests**
    - `TestInstantiationService`: mock DI container with `stub()`, `createInstance()`, `get()`, `set()` methods (adapted from VS Code's pattern — see `references/vscode/src/vs/platform/instantiation/test/`)
    - `ensureNoDisposablesAreLeakedInTestSuite()`: Vitest adaptation of VS Code's disposable leak detector — wraps `afterEach` to verify all disposables created during a test are disposed
    - Unit tests: DI resolution (3+ service chain, cycle detection, lazy instantiation via SyncDescriptor)
@@ -136,14 +136,14 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Smoke test (`tests/smoke/phase1.ts`): workbench shell renders activity bar + sidebar + main panel + status bar, theme toggle works, keyboard shortcuts respond
 
 **Acceptance criteria:**
-- [ ] Agent Host utility process starts and exchanges messages with Renderer via MessagePort
-- [ ] DI container resolves a chain of 3+ services with constructor injection
+- [x] Agent Host utility process starts and exchanges messages with Renderer via MessagePort
+- [x] DI container resolves a chain of 3+ services with constructor injection
 - [ ] User can sign in with GitHub, token persists across restarts
-- [ ] SQLite stores and retrieves a test entity
-- [ ] Workbench renders sidebar + main panel with theme switching
-- [ ] `TestInstantiationService` can stub services and create instances for tests
-- [ ] `ensureNoDisposablesAreLeakedInTestSuite()` detects leaked disposables in a failing test
-- [ ] All Phase 1 unit tests pass (`npx vitest run`)
+- [x] SQLite stores and retrieves a test entity
+- [x] Workbench renders sidebar + main panel with theme switching
+- [x] `TestInstantiationService` can stub services and create instances for tests
+- [x] `ensureNoDisposablesAreLeakedInTestSuite()` detects leaked disposables in a failing test
+- [x] All Phase 1 unit tests pass (`npx vitest run`)
 
 ### Phase 2: Agent Integration (Weeks 4-7)
 
