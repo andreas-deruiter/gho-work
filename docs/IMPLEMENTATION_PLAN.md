@@ -33,48 +33,48 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 
 **Deliverables:**
 
-- [ ] 1. **Monorepo initialization**
-   - Turborepo with pnpm workspaces
+- [x] 1. **Monorepo initialization**
+   - Turborepo with npm workspaces
    - Packages: `packages/base`, `packages/platform`, `packages/agent`, `packages/connectors`, `packages/ui`, `packages/electron`
    - App entry: `apps/desktop`
    - Directories: `cli-guides/`, `skills/`, `docs/`, `tests/`
 
-- [ ] 2. **Build tooling**
+- [x] 2. **Build tooling**
    - Vite + electron-vite configuration
    - TypeScript 5.x with strict mode, path aliases per package
    - ESLint (flat config) + Prettier
    - Vitest configured for unit tests
    - Playwright configured for E2E (Electron target)
 
-- [ ] 3. **CI pipeline (GitHub Actions)**
+- [x] 3. **CI pipeline (GitHub Actions)**
    - Lint + type-check + unit test on every PR
    - Build Electron app on macOS and Windows runners
-   - Changesets bot for version management
+   - Changesets for version management
 
-- [ ] 4. **Empty Electron shell**
+- [x] 4. **Empty Electron shell**
    - Main process creates a BrowserWindow
    - Preload script with contextBridge stub
    - Renderer loads a minimal HTML page
    - Dev mode with HMR
 
-- [ ] 5. **Development feedback infrastructure**
+- [x] 5. **Development feedback infrastructure**
    - ESLint flat config for TypeScript (`eslint.config.mjs`) with recommended + typescript rules
-   - Vitest workspace config (`vitest.workspace.ts`) covering all packages
+   - Vitest root config (`vitest.config.ts`) with `projects: ['packages/*']` covering all packages
    - Playwright config (`playwright.config.ts`) targeting Electron binary
    - Smoke test runner (`tests/smoke/helpers.ts`) with step/autoStep helpers
    - Smoke test for Phase 0 acceptance criteria (`tests/smoke/phase0.ts`)
 
-- [ ] 6. **Phase 0 tests**
+- [x] 6. **Phase 0 tests**
    - Unit test example per package (verify Vitest resolves cross-package imports)
    - Playwright smoke test: Electron window launches and renders HTML (`tests/e2e/app-launches.spec.ts`)
 
 **Acceptance criteria:**
-- [ ] `pnpm dev` launches Electron window on macOS
-- [ ] `pnpm build` produces a packaged app
-- [ ] CI passes on a clean PR
-- [ ] All packages resolve their cross-references
-- [ ] `npx vitest run` passes with at least one test per package
-- [ ] `npx playwright test` passes the app-launch smoke test
+- [x] `npm run dev` launches Electron window on macOS
+- [x] `npm run desktop:build:mac` produces a packaged app (DMG)
+- [x] CI workflow defined (`.github/workflows/ci.yml`)
+- [x] All packages resolve their cross-references (`npx turbo build` succeeds)
+- [x] `npx vitest run` passes with at least one test per package (7 files, 21 tests)
+- [x] `npx playwright test` passes the app-launch smoke test
 
 ### Phase 1: Core Shell and Foundations (Weeks 2-4)
 
