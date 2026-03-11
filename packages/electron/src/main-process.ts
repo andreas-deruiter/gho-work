@@ -20,11 +20,11 @@ export function createMainProcess(mainWindow: BrowserWindow): ServiceCollection 
 
   // Mock Copilot SDK (will be replaced with real SDK)
   const mockSDK = new MockCopilotSDK();
-  services.register(ICopilotSDK, mockSDK);
+  services.set(ICopilotSDK, mockSDK);
 
   // Agent service (uses the SDK)
   const agentService = new MockAgentService(mockSDK);
-  services.register(IAgentService, agentService);
+  services.set(IAgentService, agentService);
 
   // IPC Main adapter
   const ipcMainAdapter: import('@gho-work/platform').IIPCMain = {
@@ -37,7 +37,7 @@ export function createMainProcess(mainWindow: BrowserWindow): ServiceCollection 
       }
     },
   };
-  services.register(IIPCMain, ipcMainAdapter);
+  services.set(IIPCMain, ipcMainAdapter);
 
   // --- Set up IPC handlers ---
 
