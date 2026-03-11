@@ -9,3 +9,5 @@ export { Sidebar } from './browser/sidebar.js';
 export { StatusBar } from './browser/statusBar.js';
 export { ChatPanel } from './browser/chatPanel.js';
 export { KeyboardShortcuts } from './browser/keyboardShortcuts.js';
+export * from './browser/conversationList.js';
+export * from './browser/modelSelector.js';

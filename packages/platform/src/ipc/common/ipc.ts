@@ -9,6 +9,11 @@ export const IPC_CHANNELS = {
   AGENT_EVENT: 'agent:event',
   CONVERSATION_LIST: 'conversation:list',
   CONVERSATION_CREATE: 'conversation:create',
+  CONVERSATION_GET: 'conversation:get',
+  CONVERSATION_DELETE: 'conversation:delete',
+  CONVERSATION_RENAME: 'conversation:rename',
+  MODEL_LIST: 'model:list',
+  MODEL_SELECT: 'model:select',
   AUTH_LOGIN: 'auth:login',
   AUTH_LOGOUT: 'auth:logout',
   AUTH_STATE: 'auth:state',
@@ -64,11 +69,40 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('thinking'), content: z.string() }),
   z.object({ type: z.literal('tool_call_start'), toolCall: ToolCallPartialSchema }),
   z.object({ type: z.literal('tool_call_result'), toolCallId: z.string(), result: ToolResultSchema }),
-  z.object({ type: z.literal('permission_request'), toolCall: ToolCallPartialSchema }),
   z.object({ type: z.literal('error'), error: z.string() }),
   z.object({ type: z.literal('done'), messageId: z.string() }),
 ]);
 export type AgentEvent = z.infer<typeof AgentEventSchema>;
+
+export const ConversationGetRequestSchema = z.object({
+  conversationId: z.string(),
+});
+export type ConversationGetRequest = z.infer<typeof ConversationGetRequestSchema>;
+
+export const ConversationDeleteRequestSchema = z.object({
+  conversationId: z.string(),
+});
+export type ConversationDeleteRequest = z.infer<typeof ConversationDeleteRequestSchema>;
+
+export const ConversationRenameRequestSchema = z.object({
+  conversationId: z.string(),
+  title: z.string(),
+});
+export type ConversationRenameRequest = z.infer<typeof ConversationRenameRequestSchema>;
+
+export const ModelListResponseSchema = z.object({
+  models: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    provider: z.string(),
+  })),
+});
+export type ModelListResponse = z.infer<typeof ModelListResponseSchema>;
+
+export const ModelSelectRequestSchema = z.object({
+  modelId: z.string(),
+});
+export type ModelSelectRequest = z.infer<typeof ModelSelectRequestSchema>;
 
 export const AuthStateSchema = z.object({
   isAuthenticated: z.boolean(),

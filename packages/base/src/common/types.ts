@@ -123,7 +123,6 @@ export type AgentEvent =
   | { type: 'thinking'; content: string }
   | { type: 'tool_call_start'; toolCall: Omit<ToolCall, 'result' | 'durationMs'> }
   | { type: 'tool_call_result'; toolCallId: string; result: ToolResult }
-  | { type: 'permission_request'; toolCall: Omit<ToolCall, 'result' | 'durationMs'> }
   | { type: 'error'; error: string }
   | { type: 'done'; messageId: string };
 

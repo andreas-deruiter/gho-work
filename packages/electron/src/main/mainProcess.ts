@@ -1,30 +1,53 @@
 /**
- * Main process setup — wires up IPC handlers, DI container, and agent service.
+ * Main process setup — wires up IPC handlers, DI container, and services.
  * This runs in Electron's main process.
+ *
+ * Agent execution lives in the Agent Host utility process (agentHostMain.ts).
+ * The main process handles conversation persistence, auth, and model selection.
  */
 import { BrowserWindow, ipcMain, shell, safeStorage } from 'electron';
 import { ServiceCollection } from '@gho-work/base';
-import type { AgentContext, AgentEvent } from '@gho-work/base';
-import { IPC_CHANNELS, IIPCMain, AuthServiceImpl, SecureStorageService, IAuthService, ISecureStorageService } from '@gho-work/platform';
-import type { SendMessageRequest } from '@gho-work/platform';
-import { ICopilotSDK, IAgentService, MockCopilotSDK, MockAgentService } from '@gho-work/agent';
+import type { AgentEvent } from '@gho-work/base';
+import {
+  IPC_CHANNELS,
+  IIPCMain,
+  AuthServiceImpl,
+  SecureStorageService,
+  IAuthService,
+  ISecureStorageService,
+  SqliteStorageService,
+} from '@gho-work/platform';
+import type {
+  SendMessageRequest,
+  ConversationGetRequest,
+  ConversationDeleteRequest,
+  ConversationRenameRequest,
+  ModelSelectRequest,
+} from '@gho-work/platform';
+import { ConversationServiceImpl, IConversationService } from '@gho-work/agent';
 
 /**
- * Sets up the main process: DI container, IPC handlers, agent service.
- * Returns a function to get the service collection (for testing).
+ * Sets up the main process: DI container, IPC handlers, conversation service.
+ * Returns the service collection (for testing).
+ *
+ * @param mainWindow - The main BrowserWindow
+ * @param storageService - SqliteStorageService for workspace DB access
+ * @param workspaceId - The active workspace ID
  */
-export function createMainProcess(mainWindow: BrowserWindow): ServiceCollection {
+export function createMainProcess(
+  mainWindow: BrowserWindow,
+  storageService?: SqliteStorageService,
+  workspaceId?: string,
+): ServiceCollection {
   const services = new ServiceCollection();
 
-  // --- Register services ---
-
-  // Mock Copilot SDK (will be replaced with real SDK)
-  const mockSDK = new MockCopilotSDK();
-  services.set(ICopilotSDK, mockSDK);
-
-  // Agent service (uses the SDK)
-  const agentService = new MockAgentService(mockSDK);
-  services.set(IAgentService, agentService);
+  // --- Conversation Service ---
+  let conversationService: ConversationServiceImpl | null = null;
+  if (storageService && workspaceId) {
+    const db = storageService.getWorkspaceDatabase(workspaceId);
+    conversationService = new ConversationServiceImpl(db);
+    services.set(IConversationService, conversationService);
+  }
 
   // In-memory key-value store for secure storage (backed by safeStorage encryption)
   const _tokenStore = new Map<string, string>();
@@ -93,44 +116,94 @@ export function createMainProcess(mainWindow: BrowserWindow): ServiceCollection 
 
   // --- Set up IPC handlers ---
 
+  // Agent send/cancel: fallback handlers for when renderer uses IPC instead of MessagePort.
+  // In normal operation, the renderer talks directly to the Agent Host via MessagePort.
   ipcMainAdapter.handle(IPC_CHANNELS.AGENT_SEND_MESSAGE, async (...args: unknown[]) => {
     const request = args[0] as SendMessageRequest;
-    const context: AgentContext = {
-      conversationId: request.conversationId,
-      workspaceId: 'spike-workspace',
-      model: request.model,
+    // Fallback: forward to renderer as an error since agent runs in utility process
+    const errorEvent: AgentEvent = {
+      type: 'error',
+      error: 'Agent host not connected. Send messages via MessagePort to the agent host process.',
     };
-
-    // Run agent in background, stream events to renderer
-    (async () => {
-      try {
-        for await (const event of agentService.executeTask(request.content, context)) {
-          ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, event);
-        }
-      } catch (err) {
-        const errorEvent: AgentEvent = {
-          type: 'error',
-          error: err instanceof Error ? err.message : String(err),
-        };
-        ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, errorEvent);
-      }
-    })();
-
-    return { messageId: 'pending' };
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, errorEvent);
+    return { messageId: request.conversationId ?? 'fallback' };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.AGENT_CANCEL, async () => {
-    agentService.cancelTask('current');
+    // No-op fallback — agent cancel should go through MessagePort to agent host
   });
 
+  // Conversation handlers
   ipcMainAdapter.handle(IPC_CHANNELS.CONVERSATION_LIST, async () => {
-    return { conversations: [] };
+    if (!conversationService) {
+      return { conversations: [] };
+    }
+    const conversations = conversationService.listConversations();
+    return {
+      conversations: conversations.map((c) => ({
+        id: c.id,
+        title: c.title,
+        updatedAt: c.updatedAt,
+      })),
+    };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONVERSATION_CREATE, async () => {
-    return { id: 'spike-conversation', title: 'New Conversation' };
+    if (!conversationService) {
+      return { id: 'no-storage', title: 'New Conversation' };
+    }
+    const conversation = conversationService.createConversation('gpt-4o');
+    return { id: conversation.id, title: conversation.title };
   });
 
+  ipcMainAdapter.handle(IPC_CHANNELS.CONVERSATION_GET, async (...args: unknown[]) => {
+    const request = args[0] as ConversationGetRequest;
+    if (!conversationService) {
+      return null;
+    }
+    const conversation = conversationService.getConversation(request.conversationId);
+    if (!conversation) {
+      return null;
+    }
+    const messages = conversationService.getMessages(request.conversationId);
+    return { conversation, messages };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CONVERSATION_DELETE, async (...args: unknown[]) => {
+    const request = args[0] as ConversationDeleteRequest;
+    if (conversationService) {
+      conversationService.deleteConversation(request.conversationId);
+    }
+    return { success: true };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CONVERSATION_RENAME, async (...args: unknown[]) => {
+    const request = args[0] as ConversationRenameRequest;
+    if (conversationService) {
+      conversationService.renameConversation(request.conversationId, request.title);
+    }
+    return { success: true };
+  });
+
+  // Model handlers
+  ipcMainAdapter.handle(IPC_CHANNELS.MODEL_LIST, async () => {
+    // Return available models (mock for now, will be populated from SDK later)
+    return {
+      models: [
+        { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+        { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
+        { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'anthropic' },
+      ],
+    };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.MODEL_SELECT, async (...args: unknown[]) => {
+    const request = args[0] as ModelSelectRequest;
+    // Store selection (for now just acknowledge — will persist via storage service later)
+    return { modelId: request.modelId, success: true };
+  });
+
+  // Auth handlers
   ipcMainAdapter.handle(IPC_CHANNELS.AUTH_LOGIN, async () => {
     await authService.login();
   });
