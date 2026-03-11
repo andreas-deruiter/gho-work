@@ -1,2 +1,10 @@
-export { ChatPanel } from './chat-panel.js';
-export { Workbench } from './workbench.js';
+export { h, addDisposableListener } from './browser/dom.js';
+export { Widget } from './browser/widget.js';
+export { ThemeService } from './browser/theme.js';
+export type { ThemeKind, IThemeService } from './browser/theme.js';
+export { Workbench } from './browser/workbench.js';
+export { ActivityBar } from './browser/activityBar.js';
+export type { ActivityBarItem } from './browser/activityBar.js';
+export { StatusBar } from './browser/statusBar.js';
+export { ChatPanel } from './browser/chatPanel.js';
+export { KeyboardShortcuts } from './browser/keyboardShortcuts.js';

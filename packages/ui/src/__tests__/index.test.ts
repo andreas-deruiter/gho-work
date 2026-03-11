@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // ChatPanel uses DOM APIs; vitest.config.ts sets environment: 'jsdom'
-import { ChatPanel } from '../chat-panel.js';
+import { ChatPanel } from '../browser/chatPanel.js';
 
 describe('ui package', () => {
   it('ChatPanel can be instantiated with a mock IPC renderer', () => {
