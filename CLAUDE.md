@@ -124,6 +124,9 @@ Use these skills at the appropriate points in the development cycle:
 - **mcp-client** — MCP protocol client: transports, tool management, sampling, elicitation, OAuth, health monitoring
 - **accessibility-patterns** — ARIA roles, keyboard navigation, screen reader support for every widget type
 - **sqlite-patterns** — better-sqlite3 setup, schema design, migrations, performance tuning
+- **copilot-sdk** — GitHub Copilot SDK API reference: sessions, streaming, tools, MCP integration, custom agents (consult when wiring agent service)
+- **playwright-testing** — Playwright e2e patterns for Electron: app exploration, test generation, locator strategy, debugging
+- **context-map** — Pre-edit checklist: map affected files, dependencies, tests, and risks before multi-file changes
 
 ### Quality gates
 Every code change must pass before moving on:
