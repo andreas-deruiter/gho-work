@@ -62,11 +62,17 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Smoke test runner (`tests/smoke/helpers.ts`) with step/autoStep helpers
    - Smoke test for Phase 0 acceptance criteria (`tests/smoke/phase0.ts`)
 
+- [ ] 6. **Phase 0 tests**
+   - Unit test example per package (verify Vitest resolves cross-package imports)
+   - Playwright smoke test: Electron window launches and renders HTML (`tests/e2e/app-launches.spec.ts`)
+
 **Acceptance criteria:**
 - [ ] `pnpm dev` launches Electron window on macOS
 - [ ] `pnpm build` produces a packaged app
 - [ ] CI passes on a clean PR
 - [ ] All packages resolve their cross-references
+- [ ] `npx vitest run` passes with at least one test per package
+- [ ] `npx playwright test` passes the app-launch smoke test
 
 ### Phase 1: Core Shell and Foundations (Weeks 2-4)
 
@@ -116,12 +122,26 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - CSS custom properties for theming (light/dark/system)
    - Keyboard navigation foundation (Cmd+B, Cmd+N, Cmd+K, Cmd+L, Cmd+1-4, Cmd+,, Esc)
 
+- [ ] 7. **Test infrastructure and Phase 1 tests**
+   - `TestInstantiationService`: mock DI container with `stub()`, `createInstance()`, `get()`, `set()` methods (adapted from VS Code's pattern — see `references/vscode/src/vs/platform/instantiation/test/`)
+   - `ensureNoDisposablesAreLeakedInTestSuite()`: Vitest adaptation of VS Code's disposable leak detector — wraps `afterEach` to verify all disposables created during a test are disposed
+   - Unit tests: DI resolution (3+ service chain, cycle detection, lazy instantiation via SyncDescriptor)
+   - Unit tests: `Event<T>` and `Emitter<T>` (subscribe, fire, dispose, composition: map/filter/debounce), `DisposableStore` (add, dispose, double-dispose safety)
+   - Unit tests: IPC message round-trip (serialize, send, receive, deserialize with zod validation)
+   - Unit tests: SQLite CRUD operations, schema migration (version 0→1→2), WAL mode verification
+   - Unit tests: auth token encrypt/decrypt via safeStorage mock, OAuth state management
+   - Integration test: multi-process bootstrap — Main spawns Agent Host, MessagePort handshake, bidirectional message exchange
+   - Smoke test (`tests/smoke/phase1.ts`): workbench shell renders activity bar + sidebar + main panel + status bar, theme toggle works, keyboard shortcuts respond
+
 **Acceptance criteria:**
 - [ ] Agent Host utility process starts and exchanges messages with Renderer via MessagePort
 - [ ] DI container resolves a chain of 3+ services with constructor injection
 - [ ] User can sign in with GitHub, token persists across restarts
 - [ ] SQLite stores and retrieves a test entity
 - [ ] Workbench renders sidebar + main panel with theme switching
+- [ ] `TestInstantiationService` can stub services and create instances for tests
+- [ ] `ensureNoDisposablesAreLeakedInTestSuite()` detects leaked disposables in a failing test
+- [ ] All Phase 1 unit tests pass (`npx vitest run`)
 
 ### Phase 2: Agent Integration (Weeks 4-7)
 
@@ -173,6 +193,13 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Load conversation history on session restore
    - Auto-title generation (first user message summary)
 
+- [ ] 7. **Phase 2 tests**
+   - Unit tests: tool registry CRUD (register, get, getByServer, remove), tool name collision detection
+   - Unit tests: permission rule matching — glob patterns on tool names, rule precedence (specific > general), all four decision types (allow once, allow always, deny, deny always)
+   - Unit tests: conversation persistence — save/load messages, save/load tool calls, auto-title generation
+   - Integration test: agent service end-to-end — mock Copilot SDK → tool call → permission check → response streamed back
+   - Smoke test (`tests/smoke/phase2.ts`): send message and receive streaming response, tool call card renders with expand/collapse
+
 **Acceptance criteria:**
 - [ ] User types "Hello, what can you do?" and receives a streaming response
 - [ ] User types "Read the file at ~/test.txt" -- permission prompt appears, user approves, file content shown
@@ -181,6 +208,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 - [ ] Conversation persists across app restart
 - [ ] Model can be switched mid-session
 - [ ] Task can be canceled mid-execution
+- [ ] All Phase 2 unit and integration tests pass (`npx vitest run`)
 
 ### Phase 3: Connectors and Integrations (Weeks 5-8, overlaps Phase 2)
 
@@ -239,6 +267,14 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Route SDK tool calls for MCP tools through the MCP Manager
    - Handle MCP tool results and feed back to SDK
 
+- [ ] 8. **Phase 3 tests**
+   - Unit tests: MCP client connect/disconnect lifecycle, tool list change handling (debounce, cache invalidation), health check ping timeout
+   - Unit tests: connector registry CRUD, connector status transitions (initializing → connected → error → disconnected)
+   - Unit tests: CLI detection — mock PATH scanning, version parsing, missing tool handling
+   - Integration test: stdio MCP server lifecycle — spawn mock server → connect → list tools → call tool → shutdown (using a minimal test MCP server fixture)
+   - Integration test: registry API search — mock HTTP responses, parse server list, generate install config
+   - Smoke test (`tests/smoke/phase3.ts`): install a test MCP server from config, verify tools appear in tool registry, call a tool and see result
+
 **Acceptance criteria:**
 - [ ] Registry browser displays servers from MCP Registry API, search works
 - [ ] A community MCP server (e.g., Google Drive) installed from the registry connects and exposes tools in the tool registry
@@ -249,6 +285,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 - [ ] Test connection button works for MCP servers (both stdio and HTTP)
 - [ ] Adding a custom MCP server via settings UI works end-to-end
 - [ ] Tool allowlisting/denylisting works for remote servers
+- [ ] All Phase 3 unit and integration tests pass (`npx vitest run`)
 
 ### Phase 4: Office Features and Skills (Weeks 8-11)
 
@@ -306,6 +343,14 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Queue UI: show pending, active, completed tasks
    - Task status transitions and notifications
 
+- [ ] 9. **Phase 4 tests**
+   - Unit tests: memory context loading — CLAUDE.md parsing, .github/copilot-instructions.md fallback, global memory merge
+   - Unit tests: skill YAML frontmatter parsing — valid/invalid YAML, allowed tools extraction, dynamic context shell commands
+   - Unit tests: hook execution — pre/post tool call hooks, timeout enforcement, hook failure isolation
+   - Unit tests: task queue state machine — pending → active → completed/failed, cancel mid-execution, queue ordering
+   - Integration test: skill invocation end-to-end — load skill definition → inject context → agent executes with skill tools
+   - Smoke test (`tests/smoke/phase4.ts`): run `/draft-email` skill, queue two tasks and verify sequential execution
+
 **Acceptance criteria:**
 - [ ] `/draft-email` skill drafts an email using context from connected services
 - [ ] `/meeting-prep` pulls calendar events (via Google Calendar MCP or `mgc` CLI) and prepares agenda
@@ -314,6 +359,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 - [ ] User can queue a second task while first is executing
 - [ ] Hook executes after a tool call completes
 - [ ] Tool activity panel shows full audit trail
+- [ ] All Phase 4 unit and integration tests pass (`npx vitest run`)
 
 ### Phase 5: Polish, Testing, and Launch Prep (Weeks 11-14)
 
@@ -362,12 +408,18 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Skill authoring guide
    - CLI integration patterns (cli-guides/)
 
+- [ ] 8. **Phase 5 comprehensive test suite**
+   - Full E2E suite (Playwright): auth flow (login → verify tier → land on workbench), chat conversation (send → stream → tool call → permission → result), connector setup (install MCP server → verify tools → call tool), permission rules (create rule → verify auto-decision)
+   - Performance benchmarks: renderer startup < 2s to interactive, SQLite query time for 10k messages, MCP server spawn time, memory usage under sustained agent conversation
+   - Accessibility audit: `@axe-core/playwright` on all panels (chat, settings, connectors, tool activity), keyboard-only navigation test, VoiceOver smoke test script
+
 **Acceptance criteria:**
 - [ ] E2E tests pass on macOS and Windows CI
 - [ ] Signed DMG installs and auto-updates on macOS
 - [ ] Time-to-value < 10 minutes (install to first productive task)
-- [ ] No critical accessibility issues
+- [ ] No critical accessibility issues (axe-core reports zero violations)
 - [ ] Crash recovery works without data loss
+- [ ] Performance benchmarks meet targets and are tracked in CI
 
 ---
 
