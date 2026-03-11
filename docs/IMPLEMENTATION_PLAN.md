@@ -151,7 +151,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 
 **Deliverables:**
 
-- [ ] 1. **Copilot SDK wrapper** (`packages/agent`)
+- [x] 1. **Copilot SDK wrapper** (`packages/agent`)
    - `ICopilotSDK` interface: `start()`, `stop()`, `createSession()`, `resumeSession()`, `listSessions()`, `deleteSession()`, `ping()`
    - `ISDKSession` interface: `send()`, `sendAndWait()`, `abort()`, `on()`, `getMessages()`, `disconnect()`
    - Implementation wrapping `CopilotClient` from `@github/copilot-sdk`
@@ -160,7 +160,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Event bridging: map SDK events (`assistant.message_delta`, `tool.execution_start`, `session.idle`, etc.) to our `AgentEvent` discriminated union
    - Auth: pass GitHub token from `IAuthService` to SDK via `githubToken` option
 
-- [ ] 2. **Agent service** (`packages/agent`)
+- [x] 2. **Agent service** (`packages/agent`)
    - `IAgentService` interface: `executeTask()`, `cancelTask()`, `getActiveTaskId()`
    - `executeTask()` flow: create SDK session with `model`, `systemMessage`, `mcpServers` → bridge SDK events to `AsyncIterable<AgentEvent>` → yield events to caller
    - Context injection: loads CLAUDE.md / .github/copilot-instructions.md into `systemMessage`
@@ -168,17 +168,17 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Subagent spawning for parallel subtasks (separate SDK sessions)
    - Task queue: accept new tasks while agent is busy (addresses Claude Cowork parity item)
 
-- [ ] 3. **SDK native tool handling** (`packages/agent`)
+- [x] 3. **SDK native tool handling** (`packages/agent`)
    - The SDK manages all tools natively: built-in tools (file, bash, git, web) execute through SDK handlers; MCP servers are passed via `mcpServers` session config
    - No custom tool registry, no `defineTool()` wrapping, no built-in re-implementation
    - Tool call events from the SDK are mapped to our `AgentEvent` union and persisted via `IConversationService`
 
-- [ ] 4. **Permission system (deferred)**
+- [x] 4. **Permission system (deferred)**
    - Permission enforcement is deferred to a later phase. The SDK executes tools without our approval layer
    - Tool calls are logged to the conversation database for audit purposes
    - A permission system with rule matching, glob patterns, and interactive approval will be designed and implemented in a future phase once the core agent loop is stable
 
-- [ ] 5. **Chat UI** (`packages/ui`) — see [UX Tutorial Site](tutorial/index.html#chat) for visual spec
+- [x] 5. **Chat UI** (`packages/ui`) — see [UX Tutorial Site](tutorial/index.html#chat) for visual spec
    - `ChatPanel` widget: message list, auto-growing input area, send button
    - Streaming text rendering (token-by-token with Markdown via `marked` + `DOMPurify`, cursor blink indicator)
    - Tool call visualization: collapsible cards (collapsed after completion) showing tool name, status icon, duration. Expand for: server, arguments (JSON), result, permission decision.
@@ -191,27 +191,27 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Empty state: no conversations yet (with Cmd+N prompt) — see [Empty States mockup](tutorial/index.html#states)
    - Error state: agent host disconnect with retry — see [Error States mockup](tutorial/index.html#states)
 
-- [ ] 6. **Conversation persistence** (`packages/agent`)
+- [x] 6. **Conversation persistence** (`packages/agent`)
    - `IConversationService` interface: `listConversations()`, `createConversation()`, `addMessage()`, `addToolCall()`, `updateToolCall()`, `getMessages()`, `getToolCalls()`
    - Implementation using workspace SQLite via `IStorageService`
    - Save messages and tool calls at each event (see design spec Section 8.2)
    - Load conversation history on session restore; resume SDK session if possible
    - Auto-title generation (first user message summary, truncated to ~60 chars)
 
-- [ ] 7. **Phase 2 tests**
+- [x] 7. **Phase 2 tests**
    - Unit tests: conversation persistence — save/load messages, save/load tool calls, auto-title generation
    - Unit tests: SDK event to AgentEvent mapping — all event types correctly mapped
    - Integration test: agent service end-to-end — mock Copilot SDK → tool call → response streamed back
    - E2E test (Playwright): full chat interaction — send message → streaming response completes → all transient UI clears (thinking indicator, cursor) → tool call card renders and collapses → input re-enabled. Tests must exercise real user flows, not just check element existence.
 
 **Acceptance criteria:**
-- [ ] User types "Hello, what can you do?" and receives a streaming response
-- [ ] SDK built-in tools execute natively (file read, bash, etc.) — no permission prompts in Phase 2
-- [ ] Tool calls appear as expandable cards with arguments and results
-- [ ] Conversation persists across app restart
-- [ ] Model can be switched mid-session
-- [ ] Task can be canceled mid-execution
-- [ ] All Phase 2 unit and integration tests pass (`npx vitest run`)
+- [x] User types "Hello, what can you do?" and receives a streaming response
+- [x] SDK built-in tools execute natively (file read, bash, etc.) — no permission prompts in Phase 2
+- [x] Tool calls appear as expandable cards with arguments and results
+- [x] Conversation persists across app restart
+- [x] Model can be switched mid-session
+- [x] Task can be canceled mid-execution
+- [x] All Phase 2 unit and integration tests pass (`npx vitest run`)
 
 ### Phase 3: Connectors and Integrations (Weeks 5-8, overlaps Phase 2)
 
@@ -357,12 +357,23 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Queue UI: show pending, active, completed tasks
    - Task status transitions and notifications
 
-- [ ] 10. **Phase 4 tests**
+- [ ] 10. **Task context panel** (`packages/ui`, `packages/agent`) — see [PRD Section 6.10](../PRD.md#610-task-context-panel) and [Workbench mockup](tutorial/index.html#workbench)
+   - `TaskContextPanel` widget (right-side, 280px, resizable, collapsible via `Cmd+Shift+B`)
+   - **Progress section**: visual step tracker (completed/active/pending/failed states) driven by agent plan decomposition events
+   - **Downloads section**: lists files created/modified/downloaded during the task, click to preview, external-link to reveal in Finder/Explorer
+   - **Context section**: tools invoked and files referenced, click to scroll to tool call in chat or open file preview
+   - Agent service events: `onDidDecomposeTask` (plan steps), `onDidCreateFile`, `onDidInvokeTool`, `onDidReferenceFile` — renderer subscribes via IPC
+   - State is per-conversation: switching conversations updates the panel
+   - Auto-show when agent starts multi-step task, remember collapsed state per session
+
+- [ ] 11. **Phase 4 tests**
    - Unit tests: memory context loading — CLAUDE.md parsing, .github/copilot-instructions.md fallback, global memory merge
    - Unit tests: skill YAML frontmatter parsing — valid/invalid YAML, allowed tools extraction, dynamic context shell commands
    - Unit tests: hook execution — pre/post tool call hooks, timeout enforcement, hook failure isolation
    - Unit tests: task queue state machine — pending → active → completed/failed, cancel mid-execution, queue ordering
+   - Unit tests: context panel state — step progression, file list updates, context item tracking, per-conversation isolation
    - Integration test: skill invocation end-to-end — load skill definition → inject context → agent executes with skill tools
+   - Integration test: context panel receives agent events — plan decomposition → progress steps, tool invocation → context items, file creation → downloads list
    - Smoke test (`tests/smoke/phase4.ts`): run `/draft-email` skill, queue two tasks and verify sequential execution
 
 **Acceptance criteria:**
@@ -373,6 +384,9 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 - [ ] User can queue a second task while first is executing
 - [ ] Hook executes after a tool call completes
 - [ ] Tool activity panel shows full audit trail
+- [ ] Context panel shows progress steps, downloads, and referenced tools/files during a multi-step task
+- [ ] Context panel auto-shows when agent starts working, collapses via Cmd+Shift+B
+- [ ] Clicking a download opens preview; clicking a context tool scrolls to its chat card
 - [ ] All Phase 4 unit and integration tests pass (`npx vitest run`)
 
 ### Phase 5: Polish, Testing, and Launch Prep (Weeks 11-14)
