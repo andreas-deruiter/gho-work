@@ -5,3 +5,5 @@ out/
 *.tsbuildinfo
 .DS_Store
 references/
+playwright-report/
+test-results/
