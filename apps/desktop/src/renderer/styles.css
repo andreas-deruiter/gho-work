@@ -1,3 +1,6 @@
+@import './themes/light.css';
+@import './themes/dark.css';
+
 /* GHO Work — VS Code-inspired dark theme using CSS custom properties */
 
 :root {
