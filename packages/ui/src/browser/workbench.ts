@@ -3,7 +3,7 @@
  * Sets up the top-level layout and panels using Widget pattern.
  */
 import { Disposable } from '@gho-work/base';
-import type { IIPCRenderer } from '@gho-work/platform';
+import type { IIPCRenderer } from '@gho-work/platform/common';
 import { h } from './dom.js';
 import { ActivityBar } from './activityBar.js';
 import { StatusBar } from './statusBar.js';

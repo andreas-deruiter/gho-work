@@ -5,6 +5,10 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./common": "./dist/common.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

@@ -4,8 +4,8 @@
  */
 import { DisposableStore, generateUUID } from '@gho-work/base';
 import type { AgentEvent } from '@gho-work/base';
-import type { IIPCRenderer } from '@gho-work/platform';
-import { IPC_CHANNELS } from '@gho-work/platform';
+import type { IIPCRenderer } from '@gho-work/platform/common';
+import { IPC_CHANNELS } from '@gho-work/platform/common';
 
 interface ChatMessage {
   id: string;
