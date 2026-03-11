@@ -1,0 +1,25 @@
+{
+  "name": "gho-work",
+  "version": "0.0.1",
+  "private": true,
+  "description": "GHO Work - AI-powered office productivity desktop app",
+  "license": "MIT",
+  "packageManager": "npm@11.8.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "clean": "turbo clean",
+    "desktop:dev": "cd apps/desktop && npm run dev",
+    "desktop:build": "cd apps/desktop && npm run build"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@gho-work/ui",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "echo 'UI is bundled by electron-vite via apps/desktop'",
+    "clean": "echo 'nothing to clean'"
+  },
+  "dependencies": {
+    "@gho-work/base": "*",
+    "@gho-work/platform": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

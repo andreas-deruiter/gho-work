@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GHO Work — UX Design Spec &amp; Tutorial</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mockups.css">
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- TOP NAV                                                       -->
+<!-- ============================================================ -->
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <div class="top-nav-brand">
+      <div class="logo-mark">G</div>
+      <span class="logo-text">GHO Work</span>
+      <span class="logo-subtitle">UX Design Spec</span>
+    </div>
+    <div class="top-nav-links">
+      <a href="#overview">Overview</a>
+      <a href="#onboarding">Onboarding</a>
+      <a href="#workbench">Workbench</a>
+      <a href="#chat">Chat</a>
+      <a href="#permissions">Permissions</a>
+      <a href="#connectors">Connectors</a>
+      <a href="#skills">Skills</a>
+      <a href="#documents">Documents</a>
+      <a href="#settings">Settings</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================================================ -->
+<!-- HERO                                                          -->
+<!-- ============================================================ -->
+<header class="hero" id="overview">
+  <div class="hero-inner">
+    <h1>GHO Work</h1>
+    <p class="hero-tagline">The AI-powered office that runs on your machine, not in the cloud admin console.</p>
+    <p class="hero-desc">This document is a living UX specification for GHO Work — an Electron desktop app that brings agentic AI to office productivity via the GitHub Copilot SDK. Every screen, flow, and interaction pattern is defined here as the reference for implementation.</p>
+    <div class="hero-meta">
+      <span class="meta-chip">Version 0.1</span>
+      <span class="meta-chip">March 2026</span>
+      <span class="meta-chip">macOS &amp; Windows</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<!-- TABLE OF CONTENTS                                             -->
+<!-- ============================================================ -->
+<section class="toc-section">
+  <div class="container">
+    <h2>Contents</h2>
+    <div class="toc-grid">
+      <a href="#overview" class="toc-card">
+        <span class="toc-num">1</span>
+        <span class="toc-title">Product Overview</span>
+        <span class="toc-desc">Vision, personas, and key concepts</span>
+      </a>
+      <a href="#onboarding" class="toc-card">
+        <span class="toc-num">2</span>
+        <span class="toc-title">Onboarding</span>
+        <span class="toc-desc">First launch, sign-in, setup wizard</span>
+      </a>
+      <a href="#workbench" class="toc-card">
+        <span class="toc-num">3</span>
+        <span class="toc-title">Workbench Layout</span>
+        <span class="toc-desc">Main window, sidebar, panels, status bar</span>
+      </a>
+      <a href="#chat" class="toc-card">
+        <span class="toc-num">4</span>
+        <span class="toc-title">Chat Interface</span>
+        <span class="toc-desc">Messages, streaming, tool calls, input</span>
+      </a>
+      <a href="#permissions" class="toc-card">
+        <span class="toc-num">5</span>
+        <span class="toc-title">Permissions</span>
+        <span class="toc-desc">Approval dialogs, rules, audit log</span>
+      </a>
+      <a href="#connectors" class="toc-card">
+        <span class="toc-num">6</span>
+        <span class="toc-title">Connectors</span>
+        <span class="toc-desc">MCP servers, CLI tools, registry browser</span>
+      </a>
+      <a href="#skills" class="toc-card">
+        <span class="toc-num">7</span>
+        <span class="toc-title">Skills &amp; Commands</span>
+        <span class="toc-desc">Slash commands, custom skills, hooks</span>
+      </a>
+      <a href="#documents" class="toc-card">
+        <span class="toc-num">8</span>
+        <span class="toc-title">Documents &amp; Export</span>
+        <span class="toc-desc">Markdown preview, DOCX/PDF export</span>
+      </a>
+      <a href="#task-queue" class="toc-card">
+        <span class="toc-num">9</span>
+        <span class="toc-title">Task Queue</span>
+        <span class="toc-desc">Parallel tasks, queue management</span>
+      </a>
+      <a href="#settings" class="toc-card">
+        <span class="toc-num">10</span>
+        <span class="toc-title">Settings</span>
+        <span class="toc-desc">Preferences, theming, workspace config</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 1. PRODUCT OVERVIEW                                           -->
+<!-- ============================================================ -->
+<section class="spec-section" id="product-overview">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">1</span>
+      <h2>Product Overview</h2>
+    </div>
+
+    <div class="prose">
+      <p>GHO Work is a desktop app for macOS and Windows that gives knowledge workers an AI agent capable of executing multi-step office tasks autonomously. It is powered by the GitHub Copilot SDK and connects to external services via MCP (Model Context Protocol) servers and CLI tools.</p>
+    </div>
+
+    <h3>Core UX Principles</h3>
+    <div class="principles-grid">
+      <div class="principle-card">
+        <div class="principle-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h4>User in Control</h4>
+        <p>Every action the agent takes requires explicit or pre-approved permission. The user can see, approve, deny, and audit everything.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h4>Progressive Disclosure</h4>
+        <p>Simple tasks are simple. Power features (custom skills, permission rules, hooks) reveal themselves as users grow.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h4>Desktop-Native Feel</h4>
+        <p>Keyboard-first, fast, responsive. Follows OS conventions for menus, shortcuts, and window management. Feels like VS Code, not a web app.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/><path d="M9 4v16"/></svg>
+        </div>
+        <h4>Transparent Agent Work</h4>
+        <p>Tool calls, data access, and reasoning are always visible. No hidden actions. The tool activity panel shows everything.</p>
+      </div>
+    </div>
+
+    <h3>Target Personas</h3>
+    <div class="persona-grid">
+      <div class="persona-card">
+        <div class="persona-avatar" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">DM</div>
+        <div class="persona-info">
+          <h4>The Developer Who Also Manages</h4>
+          <p>Software engineer or tech lead who already uses GitHub Copilot for code and wants the same AI-powered workflow for docs, reports, email, and project management.</p>
+          <div class="persona-tags">
+            <span>Primary</span>
+          </div>
+        </div>
+      </div>
+      <div class="persona-card">
+        <div class="persona-avatar" style="background: linear-gradient(135deg, #059669, #10b981);">PK</div>
+        <div class="persona-info">
+          <h4>The Power Knowledge Worker</h4>
+          <p>Tech-savvy professional working across multiple tools (Google Docs, Slack, Jira, spreadsheets) who values autonomy over IT-managed solutions.</p>
+          <div class="persona-tags">
+            <span>Secondary</span>
+          </div>
+        </div>
+      </div>
+      <div class="persona-card">
+        <div class="persona-avatar" style="background: linear-gradient(135deg, #d97706, #f59e0b);">ST</div>
+        <div class="persona-info">
+          <h4>The Startup Team</h4>
+          <p>Small team (5-50) using mixed SaaS tools. Has GitHub Copilot for devs but can't justify M365 Copilot pricing for AI-assisted productivity.</p>
+          <div class="persona-tags">
+            <span>Tertiary</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Key Concepts</h3>
+    <div class="concept-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Concept</th>
+            <th>What It Is</th>
+            <th>Where in the UI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Workspace</strong></td>
+            <td>A folder on disk that scopes conversations, permissions, and memory files (CLAUDE.md)</td>
+            <td>Workspace picker, sidebar header, status bar</td>
+          </tr>
+          <tr>
+            <td><strong>Conversation</strong></td>
+            <td>A chat session with the agent. Persists across restarts. Contains messages and tool call history.</td>
+            <td>Sidebar conversation list, chat panel</td>
+          </tr>
+          <tr>
+            <td><strong>Connector</strong></td>
+            <td>An MCP server or CLI tool that gives the agent access to an external service</td>
+            <td>Settings &gt; Connectors, status bar indicators</td>
+          </tr>
+          <tr>
+            <td><strong>Skill</strong></td>
+            <td>A reusable prompt template invoked via slash command (e.g., /draft-email)</td>
+            <td>Chat input autocomplete, Skills panel</td>
+          </tr>
+          <tr>
+            <td><strong>Tool</strong></td>
+            <td>A specific action the agent can take (read file, send Slack message, run shell command)</td>
+            <td>Tool call cards in chat, Tool Activity panel</td>
+          </tr>
+          <tr>
+            <td><strong>Permission Rule</strong></td>
+            <td>A saved decision about whether a tool is always allowed or always denied</td>
+            <td>Permission dialogs, Settings &gt; Permissions</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 2. ONBOARDING                                                 -->
+<!-- ============================================================ -->
+<section class="spec-section alt-bg" id="onboarding">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">2</span>
+      <h2>Onboarding Flow</h2>
+    </div>
+
+    <div class="prose">
+      <p>The onboarding flow appears on first launch and guides the user through authentication, CLI tool detection, and first connector setup. Target: under 10 minutes from install to first productive task.</p>
+    </div>
+
+    <h3>Step 1: Welcome Screen</h3>
+    <div class="spec-note">Shown on first launch only. Clean, centered layout with the GHO Work brand.</div>
+
+    <!-- MOCKUP: Welcome -->
+    <div class="mockup-frame">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work</span>
+      </div>
+      <div class="mockup-body onboarding-welcome">
+        <div class="onb-welcome-content">
+          <div class="onb-logo">
+            <div class="onb-logo-mark">G</div>
+          </div>
+          <h2>Welcome to GHO Work</h2>
+          <p class="onb-tagline">Your AI-powered office assistant, running locally on your machine.</p>
+          <div class="onb-features">
+            <div class="onb-feature">
+              <div class="onb-feature-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <span>Chat with an AI agent that can take real actions</span>
+            </div>
+            <div class="onb-feature">
+              <div class="onb-feature-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <span>You approve every action before it executes</span>
+            </div>
+            <div class="onb-feature">
+              <div class="onb-feature-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m-7-7h6m6 0h6"/></svg>
+              </div>
+              <span>Connect to Google, Microsoft, Slack, and more via MCP</span>
+            </div>
+          </div>
+          <button class="btn-primary btn-large">Sign in with GitHub</button>
+          <p class="onb-footnote">Requires a GitHub account with Copilot subscription (Free tier works)</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Step 2: GitHub Authentication</h3>
+    <div class="spec-note">Opens the system browser for GitHub OAuth (PKCE flow). The app shows a waiting state.</div>
+
+    <div class="mockup-frame">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work</span>
+      </div>
+      <div class="mockup-body onboarding-auth">
+        <div class="onb-auth-content">
+          <div class="onb-spinner"></div>
+          <h3>Waiting for GitHub sign-in...</h3>
+          <p>A browser window has opened. Complete the sign-in there, then return here.</p>
+          <div class="onb-auth-steps">
+            <div class="onb-auth-step completed">
+              <span class="step-check">&#10003;</span>
+              <span>Browser opened</span>
+            </div>
+            <div class="onb-auth-step active">
+              <span class="step-dot"></span>
+              <span>Authorize GHO Work on GitHub</span>
+            </div>
+            <div class="onb-auth-step">
+              <span class="step-dot"></span>
+              <span>Verify Copilot subscription</span>
+            </div>
+          </div>
+          <button class="btn-text">Retry sign-in</button>
+        </div>
+      </div>
+    </div>
+
+    <h3>Step 3: Copilot Verification</h3>
+    <div class="spec-note">After OAuth completes, the app verifies the Copilot subscription tier and available models.</div>
+
+    <div class="mockup-frame">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work</span>
+      </div>
+      <div class="mockup-body onboarding-verified">
+        <div class="onb-verified-content">
+          <div class="onb-user-card">
+            <div class="onb-user-avatar">AD</div>
+            <div class="onb-user-info">
+              <span class="onb-user-name">Andreas de Ruiter</span>
+              <span class="onb-user-login">@andreasderuiter</span>
+            </div>
+            <span class="onb-tier-badge">Copilot Pro</span>
+          </div>
+          <div class="onb-models-available">
+            <h4>Available Models</h4>
+            <div class="onb-model-list">
+              <div class="onb-model-item">
+                <span class="model-dot active"></span>
+                <span class="model-name">Claude Sonnet 4.5</span>
+                <span class="model-tag default">Default</span>
+              </div>
+              <div class="onb-model-item">
+                <span class="model-dot active"></span>
+                <span class="model-name">Claude Opus 4.6</span>
+                <span class="model-tag"></span>
+              </div>
+              <div class="onb-model-item">
+                <span class="model-dot active"></span>
+                <span class="model-name">GPT-5.x</span>
+                <span class="model-tag"></span>
+              </div>
+              <div class="onb-model-item">
+                <span class="model-dot active"></span>
+                <span class="model-name">Claude Haiku 4.5</span>
+                <span class="model-tag fast">Fast</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn-primary">Continue Setup</button>
+        </div>
+      </div>
+    </div>
+
+    <h3>Step 4: CLI Tool Detection</h3>
+    <div class="spec-note">Scans PATH for known CLI tools. Shows status and install guidance for missing tools.</div>
+
+    <div class="mockup-frame">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Setup</span>
+      </div>
+      <div class="mockup-body onboarding-cli">
+        <div class="onb-cli-content">
+          <h3>CLI Tools Detected</h3>
+          <p>GHO Work can use these CLI tools to interact with external services.</p>
+          <div class="cli-detect-list">
+            <div class="cli-detect-item found">
+              <span class="cli-status-icon found">&#10003;</span>
+              <div class="cli-info">
+                <span class="cli-name">gh</span>
+                <span class="cli-desc">GitHub CLI — Issues, PRs, repos</span>
+              </div>
+              <span class="cli-version">v2.67.0</span>
+            </div>
+            <div class="cli-detect-item found">
+              <span class="cli-status-icon found">&#10003;</span>
+              <div class="cli-info">
+                <span class="cli-name">mgc</span>
+                <span class="cli-desc">Microsoft Graph CLI — OneDrive, Outlook, Teams</span>
+              </div>
+              <span class="cli-version">v1.14.0</span>
+            </div>
+            <div class="cli-detect-item found">
+              <span class="cli-status-icon found">&#10003;</span>
+              <div class="cli-info">
+                <span class="cli-name">pandoc</span>
+                <span class="cli-desc">Document conversion — DOCX, PDF, HTML</span>
+              </div>
+              <span class="cli-version">v3.6.1</span>
+            </div>
+            <div class="cli-detect-item missing">
+              <span class="cli-status-icon missing">&#10005;</span>
+              <div class="cli-info">
+                <span class="cli-name">az</span>
+                <span class="cli-desc">Azure CLI — Cloud resources</span>
+              </div>
+              <a href="#" class="cli-install-link">Install guide</a>
+            </div>
+            <div class="cli-detect-item missing">
+              <span class="cli-status-icon missing">&#10005;</span>
+              <div class="cli-info">
+                <span class="cli-name">gcloud</span>
+                <span class="cli-desc">Google Cloud CLI</span>
+              </div>
+              <a href="#" class="cli-install-link">Install guide</a>
+            </div>
+          </div>
+          <p class="cli-note">Missing tools are optional. You can install them later from Settings &gt; Connectors.</p>
+          <button class="btn-primary">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <h3>Step 5: First Connector (Optional)</h3>
+    <div class="spec-note">Suggests popular connectors. User can skip and configure later.</div>
+
+    <div class="mockup-frame">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Setup</span>
+      </div>
+      <div class="mockup-body onboarding-connectors">
+        <div class="onb-connectors-content">
+          <h3>Connect Your Services</h3>
+          <p>Add MCP servers to let the agent access your favorite services. You can always add more later.</p>
+          <div class="onb-connector-grid">
+            <div class="onb-connector-card">
+              <div class="connector-icon gdrive"></div>
+              <span class="connector-label">Google Drive</span>
+              <span class="connector-type">MCP Registry</span>
+              <button class="btn-small btn-outline">Add</button>
+            </div>
+            <div class="onb-connector-card">
+              <div class="connector-icon slack"></div>
+              <span class="connector-label">Slack</span>
+              <span class="connector-type">Remote MCP</span>
+              <button class="btn-small btn-outline">Add</button>
+            </div>
+            <div class="onb-connector-card">
+              <div class="connector-icon gmail"></div>
+              <span class="connector-label">Gmail</span>
+              <span class="connector-type">MCP Registry</span>
+              <button class="btn-small btn-outline">Add</button>
+            </div>
+            <div class="onb-connector-card">
+              <div class="connector-icon gcal"></div>
+              <span class="connector-label">Google Calendar</span>
+              <span class="connector-type">MCP Registry</span>
+              <button class="btn-small btn-outline">Add</button>
+            </div>
+            <div class="onb-connector-card">
+              <div class="connector-icon jira"></div>
+              <span class="connector-label">Jira</span>
+              <span class="connector-type">Remote MCP</span>
+              <button class="btn-small btn-outline">Add</button>
+            </div>
+            <div class="onb-connector-card">
+              <div class="connector-icon notion"></div>
+              <span class="connector-label">Notion</span>
+              <span class="connector-type">MCP Registry</span>
+              <button class="btn-small btn-outline">Add</button>
+            </div>
+          </div>
+          <div class="onb-connector-actions">
+            <button class="btn-text">Browse MCP Registry</button>
+            <button class="btn-primary">Start Using GHO Work</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Onboarding Flow Diagram</h3>
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-node">Welcome Screen</div>
+        <div class="flow-arrow"></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-node">GitHub OAuth (browser)</div>
+        <div class="flow-arrow"></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-node">Copilot Verification</div>
+        <div class="flow-arrow"></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-node">CLI Detection</div>
+        <div class="flow-arrow"></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-node">First Connector</div>
+        <div class="flow-arrow"></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-node highlight">Workbench</div>
+      </div>
+    </div>
+
+    <div class="spec-callout">
+      <h4>Design Notes</h4>
+      <ul>
+        <li>The onboarding flow uses a single centered card layout — no sidebar, no panels.</li>
+        <li>Each step has a clear primary action button. Back navigation via browser-style back or breadcrumb.</li>
+        <li>The connector step is skippable — the CTA says "Start Using GHO Work" regardless of whether connectors were added.</li>
+        <li>On subsequent launches, the app opens directly to the workbench with the last workspace.</li>
+        <li>If the Copilot subscription check fails, show a clear error with a link to subscribe.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 3. WORKBENCH LAYOUT                                           -->
+<!-- ============================================================ -->
+<section class="spec-section" id="workbench">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">3</span>
+      <h2>Workbench Layout</h2>
+    </div>
+
+    <div class="prose">
+      <p>The main application window uses a VS Code-inspired layout with a collapsible sidebar, main content area, and status bar. The layout is keyboard-navigable and adapts to window resizing.</p>
+    </div>
+
+    <h3>Full Workbench</h3>
+    <div class="spec-note">The default state after onboarding. Sidebar open, chat panel active, status bar at bottom.</div>
+
+    <!-- MOCKUP: Full workbench -->
+    <div class="mockup-frame large">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — ~/Projects/sales-reports</span>
+      </div>
+      <div class="mockup-body workbench">
+        <!-- Activity Bar -->
+        <div class="wb-activitybar">
+          <div class="ab-icon active" title="Chat">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="ab-icon" title="Tool Activity">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </div>
+          <div class="ab-icon" title="Connectors">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg>
+          </div>
+          <div class="ab-icon" title="Documents">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+          </div>
+          <div class="ab-spacer"></div>
+          <div class="ab-icon" title="Settings">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="wb-sidebar">
+          <div class="sidebar-header">
+            <span class="sidebar-title">Conversations</span>
+            <button class="sidebar-action" title="New Conversation">+</button>
+          </div>
+          <div class="sidebar-search">
+            <input type="text" placeholder="Search conversations..." disabled>
+          </div>
+          <div class="sidebar-list">
+            <div class="sidebar-item active">
+              <span class="sidebar-item-title">Weekly sales report</span>
+              <span class="sidebar-item-time">2 min ago</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-item-title">Q1 budget analysis</span>
+              <span class="sidebar-item-time">1 hour ago</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-item-title">Draft email to investors</span>
+              <span class="sidebar-item-time">Yesterday</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-item-title">Meeting prep: Board review</span>
+              <span class="sidebar-item-time">2 days ago</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-item-title">Summarize customer feedback</span>
+              <span class="sidebar-item-time">3 days ago</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main panel -->
+        <div class="wb-main">
+          <div class="main-header">
+            <h3 class="main-title">Weekly sales report</h3>
+            <div class="main-header-actions">
+              <span class="model-selector">
+                <span class="model-dot active"></span>
+                Claude Sonnet 4.5
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="chat-messages">
+            <div class="chat-msg user">
+              <div class="msg-content">Summarize last week's sales data from the spreadsheet in Google Sheets and draft a Slack message for the #sales channel with the highlights.</div>
+            </div>
+            <div class="chat-msg assistant">
+              <div class="msg-content">
+                I'll help you with that. Let me fetch the sales data first, then draft the message.
+              </div>
+              <div class="tool-call-card">
+                <div class="tool-call-header">
+                  <span class="tool-call-icon approved">&#10003;</span>
+                  <span class="tool-call-name">google-sheets / getCellRange</span>
+                  <span class="tool-call-status done">Done — 1.2s</span>
+                  <span class="tool-call-expand">&#9660;</span>
+                </div>
+              </div>
+              <div class="msg-content">
+                Here's what I found in last week's sales data:
+
+                <strong>Key Highlights:</strong>
+                <ul>
+                  <li>Total revenue: $142,500 (+12% vs prior week)</li>
+                  <li>New deals closed: 8 (up from 5)</li>
+                  <li>Top performer: Sarah Chen — $48,200</li>
+                  <li>Pipeline growth: $320K added</li>
+                </ul>
+
+                I'll now draft the Slack message:
+              </div>
+              <div class="tool-call-card pending">
+                <div class="tool-call-header">
+                  <span class="tool-call-icon pending">&#8987;</span>
+                  <span class="tool-call-name">slack / postMessage</span>
+                  <span class="tool-call-status pending">Awaiting approval</span>
+                </div>
+                <div class="tool-call-body">
+                  <div class="tool-call-args">
+                    <div class="arg-label">channel</div>
+                    <div class="arg-value">#sales</div>
+                    <div class="arg-label">message</div>
+                    <div class="arg-value msg-preview">Weekly Sales Update (Mar 3-7)
+Great week team! Revenue hit $142.5K...</div>
+                  </div>
+                  <div class="tool-call-actions">
+                    <button class="btn-approve">Allow Once</button>
+                    <button class="btn-approve-always">Allow Always</button>
+                    <button class="btn-deny">Deny</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <div class="chat-input-bar">
+              <input type="text" placeholder="Ask GHO Work anything... (/ for commands)" disabled>
+              <button class="chat-send-btn" title="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              </button>
+            </div>
+            <div class="chat-input-hints">
+              <span>Enter to send</span>
+              <span>Shift+Enter for newline</span>
+              <span>/ for commands</span>
+              <span>Esc to cancel</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status bar -->
+        <div class="wb-statusbar">
+          <div class="sb-left">
+            <span class="sb-item workspace">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              ~/Projects/sales-reports
+            </span>
+            <span class="sb-item connectors-status">
+              <span class="sb-dot green"></span> 3 connectors
+            </span>
+          </div>
+          <div class="sb-right">
+            <span class="sb-item">Claude Sonnet 4.5</span>
+            <span class="sb-item">
+              <span class="sb-dot green"></span> Agent idle
+            </span>
+            <span class="sb-item user-item">
+              <span class="sb-avatar">AD</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Layout Anatomy</h3>
+    <div class="anatomy-grid">
+      <div class="anatomy-item">
+        <div class="anatomy-label">A</div>
+        <h4>Activity Bar</h4>
+        <p>Leftmost strip. Icon buttons for switching sidebar views: Chat, Tool Activity, Connectors, Documents. Settings at the bottom. 48px wide, dark background.</p>
+      </div>
+      <div class="anatomy-item">
+        <div class="anatomy-label">B</div>
+        <h4>Sidebar</h4>
+        <p>240px wide (resizable, collapsible via Cmd+B). Content changes based on Activity Bar selection. Default: conversation list with search.</p>
+      </div>
+      <div class="anatomy-item">
+        <div class="anatomy-label">C</div>
+        <h4>Main Panel</h4>
+        <p>Takes remaining width. Contains the active view: Chat (default), Document Preview, or Settings. Has its own header with context-specific actions.</p>
+      </div>
+      <div class="anatomy-item">
+        <div class="anatomy-label">D</div>
+        <h4>Status Bar</h4>
+        <p>Full-width bottom strip, 24px tall. Shows: workspace path, connector status, active model, agent state, user avatar.</p>
+      </div>
+    </div>
+
+    <h3>Sidebar Views</h3>
+    <div class="sidebar-views-grid">
+      <div class="sidebar-view-card">
+        <h4>Chat (Default)</h4>
+        <ul>
+          <li>New conversation button (+)</li>
+          <li>Search bar to filter conversations</li>
+          <li>Conversation list sorted by recency</li>
+          <li>Each item: title, timestamp</li>
+          <li>Right-click: rename, archive, delete</li>
+        </ul>
+      </div>
+      <div class="sidebar-view-card">
+        <h4>Tool Activity</h4>
+        <ul>
+          <li>Live feed of tool calls across sessions</li>
+          <li>Filter by: server, status, time range</li>
+          <li>Each item: tool name, status, duration</li>
+          <li>Click to expand: args, result, approval</li>
+          <li>Full audit log viewer</li>
+        </ul>
+      </div>
+      <div class="sidebar-view-card">
+        <h4>Connectors</h4>
+        <ul>
+          <li>List of configured MCP servers &amp; CLIs</li>
+          <li>Status indicator per connector</li>
+          <li>Quick enable/disable toggle</li>
+          <li>Add connector button (opens settings)</li>
+          <li>Tool count per server</li>
+        </ul>
+      </div>
+      <div class="sidebar-view-card">
+        <h4>Documents</h4>
+        <ul>
+          <li>Files in current workspace</li>
+          <li>Quick access to generated docs</li>
+          <li>File tree with type icons</li>
+          <li>Click to preview in main panel</li>
+          <li>Export actions (DOCX, PDF)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="spec-callout">
+      <h4>Keyboard Shortcuts</h4>
+      <table class="shortcut-table">
+        <tr><td><kbd>Cmd+B</kbd></td><td>Toggle sidebar</td></tr>
+        <tr><td><kbd>Cmd+N</kbd></td><td>New conversation</td></tr>
+        <tr><td><kbd>Cmd+K</kbd></td><td>Quick command palette</td></tr>
+        <tr><td><kbd>Cmd+,</kbd></td><td>Open settings</td></tr>
+        <tr><td><kbd>Cmd+1-4</kbd></td><td>Switch activity bar view</td></tr>
+        <tr><td><kbd>Cmd+L</kbd></td><td>Focus chat input</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Cancel current agent task</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 4. CHAT INTERFACE                                             -->
+<!-- ============================================================ -->
+<section class="spec-section alt-bg" id="chat">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">4</span>
+      <h2>Chat Interface</h2>
+    </div>
+
+    <div class="prose">
+      <p>The chat panel is the primary interaction surface. It displays a threaded conversation with the AI agent, including streaming text, tool call cards, permission prompts, and rich content rendering.</p>
+    </div>
+
+    <h3>Message Types</h3>
+
+    <div class="message-types-grid">
+      <div class="msg-type-card">
+        <h4>User Message</h4>
+        <div class="msg-type-example">
+          <div class="chat-msg user compact">
+            <div class="msg-content">Summarize the Q1 financial report and highlight any red flags.</div>
+          </div>
+        </div>
+        <p>Right-aligned, accent background. Supports multi-line input and file attachments (drag-and-drop).</p>
+      </div>
+
+      <div class="msg-type-card">
+        <h4>Assistant Text</h4>
+        <div class="msg-type-example">
+          <div class="chat-msg assistant compact">
+            <div class="msg-content">I'll read the Q1 report and analyze it for you. Let me start by fetching the document.</div>
+          </div>
+        </div>
+        <p>Left-aligned, renders Markdown (headings, lists, bold, code blocks, tables). Streams token-by-token.</p>
+      </div>
+
+      <div class="msg-type-card">
+        <h4>Tool Call (Completed)</h4>
+        <div class="msg-type-example">
+          <div class="tool-call-card compact">
+            <div class="tool-call-header">
+              <span class="tool-call-icon approved">&#10003;</span>
+              <span class="tool-call-name">FileRead</span>
+              <span class="tool-call-status done">Done — 0.3s</span>
+              <span class="tool-call-expand">&#9654;</span>
+            </div>
+          </div>
+        </div>
+        <p>Collapsible card. Collapsed by default after completion. Expand to see arguments and result.</p>
+      </div>
+
+      <div class="msg-type-card">
+        <h4>Tool Call (Pending Approval)</h4>
+        <div class="msg-type-example">
+          <div class="tool-call-card pending compact">
+            <div class="tool-call-header">
+              <span class="tool-call-icon pending">&#8987;</span>
+              <span class="tool-call-name">Bash</span>
+              <span class="tool-call-status pending">Awaiting approval</span>
+            </div>
+          </div>
+        </div>
+        <p>Highlighted border, shows approval buttons inline. Agent pauses until user responds.</p>
+      </div>
+
+      <div class="msg-type-card">
+        <h4>Tool Call (Failed)</h4>
+        <div class="msg-type-example">
+          <div class="tool-call-card failed compact">
+            <div class="tool-call-header">
+              <span class="tool-call-icon failed">&#10005;</span>
+              <span class="tool-call-name">google-drive / readFile</span>
+              <span class="tool-call-status failed">Error</span>
+              <span class="tool-call-expand">&#9654;</span>
+            </div>
+          </div>
+        </div>
+        <p>Red accent. Expand to see error message. Agent automatically attempts recovery or reports failure.</p>
+      </div>
+
+      <div class="msg-type-card">
+        <h4>Thinking Indicator</h4>
+        <div class="msg-type-example">
+          <div class="thinking-indicator">
+            <div class="thinking-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <span class="thinking-label">Analyzing spreadsheet data...</span>
+          </div>
+        </div>
+        <p>Shows when the agent is reasoning. Displays a label from the agent's current step. Animated dots.</p>
+      </div>
+    </div>
+
+    <h3>Streaming Response</h3>
+    <div class="spec-note">Text streams token-by-token. Tool calls appear inline as they are invoked. The message grows as the agent works.</div>
+
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Streaming Response</span>
+      </div>
+      <div class="mockup-body chat-streaming">
+        <div class="chat-messages">
+          <div class="chat-msg user">
+            <div class="msg-content">Prepare a meeting agenda for tomorrow's 1:1 with Sarah. Check my calendar and recent Slack threads with her.</div>
+          </div>
+          <div class="chat-msg assistant">
+            <div class="msg-content">
+              I'll gather the context for your 1:1 with Sarah. Let me check your calendar and Slack conversations.
+            </div>
+            <div class="tool-call-card">
+              <div class="tool-call-header">
+                <span class="tool-call-icon approved">&#10003;</span>
+                <span class="tool-call-name">google-calendar / getEvents</span>
+                <span class="tool-call-status done">Done — 0.8s</span>
+              </div>
+            </div>
+            <div class="tool-call-card">
+              <div class="tool-call-header">
+                <span class="tool-call-icon approved">&#10003;</span>
+                <span class="tool-call-name">slack / searchMessages</span>
+                <span class="tool-call-status done">Done — 1.1s</span>
+              </div>
+            </div>
+            <div class="msg-content streaming">
+              Here's a draft agenda for your 1:1 with Sarah Chen tomorrow at 10:00 AM:
+
+              <strong>1:1 Agenda — Sarah Chen (Mar 12, 10:00 AM)</strong>
+
+              <strong>1. Project Phoenix Update</strong>
+              Sarah mentioned in #eng-team on Monday that the API migration is 80% complete. Discuss timeline for the remaining 20% and any blockers.
+
+              <strong>2. Q2 Hiring</strong>
+              From your calendar: you have a "Headcount Planning" meeting on Thursday. Get Sarah's input on the senior eng role before that.
+
+              <strong>3. Feedback on PR #482</strong>
+              Sarah's large PR has been open for 3 days. Discuss review<span class="cursor-blink">|</span>
+            </div>
+          </div>
+        </div>
+        <div class="streaming-status">
+          <button class="btn-cancel">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            Stop generating
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <h3>Chat Input</h3>
+    <div class="chat-input-spec">
+      <div class="input-feature">
+        <h4>Text Input</h4>
+        <p>Auto-growing textarea. Enter to send, Shift+Enter for newline. Supports pasting long text.</p>
+      </div>
+      <div class="input-feature">
+        <h4>Slash Commands</h4>
+        <p>Type <code>/</code> to open the command palette inline. Shows available skills and system commands.</p>
+      </div>
+      <div class="input-feature">
+        <h4>File Drag &amp; Drop</h4>
+        <p>Drop files onto the input area to attach them. Shows file pills with name and size.</p>
+      </div>
+      <div class="input-feature">
+        <h4>Model Selector</h4>
+        <p>In the main panel header. Dropdown to switch models mid-conversation. Also accessible via <code>/model</code>.</p>
+      </div>
+    </div>
+
+    <h3>Slash Command Autocomplete</h3>
+
+    <div class="mockup-frame small">
+      <div class="mockup-body slash-autocomplete">
+        <div class="autocomplete-popup">
+          <div class="autocomplete-item active">
+            <span class="ac-icon">/</span>
+            <div class="ac-info">
+              <span class="ac-name">/draft-email</span>
+              <span class="ac-desc">Draft an email from a brief description</span>
+            </div>
+          </div>
+          <div class="autocomplete-item">
+            <span class="ac-icon">/</span>
+            <div class="ac-info">
+              <span class="ac-name">/data-analysis</span>
+              <span class="ac-desc">Analyze a spreadsheet or CSV</span>
+            </div>
+          </div>
+          <div class="autocomplete-item">
+            <span class="ac-icon">/</span>
+            <div class="ac-info">
+              <span class="ac-name">/meeting-prep</span>
+              <span class="ac-desc">Prepare for an upcoming meeting</span>
+            </div>
+          </div>
+          <div class="autocomplete-item">
+            <span class="ac-icon">/</span>
+            <div class="ac-info">
+              <span class="ac-name">/summarize-doc</span>
+              <span class="ac-desc">Summarize a document or set of documents</span>
+            </div>
+          </div>
+          <div class="autocomplete-item">
+            <span class="ac-icon">/</span>
+            <div class="ac-info">
+              <span class="ac-name">/weekly-report</span>
+              <span class="ac-desc">Generate a weekly summary from multiple sources</span>
+            </div>
+          </div>
+          <div class="autocomplete-divider"></div>
+          <div class="autocomplete-item">
+            <span class="ac-icon sys">#</span>
+            <div class="ac-info">
+              <span class="ac-name">/model</span>
+              <span class="ac-desc">Switch the AI model</span>
+            </div>
+          </div>
+          <div class="autocomplete-item">
+            <span class="ac-icon sys">#</span>
+            <div class="ac-info">
+              <span class="ac-name">/clear</span>
+              <span class="ac-desc">Start a new conversation</span>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-bar">
+          <input type="text" value="/" disabled>
+        </div>
+      </div>
+    </div>
+
+    <h3>Tool Call Card — Expanded View</h3>
+    <div class="spec-note">Clicking the expand arrow on any tool call card reveals the full details.</div>
+
+    <div class="mockup-frame small">
+      <div class="mockup-body tool-expanded">
+        <div class="tool-call-card expanded">
+          <div class="tool-call-header">
+            <span class="tool-call-icon approved">&#10003;</span>
+            <span class="tool-call-name">google-sheets / getCellRange</span>
+            <span class="tool-call-status done">Done — 1.2s</span>
+            <span class="tool-call-expand open">&#9660;</span>
+          </div>
+          <div class="tool-call-body">
+            <div class="tool-call-section">
+              <div class="tcs-label">Server</div>
+              <div class="tcs-value">google-sheets (MCP, stdio)</div>
+            </div>
+            <div class="tool-call-section">
+              <div class="tcs-label">Arguments</div>
+              <div class="tcs-code"><pre>{
+  "spreadsheetId": "1BxiMVs0XRA5nFMdKvBd...",
+  "range": "Sales!A1:F52",
+  "format": "json"
+}</pre></div>
+            </div>
+            <div class="tool-call-section">
+              <div class="tcs-label">Result</div>
+              <div class="tcs-code"><pre>{
+  "rows": 51,
+  "columns": ["Date", "Rep", "Deal", "Value", "Stage", "Notes"],
+  "data": [...]
+}</pre></div>
+            </div>
+            <div class="tool-call-section">
+              <div class="tcs-label">Permission</div>
+              <div class="tcs-value">Allowed (rule: google-sheets/* → allow always)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 5. PERMISSIONS                                                -->
+<!-- ============================================================ -->
+<section class="spec-section" id="permissions">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">5</span>
+      <h2>Permissions System</h2>
+    </div>
+
+    <div class="prose">
+      <p>Every tool call goes through the permission system. The user controls what the agent can do, with four decision levels: Allow Once, Allow Always, Deny, and Deny Always. This is the core trust mechanism.</p>
+    </div>
+
+    <h3>Inline Permission Prompt</h3>
+    <div class="spec-note">Appears directly in the chat flow when the agent wants to execute a tool that has no saved rule. The agent pauses until the user decides.</div>
+
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Permission Request</span>
+      </div>
+      <div class="mockup-body permission-inline">
+        <div class="chat-messages">
+          <div class="chat-msg assistant">
+            <div class="msg-content">I'll send the report to the #sales channel now.</div>
+            <div class="permission-card">
+              <div class="perm-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span class="perm-title">Permission Required</span>
+              </div>
+              <div class="perm-body">
+                <div class="perm-tool">
+                  <span class="perm-tool-name">slack / postMessage</span>
+                  <span class="perm-tool-server">via Slack MCP Server</span>
+                </div>
+                <div class="perm-args">
+                  <div class="perm-arg">
+                    <span class="perm-arg-key">channel:</span>
+                    <span class="perm-arg-val">#sales</span>
+                  </div>
+                  <div class="perm-arg">
+                    <span class="perm-arg-key">message:</span>
+                    <span class="perm-arg-val preview">Weekly Sales Update (Mar 3-7)
+
+Great week, team! Here are the highlights:
+- Total revenue: $142,500 (+12% vs prior week)
+- New deals closed: 8 (up from 5)
+- Top performer: Sarah Chen — $48,200
+- Pipeline growth: $320K added
+
+Keep the momentum going!</span>
+                  </div>
+                </div>
+              </div>
+              <div class="perm-actions">
+                <div class="perm-actions-left">
+                  <button class="btn-approve">Allow Once</button>
+                  <button class="btn-approve-always">Allow Always</button>
+                </div>
+                <div class="perm-actions-right">
+                  <button class="btn-deny">Deny</button>
+                  <button class="btn-deny-always">Deny Always</button>
+                </div>
+              </div>
+              <div class="perm-footnote">
+                "Allow Always" will create a rule: <code>slack/postMessage</code> → always allow
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Permission Decisions</h3>
+    <div class="perm-decisions-grid">
+      <div class="perm-decision-card allow-once">
+        <h4>Allow Once</h4>
+        <p>Approve this specific tool call. No rule is saved. Next time the same tool is called, the prompt appears again.</p>
+        <div class="perm-decision-key"><kbd>Enter</kbd></div>
+      </div>
+      <div class="perm-decision-card allow-always">
+        <h4>Allow Always</h4>
+        <p>Create a persistent rule. This tool (from this server) will be auto-approved in future. Rule is visible in Settings &gt; Permissions.</p>
+        <div class="perm-decision-key"><kbd>Shift+Enter</kbd></div>
+      </div>
+      <div class="perm-decision-card deny-once">
+        <h4>Deny</h4>
+        <p>Block this specific call. The agent is notified and will try an alternative approach or explain what it couldn't do.</p>
+        <div class="perm-decision-key"><kbd>Esc</kbd></div>
+      </div>
+      <div class="perm-decision-card deny-always">
+        <h4>Deny Always</h4>
+        <p>Create a persistent deny rule. This tool will never be executed. The agent won't attempt it again.</p>
+        <div class="perm-decision-key"><kbd>Shift+Esc</kbd></div>
+      </div>
+    </div>
+
+    <h3>Bash/Shell Permission</h3>
+    <div class="spec-note">Shell commands get special treatment — the full command is shown for review before execution.</div>
+
+    <div class="mockup-frame small">
+      <div class="mockup-body permission-bash">
+        <div class="permission-card bash-perm">
+          <div class="perm-header warn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="perm-title">Shell Command — Review Carefully</span>
+          </div>
+          <div class="perm-body">
+            <div class="perm-tool">
+              <span class="perm-tool-name">Bash</span>
+              <span class="perm-tool-server">SDK Built-in</span>
+            </div>
+            <div class="perm-command">
+              <pre>mgc users mail messages list --top 10 --orderby "receivedDateTime desc" --select "subject,from,receivedDateTime" --output json</pre>
+            </div>
+            <div class="perm-command-info">
+              Working directory: <code>~/Projects/sales-reports</code>
+            </div>
+          </div>
+          <div class="perm-actions">
+            <div class="perm-actions-left">
+              <button class="btn-approve">Allow Once</button>
+              <button class="btn-approve-always">Allow Always</button>
+            </div>
+            <div class="perm-actions-right">
+              <button class="btn-deny">Deny</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Permission Rules (Settings)</h3>
+    <div class="spec-note">Saved rules appear in Settings &gt; Permissions. Users can review, edit, and delete rules.</div>
+
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">Settings — Permissions</span>
+      </div>
+      <div class="mockup-body settings-permissions">
+        <div class="settings-panel">
+          <div class="settings-header">
+            <h3>Permission Rules</h3>
+            <p>Saved rules that automatically allow or deny tool calls.</p>
+          </div>
+          <div class="perm-rules-list">
+            <div class="perm-rule-item allow">
+              <span class="rule-decision allow">ALLOW</span>
+              <div class="rule-info">
+                <span class="rule-pattern">google-sheets/*</span>
+                <span class="rule-scope">Global</span>
+              </div>
+              <span class="rule-server">Google Sheets MCP</span>
+              <button class="rule-delete" title="Delete rule">&#10005;</button>
+            </div>
+            <div class="perm-rule-item allow">
+              <span class="rule-decision allow">ALLOW</span>
+              <div class="rule-info">
+                <span class="rule-pattern">google-drive/readFile</span>
+                <span class="rule-scope">Global</span>
+              </div>
+              <span class="rule-server">Google Drive MCP</span>
+              <button class="rule-delete" title="Delete rule">&#10005;</button>
+            </div>
+            <div class="perm-rule-item deny">
+              <span class="rule-decision deny">DENY</span>
+              <div class="rule-info">
+                <span class="rule-pattern">slack/deleteMessage</span>
+                <span class="rule-scope">Global</span>
+              </div>
+              <span class="rule-server">Slack MCP</span>
+              <button class="rule-delete" title="Delete rule">&#10005;</button>
+            </div>
+            <div class="perm-rule-item allow">
+              <span class="rule-decision allow">ALLOW</span>
+              <div class="rule-info">
+                <span class="rule-pattern">FileRead</span>
+                <span class="rule-scope">Workspace: sales-reports</span>
+              </div>
+              <span class="rule-server">SDK Built-in</span>
+              <button class="rule-delete" title="Delete rule">&#10005;</button>
+            </div>
+          </div>
+          <div class="settings-action-bar">
+            <button class="btn-outline">Add Rule Manually</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Audit Log</h3>
+    <div class="spec-note">Every tool call and permission decision is logged. Accessible via Tool Activity sidebar or Settings &gt; Audit Log.</div>
+
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">Tool Activity — Audit Log</span>
+      </div>
+      <div class="mockup-body audit-log">
+        <div class="audit-header">
+          <div class="audit-filters">
+            <select disabled>
+              <option>All servers</option>
+            </select>
+            <select disabled>
+              <option>All statuses</option>
+            </select>
+            <input type="text" placeholder="Search tools..." disabled>
+          </div>
+        </div>
+        <div class="audit-list">
+          <div class="audit-item">
+            <span class="audit-time">14:32:01</span>
+            <span class="audit-status approved">&#10003;</span>
+            <span class="audit-tool">google-sheets / getCellRange</span>
+            <span class="audit-perm">auto-allowed (rule)</span>
+            <span class="audit-duration">1.2s</span>
+          </div>
+          <div class="audit-item">
+            <span class="audit-time">14:32:03</span>
+            <span class="audit-status approved">&#10003;</span>
+            <span class="audit-tool">FileWrite</span>
+            <span class="audit-perm">allowed once</span>
+            <span class="audit-duration">0.1s</span>
+          </div>
+          <div class="audit-item">
+            <span class="audit-time">14:32:05</span>
+            <span class="audit-status pending">&#8987;</span>
+            <span class="audit-tool">slack / postMessage</span>
+            <span class="audit-perm">pending</span>
+            <span class="audit-duration">—</span>
+          </div>
+          <div class="audit-item">
+            <span class="audit-time">14:30:12</span>
+            <span class="audit-status denied">&#10005;</span>
+            <span class="audit-tool">Bash</span>
+            <span class="audit-perm">denied</span>
+            <span class="audit-duration">—</span>
+          </div>
+          <div class="audit-item">
+            <span class="audit-time">14:28:44</span>
+            <span class="audit-status approved">&#10003;</span>
+            <span class="audit-tool">google-drive / readFile</span>
+            <span class="audit-perm">auto-allowed (rule)</span>
+            <span class="audit-duration">0.9s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 6. CONNECTORS                                                 -->
+<!-- ============================================================ -->
+<section class="spec-section alt-bg" id="connectors">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">6</span>
+      <h2>Connectors &amp; Integrations</h2>
+    </div>
+
+    <div class="prose">
+      <p>Connectors give the agent access to external services. There are two types: MCP servers (purpose-built AI integrations) and CLI tools (mature command-line utilities). The Connector Settings panel manages both.</p>
+    </div>
+
+    <h3>Connector Settings — Overview</h3>
+
+    <div class="mockup-frame large">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">Settings — Connectors</span>
+      </div>
+      <div class="mockup-body connector-settings">
+        <div class="conn-settings-layout">
+          <div class="conn-tabs">
+            <div class="conn-tab active">Installed</div>
+            <div class="conn-tab">Registry</div>
+            <div class="conn-tab">Remote</div>
+            <div class="conn-tab">CLI Tools</div>
+            <div class="conn-tab">Custom</div>
+          </div>
+
+          <div class="conn-installed-list">
+            <div class="conn-installed-item">
+              <div class="conn-status-dot connected"></div>
+              <div class="conn-icon-small gdrive"></div>
+              <div class="conn-item-info">
+                <span class="conn-item-name">Google Drive</span>
+                <span class="conn-item-type">MCP (stdio) — 12 tools</span>
+              </div>
+              <div class="conn-item-actions">
+                <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+                <button class="btn-icon" title="Settings">&#9881;</button>
+              </div>
+            </div>
+            <div class="conn-installed-item">
+              <div class="conn-status-dot connected"></div>
+              <div class="conn-icon-small slack"></div>
+              <div class="conn-item-info">
+                <span class="conn-item-name">Slack</span>
+                <span class="conn-item-type">MCP (Streamable HTTP) — 18 tools</span>
+              </div>
+              <div class="conn-item-actions">
+                <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+                <button class="btn-icon" title="Settings">&#9881;</button>
+              </div>
+            </div>
+            <div class="conn-installed-item">
+              <div class="conn-status-dot connected"></div>
+              <div class="conn-icon-small gsheets"></div>
+              <div class="conn-item-info">
+                <span class="conn-item-name">Google Sheets</span>
+                <span class="conn-item-type">MCP (stdio) — 8 tools</span>
+              </div>
+              <div class="conn-item-actions">
+                <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+                <button class="btn-icon" title="Settings">&#9881;</button>
+              </div>
+            </div>
+            <div class="conn-installed-item error">
+              <div class="conn-status-dot error"></div>
+              <div class="conn-icon-small jira"></div>
+              <div class="conn-item-info">
+                <span class="conn-item-name">Jira</span>
+                <span class="conn-item-type error-text">Connection error — Token expired</span>
+              </div>
+              <div class="conn-item-actions">
+                <button class="btn-small btn-outline">Reconnect</button>
+                <button class="btn-icon" title="Settings">&#9881;</button>
+              </div>
+            </div>
+            <div class="conn-installed-divider">CLI Tools</div>
+            <div class="conn-installed-item">
+              <div class="conn-status-dot connected"></div>
+              <div class="conn-icon-small cli">gh</div>
+              <div class="conn-item-info">
+                <span class="conn-item-name">GitHub CLI</span>
+                <span class="conn-item-type">CLI — v2.67.0 — authenticated</span>
+              </div>
+              <div class="conn-item-actions">
+                <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+            <div class="conn-installed-item">
+              <div class="conn-status-dot connected"></div>
+              <div class="conn-icon-small cli">mgc</div>
+              <div class="conn-item-info">
+                <span class="conn-item-name">Microsoft Graph CLI</span>
+                <span class="conn-item-type">CLI — v1.14.0 — authenticated</span>
+              </div>
+              <div class="conn-item-actions">
+                <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>MCP Registry Browser</h3>
+    <div class="spec-note">Browse and search the MCP Registry (registry.modelcontextprotocol.io) to discover and install community MCP servers.</div>
+
+    <div class="mockup-frame large">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">Settings — Connectors — Registry</span>
+      </div>
+      <div class="mockup-body registry-browser">
+        <div class="conn-tabs">
+          <div class="conn-tab">Installed</div>
+          <div class="conn-tab active">Registry</div>
+          <div class="conn-tab">Remote</div>
+          <div class="conn-tab">CLI Tools</div>
+          <div class="conn-tab">Custom</div>
+        </div>
+        <div class="registry-search">
+          <input type="text" placeholder="Search MCP servers..." value="google" disabled>
+          <div class="registry-filters">
+            <select disabled><option>All categories</option></select>
+            <select disabled><option>Sort: Popular</option></select>
+          </div>
+        </div>
+        <div class="registry-results">
+          <div class="registry-card">
+            <div class="registry-card-header">
+              <div class="registry-card-icon gdrive"></div>
+              <div class="registry-card-info">
+                <h4>Google Drive MCP Server</h4>
+                <span class="registry-author">@anthropic-community</span>
+              </div>
+              <button class="btn-small btn-primary">Install</button>
+            </div>
+            <p class="registry-desc">Access Google Drive files — list, read, search, and manage documents, spreadsheets, and presentations.</p>
+            <div class="registry-meta">
+              <span>12 tools</span>
+              <span>npm</span>
+              <span>Updated 2 days ago</span>
+            </div>
+          </div>
+          <div class="registry-card">
+            <div class="registry-card-header">
+              <div class="registry-card-icon gsheets"></div>
+              <div class="registry-card-info">
+                <h4>Google Sheets MCP Server</h4>
+                <span class="registry-author">@anthropic-community</span>
+              </div>
+              <button class="btn-small btn-primary">Install</button>
+            </div>
+            <p class="registry-desc">Read, write, and analyze Google Sheets data. Supports cell ranges, formulas, and structured data queries.</p>
+            <div class="registry-meta">
+              <span>8 tools</span>
+              <span>npm</span>
+              <span>Updated 1 week ago</span>
+            </div>
+          </div>
+          <div class="registry-card installed">
+            <div class="registry-card-header">
+              <div class="registry-card-icon gcal"></div>
+              <div class="registry-card-info">
+                <h4>Google Calendar MCP Server</h4>
+                <span class="registry-author">@anthropic-community</span>
+              </div>
+              <span class="installed-badge">Installed</span>
+            </div>
+            <p class="registry-desc">Read and manage Google Calendar events — list, create, update, delete events across calendars.</p>
+            <div class="registry-meta">
+              <span>6 tools</span>
+              <span>npm</span>
+              <span>Updated 5 days ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Remote MCP Servers</h3>
+    <div class="spec-note">Connect to remote MCP servers hosted by Claude ecosystem partners. Uses Streamable HTTP + OAuth.</div>
+
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">Settings — Connectors — Remote</span>
+      </div>
+      <div class="mockup-body remote-servers">
+        <div class="conn-tabs">
+          <div class="conn-tab">Installed</div>
+          <div class="conn-tab">Registry</div>
+          <div class="conn-tab active">Remote</div>
+          <div class="conn-tab">CLI Tools</div>
+          <div class="conn-tab">Custom</div>
+        </div>
+        <div class="remote-server-list">
+          <p class="remote-desc">Connect to remote MCP servers via Streamable HTTP. These are the same integrations available in Claude.</p>
+          <div class="remote-card">
+            <div class="remote-card-icon jira"></div>
+            <div class="remote-card-info">
+              <h4>Atlassian (Jira &amp; Confluence)</h4>
+              <p>Issues, projects, pages, spaces, search</p>
+            </div>
+            <button class="btn-small btn-outline">Connect with OAuth</button>
+          </div>
+          <div class="remote-card">
+            <div class="remote-card-icon slack"></div>
+            <div class="remote-card-info">
+              <h4>Slack</h4>
+              <p>Messages, channels, users, files, search</p>
+            </div>
+            <span class="connected-badge">Connected</span>
+          </div>
+          <div class="remote-card">
+            <div class="remote-card-icon zapier"></div>
+            <div class="remote-card-info">
+              <h4>Zapier</h4>
+              <p>Connect to 7000+ apps via Zapier automations</p>
+            </div>
+            <button class="btn-small btn-outline">Connect with OAuth</button>
+          </div>
+          <div class="remote-card">
+            <div class="remote-card-icon linear"></div>
+            <div class="remote-card-info">
+              <h4>Linear</h4>
+              <p>Issues, projects, cycles, roadmaps</p>
+            </div>
+            <button class="btn-small btn-outline">Connect with OAuth</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Custom MCP Server Configuration</h3>
+
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">Add Custom MCP Server</span>
+      </div>
+      <div class="mockup-body custom-server-form">
+        <div class="form-layout">
+          <h3>Add Custom MCP Server</h3>
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" placeholder="e.g., Company Internal API" disabled>
+          </div>
+          <div class="form-group">
+            <label>Transport</label>
+            <div class="radio-group">
+              <label class="radio-label active"><input type="radio" checked disabled> stdio (local process)</label>
+              <label class="radio-label"><input type="radio" disabled> Streamable HTTP (remote)</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Command</label>
+            <input type="text" placeholder="e.g., npx" value="npx" disabled>
+          </div>
+          <div class="form-group">
+            <label>Arguments</label>
+            <input type="text" placeholder="e.g., -y @mcp/my-server" value="-y @company/internal-api-mcp" disabled>
+          </div>
+          <div class="form-group">
+            <label>Environment Variables</label>
+            <div class="env-vars">
+              <div class="env-var-row">
+                <input type="text" value="API_KEY" disabled>
+                <input type="password" value="sk-xxxx" disabled>
+                <button class="btn-icon-small">&#10005;</button>
+              </div>
+              <button class="btn-text-small">+ Add variable</button>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-outline">Test Connection</button>
+            <button class="btn-primary">Add Server</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Connector Detail View</h3>
+    <div class="spec-note">Clicking the gear icon on an installed connector opens its detail view with tools, credentials, and settings.</div>
+
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">Connector — Google Drive</span>
+      </div>
+      <div class="mockup-body connector-detail">
+        <div class="conn-detail-layout">
+          <div class="conn-detail-header">
+            <div class="conn-icon-small gdrive"></div>
+            <div>
+              <h3>Google Drive</h3>
+              <span class="conn-detail-type">MCP (stdio) — Connected</span>
+            </div>
+            <div class="conn-detail-actions">
+              <button class="btn-outline">Test Connection</button>
+              <button class="btn-outline danger">Disconnect</button>
+            </div>
+          </div>
+
+          <div class="conn-detail-section">
+            <h4>Tools (12)</h4>
+            <p class="conn-detail-hint">Enable or disable individual tools. Disabled tools won't be available to the agent.</p>
+            <div class="tools-list">
+              <div class="tool-list-item">
+                <label class="toggle-switch small"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+                <span class="tool-list-name">listFiles</span>
+                <span class="tool-list-desc">List files in a folder</span>
+              </div>
+              <div class="tool-list-item">
+                <label class="toggle-switch small"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+                <span class="tool-list-name">readFile</span>
+                <span class="tool-list-desc">Read file contents</span>
+              </div>
+              <div class="tool-list-item">
+                <label class="toggle-switch small"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+                <span class="tool-list-name">searchFiles</span>
+                <span class="tool-list-desc">Search for files by name or content</span>
+              </div>
+              <div class="tool-list-item disabled">
+                <label class="toggle-switch small"><input type="checkbox" disabled><span class="toggle-slider"></span></label>
+                <span class="tool-list-name">deleteFile</span>
+                <span class="tool-list-desc">Delete a file permanently</span>
+              </div>
+              <div class="tool-list-item">
+                <label class="toggle-switch small"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+                <span class="tool-list-name">createFile</span>
+                <span class="tool-list-desc">Create a new file</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 7. SKILLS                                                     -->
+<!-- ============================================================ -->
+<section class="spec-section" id="skills">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">7</span>
+      <h2>Skills &amp; Commands</h2>
+    </div>
+
+    <div class="prose">
+      <p>Skills are reusable prompt templates invoked via slash commands. GHO Work ships with built-in skills for common office tasks. Users can also create custom skills as Markdown files.</p>
+    </div>
+
+    <h3>Built-in Skills</h3>
+    <div class="skills-grid">
+      <div class="skill-card">
+        <div class="skill-header">
+          <span class="skill-command">/draft-email</span>
+        </div>
+        <p>Compose an email from a brief description. Uses context from recent conversations and connected email services.</p>
+        <div class="skill-tools">
+          <span class="skill-tool">Gmail MCP</span>
+          <span class="skill-tool">Outlook (mgc)</span>
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-header">
+          <span class="skill-command">/summarize-doc</span>
+        </div>
+        <p>Summarize a document or set of documents. Supports local files, Google Drive, and OneDrive.</p>
+        <div class="skill-tools">
+          <span class="skill-tool">FileRead</span>
+          <span class="skill-tool">Google Drive MCP</span>
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-header">
+          <span class="skill-command">/meeting-prep</span>
+        </div>
+        <p>Prepare for an upcoming meeting. Pulls calendar events, gathers related documents, and drafts an agenda.</p>
+        <div class="skill-tools">
+          <span class="skill-tool">Google Calendar MCP</span>
+          <span class="skill-tool">Slack MCP</span>
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-header">
+          <span class="skill-command">/data-analysis</span>
+        </div>
+        <p>Analyze a spreadsheet or CSV with natural language queries. Generates summaries, charts descriptions, and insights.</p>
+        <div class="skill-tools">
+          <span class="skill-tool">Google Sheets MCP</span>
+          <span class="skill-tool">FileRead</span>
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-header">
+          <span class="skill-command">/weekly-report</span>
+        </div>
+        <p>Generate a weekly summary from multiple data sources. Aggregates activity across connectors into a report.</p>
+        <div class="skill-tools">
+          <span class="skill-tool">Multiple connectors</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Skill Invocation Flow</h3>
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Using /meeting-prep</span>
+      </div>
+      <div class="mockup-body skill-invocation">
+        <div class="chat-messages">
+          <div class="chat-msg user">
+            <div class="msg-content">
+              <span class="skill-pill">/meeting-prep</span> Board review meeting tomorrow at 2pm
+            </div>
+          </div>
+          <div class="chat-msg assistant">
+            <div class="msg-content">
+              I'll prepare you for the Board Review meeting. Let me gather the relevant context.
+            </div>
+            <div class="tool-call-card">
+              <div class="tool-call-header">
+                <span class="tool-call-icon approved">&#10003;</span>
+                <span class="tool-call-name">google-calendar / getEvent</span>
+                <span class="tool-call-status done">Done — 0.6s</span>
+              </div>
+            </div>
+            <div class="tool-call-card">
+              <div class="tool-call-header">
+                <span class="tool-call-icon approved">&#10003;</span>
+                <span class="tool-call-name">google-drive / searchFiles</span>
+                <span class="tool-call-status done">Done — 1.4s</span>
+              </div>
+            </div>
+            <div class="tool-call-card">
+              <div class="tool-call-header">
+                <span class="tool-call-icon approved">&#10003;</span>
+                <span class="tool-call-name">slack / searchMessages</span>
+                <span class="tool-call-status done">Done — 1.1s</span>
+              </div>
+            </div>
+            <div class="msg-content">
+              <strong>Meeting Prep: Board Review</strong><br>
+              <em>Tomorrow, Mar 12 at 2:00 PM — Conference Room A (also on Zoom)</em><br>
+              <em>Attendees: You, CEO, CFO, VP Engineering, VP Sales</em>
+
+              <strong>Agenda (from calendar invite):</strong>
+              <ol>
+                <li>Q1 Financial Review</li>
+                <li>Product Roadmap Update</li>
+                <li>Hiring Plan</li>
+                <li>Fundraising Status</li>
+              </ol>
+
+              <strong>Related Documents Found:</strong>
+              <ul>
+                <li>"Q1 Financial Summary.xlsx" (Google Drive, updated yesterday)</li>
+                <li>"2026 Product Roadmap.pdf" (Google Drive, updated 3 days ago)</li>
+                <li>"Hiring Plan v3.docx" (Google Drive, updated last week)</li>
+              </ul>
+
+              <strong>Recent Context from Slack:</strong>
+              <ul>
+                <li>CFO mentioned in #leadership that Q1 revenue is "ahead of plan by 8%"</li>
+                <li>VP Eng posted in #product that the v2.0 launch may slip 2 weeks</li>
+                <li>VP Sales shared in #sales that pipeline is $2.1M (target was $1.8M)</li>
+              </ul>
+
+              <strong>Suggested Talking Points:</strong>
+              <ul>
+                <li>Celebrate the revenue beat (+8% vs plan)</li>
+                <li>Address the v2.0 delay — have mitigation plan ready</li>
+                <li>Pipeline strength supports aggressive hiring plan</li>
+              </ul>
+
+              Want me to draft a one-page briefing document you can bring to the meeting?
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Custom Skill File Format</h3>
+    <div class="spec-note">Custom skills are Markdown files with YAML frontmatter, stored in .claude/skills/ or .github/skills/.</div>
+
+    <div class="code-example">
+      <div class="code-header">
+        <span class="code-filename">.claude/skills/weekly-standup.md</span>
+      </div>
+      <pre class="code-body">---
+name: Weekly Standup Summary
+description: Generate a standup summary from this week's activity
+allowed-tools:
+  - google-calendar/*
+  - slack/searchMessages
+  - github-issues/*
+user-invocable: true
+---
+
+# Weekly Standup Summary
+
+Generate a concise standup update based on this week's activity.
+
+## Context
+
+The user's calendar events this week:
+```sh
+# This command runs automatically to provide context
+mgc users calendar events list --start "$(date -v-7d +%Y-%m-%d)" --end "$(date +%Y-%m-%d)" --select "subject,start,end" --output json
+```
+
+## Instructions
+
+1. Check the calendar for this week's meetings
+2. Search Slack for messages from the user this week
+3. Check GitHub for issues/PRs the user worked on
+4. Compile into a standup format:
+   - **Done this week**
+   - **In progress**
+   - **Blockers**
+   - **Next week priorities**</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 8. DOCUMENTS                                                  -->
+<!-- ============================================================ -->
+<section class="spec-section alt-bg" id="documents">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">8</span>
+      <h2>Documents &amp; Export</h2>
+    </div>
+
+    <div class="prose">
+      <p>GHO Work uses a Markdown-first document model. The agent generates content in Markdown, which can be previewed in the app and exported to DOCX or PDF. Documents can also be imported from DOCX and Excel for analysis.</p>
+    </div>
+
+    <h3>Document Preview Panel</h3>
+    <div class="spec-note">When the agent creates or edits a document, it can be opened in the document preview panel alongside the chat.</div>
+
+    <div class="mockup-frame large">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Document Preview</span>
+      </div>
+      <div class="mockup-body doc-preview-layout">
+        <!-- Split view: chat left, document right -->
+        <div class="split-left">
+          <div class="chat-messages compact-chat">
+            <div class="chat-msg user compact">
+              <div class="msg-content">Draft a quarterly business review document based on the sales data and team updates.</div>
+            </div>
+            <div class="chat-msg assistant compact">
+              <div class="msg-content">I've drafted the QBR document. You can see it in the preview panel. Here's what I included:</div>
+              <div class="msg-file-pill">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                Q1-QBR-2026.md
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="split-divider"></div>
+        <div class="split-right">
+          <div class="doc-preview-header">
+            <span class="doc-preview-title">Q1-QBR-2026.md</span>
+            <div class="doc-preview-actions">
+              <button class="btn-small btn-outline">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export
+              </button>
+              <div class="export-dropdown">
+                <div class="export-option">Export as DOCX</div>
+                <div class="export-option">Export as PDF</div>
+                <div class="export-option">Copy Markdown</div>
+              </div>
+            </div>
+          </div>
+          <div class="doc-preview-content">
+            <h1>Quarterly Business Review — Q1 2026</h1>
+            <p><em>Prepared by GHO Work | March 11, 2026</em></p>
+
+            <h2>Executive Summary</h2>
+            <p>Q1 2026 closed with <strong>$1.42M in revenue</strong>, exceeding our target of $1.32M by 8%. The sales team closed 47 deals with an average deal size of $30.2K, up from $26.1K in Q4 2025.</p>
+
+            <h2>Revenue Highlights</h2>
+            <table>
+              <tr><th>Metric</th><th>Q1 Actual</th><th>Q1 Target</th><th>vs Target</th></tr>
+              <tr><td>Revenue</td><td>$1.42M</td><td>$1.32M</td><td class="positive">+8%</td></tr>
+              <tr><td>Deals Closed</td><td>47</td><td>40</td><td class="positive">+18%</td></tr>
+              <tr><td>Avg Deal Size</td><td>$30.2K</td><td>$33.0K</td><td class="negative">-8%</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Export Formats</h3>
+    <div class="export-grid">
+      <div class="export-card">
+        <h4>DOCX</h4>
+        <p>High-quality Word document via pandoc (preferred) or docx library fallback. Preserves headings, tables, lists, and basic formatting.</p>
+      </div>
+      <div class="export-card">
+        <h4>PDF</h4>
+        <p>Clean PDF via pandoc with LaTeX or wkhtmltopdf. Suitable for sharing and printing.</p>
+      </div>
+      <div class="export-card">
+        <h4>Markdown</h4>
+        <p>Copy raw Markdown to clipboard or save to a .md file. Native format, no conversion needed.</p>
+      </div>
+    </div>
+
+    <h3>Import &amp; Analysis</h3>
+    <div class="import-grid">
+      <div class="import-card">
+        <h4>DOCX Import</h4>
+        <p>Drag a .docx file into the chat or use the file picker. Converted to Markdown via mammoth for agent analysis.</p>
+      </div>
+      <div class="import-card">
+        <h4>Excel / CSV Import</h4>
+        <p>Drop .xlsx or .csv files. Parsed via exceljs/papaparse. Agent can query, summarize, and analyze the data.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 9. TASK QUEUE                                                 -->
+<!-- ============================================================ -->
+<section class="spec-section" id="task-queue">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">9</span>
+      <h2>Task Queue</h2>
+    </div>
+
+    <div class="prose">
+      <p>Unlike single-threaded chat, GHO Work supports a task queue. Users can submit new tasks while the agent is busy with a previous one. Tasks execute sequentially (or in parallel via subagents).</p>
+    </div>
+
+    <h3>Task Queue UI</h3>
+
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Task Queue</span>
+      </div>
+      <div class="mockup-body task-queue">
+        <div class="tq-header">
+          <h3>Task Queue</h3>
+          <span class="tq-count">3 tasks</span>
+        </div>
+        <div class="tq-list">
+          <div class="tq-item active">
+            <div class="tq-status running">
+              <div class="tq-spinner-small"></div>
+            </div>
+            <div class="tq-info">
+              <span class="tq-title">Analyze Q1 sales spreadsheet</span>
+              <span class="tq-detail">Running — 3 tool calls, 45s elapsed</span>
+            </div>
+            <button class="btn-icon-small" title="Cancel">&#10005;</button>
+          </div>
+          <div class="tq-item queued">
+            <div class="tq-status queued">
+              <span class="tq-queue-num">2</span>
+            </div>
+            <div class="tq-info">
+              <span class="tq-title">Draft weekly update email</span>
+              <span class="tq-detail">Queued — waiting</span>
+            </div>
+            <button class="btn-icon-small" title="Cancel">&#10005;</button>
+          </div>
+          <div class="tq-item completed">
+            <div class="tq-status completed">&#10003;</div>
+            <div class="tq-info">
+              <span class="tq-title">Summarize meeting notes from yesterday</span>
+              <span class="tq-detail">Completed — 2m 14s, 7 tool calls</span>
+            </div>
+            <button class="btn-icon-small" title="View">&#8594;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spec-callout">
+      <h4>Task Queue Behavior</h4>
+      <ul>
+        <li>New messages sent while the agent is working are queued as tasks.</li>
+        <li>The queue is visible in the status bar ("2 tasks queued") and expandable as a panel.</li>
+        <li>Tasks execute in order. Completed tasks link back to their conversation messages.</li>
+        <li>Users can cancel queued or active tasks without affecting other tasks.</li>
+        <li>Subagents can run in parallel for independent parts of a single task.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 10. SETTINGS                                                  -->
+<!-- ============================================================ -->
+<section class="spec-section alt-bg" id="settings">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">10</span>
+      <h2>Settings</h2>
+    </div>
+
+    <div class="prose">
+      <p>Settings are accessed via the gear icon in the activity bar or Cmd+,. The settings panel replaces the main content area. Organized into categories with a left-hand navigation.</p>
+    </div>
+
+    <h3>Settings Panel</h3>
+
+    <div class="mockup-frame large">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Settings</span>
+      </div>
+      <div class="mockup-body settings-main">
+        <div class="settings-layout">
+          <div class="settings-nav">
+            <div class="settings-nav-item active">General</div>
+            <div class="settings-nav-item">Appearance</div>
+            <div class="settings-nav-item">Models</div>
+            <div class="settings-nav-item">Connectors</div>
+            <div class="settings-nav-item">Permissions</div>
+            <div class="settings-nav-item">Workspace</div>
+            <div class="settings-nav-item">Account</div>
+          </div>
+          <div class="settings-content">
+            <h3>General</h3>
+
+            <div class="setting-group">
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-label">Default Model</span>
+                  <span class="setting-desc">Model used for new conversations</span>
+                </div>
+                <select disabled>
+                  <option>Claude Sonnet 4.5</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-label">Max Iterations</span>
+                  <span class="setting-desc">Maximum agent steps per task</span>
+                </div>
+                <input type="number" value="50" disabled style="width: 80px;">
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-label">Auto-approve Read Tools</span>
+                  <span class="setting-desc">Automatically allow file read operations</span>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-label">Notifications</span>
+                  <span class="setting-desc">Show OS notifications when tasks complete</span>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-label">Telemetry</span>
+                  <span class="setting-desc">Help improve GHO Work by sending anonymous usage data</span>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" disabled><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Appearance Settings</h3>
+
+    <div class="theme-preview-grid">
+      <div class="theme-card">
+        <div class="theme-preview light-theme">
+          <div class="tp-sidebar"></div>
+          <div class="tp-main">
+            <div class="tp-msg"></div>
+            <div class="tp-msg reply"></div>
+          </div>
+        </div>
+        <span class="theme-label">Light</span>
+      </div>
+      <div class="theme-card active">
+        <div class="theme-preview dark-theme">
+          <div class="tp-sidebar"></div>
+          <div class="tp-main">
+            <div class="tp-msg"></div>
+            <div class="tp-msg reply"></div>
+          </div>
+        </div>
+        <span class="theme-label">Dark</span>
+      </div>
+      <div class="theme-card">
+        <div class="theme-preview system-theme">
+          <div class="tp-half light">
+            <div class="tp-sidebar"></div>
+            <div class="tp-content"></div>
+          </div>
+          <div class="tp-half dark">
+            <div class="tp-sidebar"></div>
+            <div class="tp-content"></div>
+          </div>
+        </div>
+        <span class="theme-label">System</span>
+      </div>
+    </div>
+
+    <h3>Workspace Picker</h3>
+    <div class="spec-note">Shown on launch if no recent workspace, or via the workspace name in the status bar.</div>
+
+    <div class="mockup-frame small">
+      <div class="mockup-body workspace-picker">
+        <div class="ws-picker-content">
+          <h3>Open Workspace</h3>
+          <div class="ws-recent">
+            <h4>Recent</h4>
+            <div class="ws-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <div class="ws-item-info">
+                <span class="ws-item-name">sales-reports</span>
+                <span class="ws-item-path">~/Projects/sales-reports</span>
+              </div>
+              <span class="ws-item-time">2 min ago</span>
+            </div>
+            <div class="ws-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <div class="ws-item-info">
+                <span class="ws-item-name">marketing-q1</span>
+                <span class="ws-item-path">~/Projects/marketing-q1</span>
+              </div>
+              <span class="ws-item-time">Yesterday</span>
+            </div>
+            <div class="ws-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <div class="ws-item-info">
+                <span class="ws-item-name">hiring-2026</span>
+                <span class="ws-item-path">~/Projects/hiring-2026</span>
+              </div>
+              <span class="ws-item-time">3 days ago</span>
+            </div>
+          </div>
+          <button class="btn-outline full-width">Open Folder...</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- FOOTER                                                        -->
+<!-- ============================================================ -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <div class="logo-mark small">G</div>
+        <span>GHO Work UX Design Spec</span>
+      </div>
+      <div class="footer-meta">
+        <span>Version 0.1 — March 2026</span>
+        <span>This document is the reference for building the GHO Work application.</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
