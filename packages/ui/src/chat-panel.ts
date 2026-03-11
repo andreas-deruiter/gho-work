@@ -222,6 +222,7 @@ export class ChatPanel {
     if (this.currentAssistantMessage) {
       this.currentAssistantMessage.isStreaming = false;
       this.updateAssistantContent();
+      this.updateAssistantStatus('');
     }
     this.currentAssistantMessage = null;
     this.isProcessing = false;
