@@ -60,6 +60,12 @@ Within each package, organize code by runtime target:
 
 Code in `common/` must never import from `browser/` or `node/`. This enables code sharing and testability.
 
+**Barrel exports must respect environment boundaries.** A package barrel (`index.ts`) that re-exports both `common/` and `node/` code forces browser consumers to pull in Node.js dependencies (e.g., `better-sqlite3`), crashing the renderer. Packages with mixed environments must provide separate entry points:
+- `@gho-work/<pkg>` — full package (Node.js consumers only)
+- `@gho-work/<pkg>/common` — browser-safe exports (no Node.js, no native modules)
+
+Browser code (`packages/ui/src/browser/`, renderer entry points) must import from `/common` subpaths, never from the full barrel of packages that contain Node.js code.
+
 ### Dependency decisions
 
 Follow VS Code's framework for deciding build vs buy:
@@ -140,6 +146,19 @@ Before modifying existing code: note current test state, capture which files wil
 
 ### Evidence over assertions
 Never claim "it works" without proof. Show test output, build output, or runtime evidence. The verify-task skill enforces this standard. Automated test pass is necessary but not sufficient — if the tests don't cover the user-facing behavior, they don't count as evidence for that behavior.
+
+### Run every executable artifact in its actual runtime
+A build pass and unit test pass say nothing about whether the app works in its real environment. Different runtimes have different capabilities:
+- **Vitest** (Node.js + Vite transforms) supports `experimentalDecorators` and top-level await
+- **tsx/esbuild** does not support parameter decorators or top-level await in CJS
+- **Electron renderer** (browser) cannot use Node.js builtins (`util`, `fs`, `path`)
+
+After writing any executable artifact, run it the way a user would:
+- Smoke test (`tests/smoke/*.ts`) → run `npx tsx tests/smoke/<name>.ts`
+- Desktop app changes → run `npm run desktop:dev` and verify the window renders
+- E2E tests → run `npx playwright test`
+
+A successful `turbo build` is not a proxy for "the app launches." A successful `vitest run` is not a proxy for "the smoke test works under tsx."
 
 ## Task execution
 
