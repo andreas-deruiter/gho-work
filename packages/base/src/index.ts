@@ -6,16 +6,3 @@ export * from './common/uuid.js';
 export * from './common/descriptors.js';
 export * from './common/serviceCollection.js';
 export * from './common/instantiationService.js';
-
-// --- Backward-compatibility shims (deprecated, use createServiceIdentifier) ---
-
-import { createServiceIdentifier } from './common/instantiation.js';
-import type { ServiceIdentifier } from './common/instantiation.js';
-
-/** @deprecated Use createServiceIdentifier instead */
-export type ServiceId<T> = ServiceIdentifier<T>;
-
-/** @deprecated Use createServiceIdentifier instead */
-export function createServiceId<T>(id: string): ServiceIdentifier<T> {
-  return createServiceIdentifier<T>(id);
-}

@@ -2,7 +2,7 @@
  * IPC channel definitions and typed message protocol.
  * These define the contract between main process and renderer.
  */
-import { createServiceId } from '@gho-work/base';
+import { createServiceIdentifier } from '@gho-work/base';
 
 // --- IPC Channel Names ---
 
@@ -46,7 +46,7 @@ export interface IIPCRenderer {
   removeListener(channel: string, callback: (...args: unknown[]) => void): void;
 }
 
-export const IIPCRenderer = createServiceId<IIPCRenderer>('IIPCRenderer');
+export const IIPCRenderer = createServiceIdentifier<IIPCRenderer>('IIPCRenderer');
 
 /**
  * Abstraction over Electron IPC for the main process side.
@@ -56,4 +56,4 @@ export interface IIPCMain {
   sendToRenderer(channel: string, ...args: unknown[]): void;
 }
 
-export const IIPCMain = createServiceId<IIPCMain>('IIPCMain');
+export const IIPCMain = createServiceIdentifier<IIPCMain>('IIPCMain');

@@ -2,7 +2,7 @@
  * Connectors package — MCP client management interfaces.
  * Minimal for the spike; full implementation will use @modelcontextprotocol/sdk.
  */
-import { createServiceId } from '@gho-work/base';
+import { createServiceIdentifier } from '@gho-work/base';
 import type { ConnectorConfig } from '@gho-work/base';
 
 export interface IMCPClientManager {
@@ -12,7 +12,7 @@ export interface IMCPClientManager {
   getServerStatus(connectorId: string): ConnectorConfig['status'];
 }
 
-export const IMCPClientManager = createServiceId<IMCPClientManager>('IMCPClientManager');
+export const IMCPClientManager = createServiceIdentifier<IMCPClientManager>('IMCPClientManager');
 
 /**
  * Mock MCP client manager for the spike.

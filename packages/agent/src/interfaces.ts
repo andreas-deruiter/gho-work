@@ -1,7 +1,7 @@
 /**
  * Core agent service interfaces (from PRD Section 6.4).
  */
-import { createServiceId } from '@gho-work/base';
+import { createServiceIdentifier } from '@gho-work/base';
 import type {
   AgentContext,
   AgentEvent,
@@ -24,7 +24,7 @@ export interface ICopilotSDK {
   dispose(): void;
 }
 
-export const ICopilotSDK = createServiceId<ICopilotSDK>('ICopilotSDK');
+export const ICopilotSDK = createServiceIdentifier<ICopilotSDK>('ICopilotSDK');
 
 // --- IAgentService ---
 
@@ -37,7 +37,7 @@ export interface IAgentService {
   cancelTask(taskId: string): void;
 }
 
-export const IAgentService = createServiceId<IAgentService>('IAgentService');
+export const IAgentService = createServiceIdentifier<IAgentService>('IAgentService');
 
 // --- IPermissionService ---
 
@@ -49,7 +49,7 @@ export interface IPermissionService {
   setRule(toolPattern: string, decision: 'allow' | 'deny', scope: 'global' | 'workspace'): void;
 }
 
-export const IPermissionService = createServiceId<IPermissionService>('IPermissionService');
+export const IPermissionService = createServiceIdentifier<IPermissionService>('IPermissionService');
 
 // --- IMCPManager ---
 
@@ -64,4 +64,4 @@ export interface IMCPManager {
   callTool(connectorId: string, toolName: string, args: Record<string, unknown>): Promise<unknown>;
 }
 
-export const IMCPManager = createServiceId<IMCPManager>('IMCPManager');
+export const IMCPManager = createServiceIdentifier<IMCPManager>('IMCPManager');
