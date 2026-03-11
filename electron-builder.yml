@@ -1,0 +1,33 @@
+appId: com.gho-work.desktop
+productName: GHO Work
+directories:
+  buildResources: resources
+  output: ../../release
+files:
+  - out/**
+  - '!**/.vscode/*'
+  - '!**/src/*'
+  - '!**/*.ts'
+  - '!**/*.map'
+# asarUnpack for better-sqlite3 will be added in Phase 1 when the dependency is introduced
+win:
+  executableName: gho-work
+  target:
+    - nsis
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: GHO Work
+  uninstallDisplayName: GHO Work
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target:
+    - dmg
+  category: public.app-category.productivity
+dmg:
+  artifactName: ${name}-${version}.${ext}
+linux:
+  target:
+    - AppImage
+  category: Office
+npmRebuild: false
