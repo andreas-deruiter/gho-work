@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { IPC_CHANNELS, IIPCRenderer, IIPCMain } from '../ipc.js';
+import { IPC_CHANNELS } from '../ipc/common/ipc.js';
+import { IIPCRenderer, IIPCMain } from '../ipc/common/ipcService.js';
 
 describe('IPC channel definitions', () => {
   it('IPC_CHANNELS contains expected keys', () => {
