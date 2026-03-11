@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@gho-work/base": "*",
-    "@gho-work/platform": "*"
+    "@gho-work/platform": "*",
+    "@github/copilot-sdk": "^0.1.32"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
