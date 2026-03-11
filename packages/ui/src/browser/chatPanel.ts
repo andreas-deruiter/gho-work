@@ -44,6 +44,10 @@ export class ChatPanel extends Disposable {
   private _conversationId: string = generateUUID();
   private _model: string = 'gpt-4o';
 
+  private _attachments: Array<{ type: 'file'; path: string; displayName: string }> = [];
+  private _attachmentListEl!: HTMLElement;
+  private _slashDropdownEl!: HTMLElement;
+
   private readonly _onDidSendMessage = this._register(new Emitter<SendMessageEvent>());
   readonly onDidSendMessage: Event<SendMessageEvent> = this._onDidSendMessage.event;
 
@@ -114,6 +118,31 @@ export class ChatPanel extends Disposable {
     const inputWrapper = document.createElement('div');
     inputWrapper.className = 'chat-input-wrapper';
 
+    // File drag-and-drop
+    this._attachments = [];
+    this._attachmentListEl = document.createElement('div');
+    this._attachmentListEl.className = 'chat-attachments';
+    inputArea.appendChild(this._attachmentListEl);
+
+    inputWrapper.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      inputWrapper.classList.add('drag-over');
+    });
+
+    inputWrapper.addEventListener('dragleave', () => {
+      inputWrapper.classList.remove('drag-over');
+    });
+
+    inputWrapper.addEventListener('drop', (e) => {
+      e.preventDefault();
+      inputWrapper.classList.remove('drag-over');
+      if (e.dataTransfer?.files) {
+        for (const file of Array.from(e.dataTransfer.files)) {
+          this._addAttachment(file);
+        }
+      }
+    });
+
     this._inputEl = document.createElement('textarea');
     this._inputEl.className = 'chat-input';
     this._inputEl.placeholder =
@@ -130,7 +159,15 @@ export class ChatPanel extends Disposable {
       this._inputEl.style.height = 'auto';
       this._inputEl.style.height = Math.min(this._inputEl.scrollHeight, 150) + 'px';
     });
+    this._inputEl.addEventListener('input', () => {
+      this._updateSlashDropdown();
+    });
     inputWrapper.appendChild(this._inputEl);
+
+    this._slashDropdownEl = document.createElement('div');
+    this._slashDropdownEl.className = 'slash-dropdown';
+    this._slashDropdownEl.style.display = 'none';
+    inputWrapper.appendChild(this._slashDropdownEl);
 
     this._sendBtnEl = document.createElement('button');
     this._sendBtnEl.className = 'chat-send-btn';
@@ -306,7 +343,11 @@ export class ChatPanel extends Disposable {
         conversationId: this._conversationId,
         content,
         model: this._model,
+        attachments: this._attachments.length > 0 ? this._attachments : undefined,
       });
+      // Clear attachments after send
+      this._attachments = [];
+      this._renderAttachments();
     } catch (err) {
       console.error('Failed to send message:', err);
     }
@@ -362,8 +403,7 @@ export class ChatPanel extends Disposable {
         break;
       }
       case 'error': {
-        this._currentAssistantMessage.content += `\n\n**Error:** ${event.error}`;
-        this._updateAssistantContent();
+        this._showErrorBanner(event.error);
         this._finishStreaming();
         break;
       }
@@ -518,6 +558,138 @@ export class ChatPanel extends Disposable {
         toolCallsEl.appendChild(item);
       }
     }
+  }
+
+  private _showErrorBanner(message: string): void {
+    this._dismissErrorBanner();
+
+    const banner = document.createElement('div');
+    banner.className = 'chat-error-banner';
+
+    const text = document.createElement('span');
+    text.textContent = message;
+    banner.appendChild(text);
+
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'chat-error-dismiss';
+    dismissBtn.textContent = 'Dismiss';
+    dismissBtn.addEventListener('click', () => this._dismissErrorBanner());
+    banner.appendChild(dismissBtn);
+
+    const panel = this._messageListEl?.parentElement;
+    const inputArea = panel?.querySelector('.chat-input-area');
+    if (panel && inputArea) {
+      panel.insertBefore(banner, inputArea);
+    }
+  }
+
+  private _dismissErrorBanner(): void {
+    const existing = this._messageListEl?.parentElement?.querySelector('.chat-error-banner');
+    if (existing) { existing.remove(); }
+  }
+
+  private _addAttachment(file: File): void {
+    const attachment = {
+      type: 'file' as const,
+      path: (file as any).path ?? file.name,
+      displayName: file.name,
+    };
+    this._attachments.push(attachment);
+    this._renderAttachments();
+  }
+
+  private _renderAttachments(): void {
+    while (this._attachmentListEl.firstChild) {
+      this._attachmentListEl.removeChild(this._attachmentListEl.firstChild);
+    }
+    for (let i = 0; i < this._attachments.length; i++) {
+      const pill = document.createElement('span');
+      pill.className = 'attachment-pill';
+
+      const name = document.createElement('span');
+      name.textContent = this._attachments[i].displayName;
+      pill.appendChild(name);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'attachment-remove';
+      removeBtn.textContent = 'x';
+      const index = i;
+      removeBtn.addEventListener('click', () => {
+        this._attachments.splice(index, 1);
+        this._renderAttachments();
+      });
+      pill.appendChild(removeBtn);
+
+      this._attachmentListEl.appendChild(pill);
+    }
+  }
+
+  private _updateSlashDropdown(): void {
+    const value = this._inputEl.value;
+    if (value.startsWith('/') && !value.includes(' ')) {
+      const query = value.substring(1).toLowerCase();
+      const commands = [
+        { name: '/model', description: 'Switch model' },
+        { name: '/clear', description: 'Clear conversation' },
+        { name: '/help', description: 'Show help' },
+      ].filter((c) => c.name.includes(query) || query === '');
+
+      if (commands.length > 0) {
+        while (this._slashDropdownEl.firstChild) {
+          this._slashDropdownEl.removeChild(this._slashDropdownEl.firstChild);
+        }
+        for (const cmd of commands) {
+          const item = document.createElement('div');
+          item.className = 'slash-dropdown-item';
+
+          const nameEl = document.createElement('span');
+          nameEl.className = 'slash-command-name';
+          nameEl.textContent = cmd.name;
+          item.appendChild(nameEl);
+
+          const descEl = document.createElement('span');
+          descEl.className = 'slash-command-desc';
+          descEl.textContent = cmd.description;
+          item.appendChild(descEl);
+
+          item.addEventListener('click', () => {
+            this._executeSlashCommand(cmd.name);
+          });
+          this._slashDropdownEl.appendChild(item);
+        }
+        this._slashDropdownEl.style.display = '';
+        return;
+      }
+    }
+    this._slashDropdownEl.style.display = 'none';
+  }
+
+  private _executeSlashCommand(command: string): void {
+    this._slashDropdownEl.style.display = 'none';
+    this._inputEl.value = '';
+
+    switch (command) {
+      case '/clear':
+        this._messages = [];
+        this._renderWelcome();
+        break;
+      case '/help':
+        this._showHelpMessage();
+        break;
+      case '/model':
+        this._modelSelector?.focus();
+        break;
+    }
+  }
+
+  private _showHelpMessage(): void {
+    const helpMsg: ChatMessage = {
+      id: generateUUID(),
+      role: 'assistant',
+      content: '**Available commands:**\n- `/model` — Switch the AI model\n- `/clear` — Clear the conversation\n- `/help` — Show this help message\n\n**Keyboard shortcuts:**\n- `Enter` — Send message\n- `Shift+Enter` — New line\n- `Cmd+B` — Toggle sidebar\n- `Cmd+N` — New conversation',
+    };
+    this._messages.push(helpMsg);
+    this._renderMessage(helpMsg);
   }
 
   private _clearElement(el: Element): void {
