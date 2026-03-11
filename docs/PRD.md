@@ -588,55 +588,60 @@ class AgentService implements IAgentService {
 
 The agent loop is powered by the GH Copilot SDK harness. The SDK handles the core orchestration cycle (planning, tool invocation, observation, iteration). GHO Work's role is to configure each session with the right context, tools, and permissions.
 
+**Tool execution strategy — native SDK tool handling:**
+
+The SDK handles all tool execution natively. GHO Work does not wrap, intercept, or re-register tools.
+
+- **SDK built-in tools** (file read/write/edit, bash, git, web fetch, glob, grep) execute through the SDK's native handlers without intervention.
+- **MCP tools** are passed to the SDK via the `mcpServers` session config. The SDK manages MCP server connections, tool discovery, and tool execution. GHO Work's `IMCPClientManager` provides server configs to the SDK.
+- **Agent Skills** are triggered by user intent (slash commands); the individual tool calls within a skill execute through the SDK's native tool handling.
+- **Permissions** are deferred to a later phase. In the initial implementation, all tools execute without a permission layer. A permission system with rule matching, interactive approval, and audit logging will be added once the core agent loop is stable.
+
 ```
 User Message
     |
     v
 [GHO Work: Create SDK Session]
   - Load context: CLAUDE.md / copilot-instructions.md, conversation history
-  - Register MCP tools with SDK session (from IToolRegistry)
-  - Configure model, max iterations, custom instructions
+  - Pass mcpServers config for connected MCP servers
+  - Configure model, systemMessage, streaming: true
     |
     v
 [SDK Agent Harness: Autonomous Loop]
     |
     +-- Plan --> SDK selects next action
     |
-    +-- SDK Built-in Tool Call (file edit, bash, git, web) --> [GHO Work: Check Permissions]
-    |       |                                                          |
-    |    Allowed --> SDK executes directly                           Denied --> SDK notified
+    +-- Tool Call --> SDK executes tool natively (built-in or MCP)
+    |       |
+    |       +-- Result --> SDK observes result, continues loop
     |
-    +-- MCP Tool Call --> [GHO Work: Check Permissions]
-    |       |                                                          |
-    |    Allowed --> GHO Work routes to MCP Manager --> Result back to SDK
-    |                                                               Denied --> SDK notified
+    +-- Text --> Stream to GHO Work UI via agent:event IPC
     |
-    +-- Text --> Stream to GHO Work UI
-    |
-    +-- Done --> [Return Final Response to UI]
+    +-- Done --> session.idle event --> agent:event {done} to UI
 ```
 
 **What the SDK harness provides:**
 - Agent loop orchestration (plan → execute → observe → iterate)
-- Built-in tools: file read/write/edit, bash/PowerShell execution, Git operations, web fetch/search, glob, grep
 - Model inference with multi-model routing
-- Streaming responses
+- Streaming responses (assistant.message_delta, assistant.reasoning_delta)
+- Session management (create, resume, list, delete)
 - Error recovery and retry logic
 - Max iteration limits
+- Native tool execution (file ops, bash, git, web, MCP tools)
 
 **What GHO Work adds on top:**
-- MCP tool registration: discovers tools from connected MCP servers and registers them as custom tools with the SDK session
-- Permission interception: hooks into the SDK's tool execution to enforce the trust model before any tool runs
-- Context injection: loads memory files, conversation history, and workspace metadata into each SDK session
-- UI integration: streams SDK events (tool calls, text, thinking) to the workbench
+- Context injection: loads memory files, conversation history, and workspace metadata into each SDK session via `systemMessage`
+- MCP server configuration: passes connected MCP server configs to the SDK via `mcpServers` session option
+- UI integration: bridges SDK events (tool calls, text, thinking) to our `AgentEvent` discriminated union, streamed to the renderer via IPC
+- Conversation persistence: stores messages and tool calls to workspace SQLite for history and audit
 - Subagent management: spawns parallel SDK sessions for independent subtasks
 
 **Shell execution (Bash / PowerShell):**
-- The SDK's built-in Bash and PowerShell tools allow the agent to run arbitrary commands on the user's machine
+- SDK built-in Bash/PowerShell tools execute through the SDK's native handlers
 - This enables use of any CLI tool: `pandoc` for document conversion, `jq` for JSON processing, `git` for version control, `curl` for API calls, platform-specific utilities, etc.
-- Shell commands go through `IPermissionService` — the user approves or denies execution
 - The working directory defaults to the workspace root
 - Commands run with the user's environment (PATH, env vars) — the agent has access to whatever the user has installed
+- A permission layer for shell commands will be added in a later phase
 
 ### 7.6 Communication Patterns
 

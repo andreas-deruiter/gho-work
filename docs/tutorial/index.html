@@ -804,6 +804,505 @@ Great week team! Revenue hit $142.5K...</div>
       </div>
     </div>
 
+    <h3>Sidebar Views</h3>
+    <div class="prose">
+      <p>Each activity bar icon opens a dedicated sidebar view. Below are the three primary sidebar views: Tool Activity (real-time feed of agent tool calls), Connectors (quick status of connected MCP servers and CLI tools), and Documents (workspace file tree with type-aware icons).</p>
+    </div>
+
+    <!-- TOOL ACTIVITY SIDEBAR MOCKUP -->
+    <!-- TOOL ACTIVITY SIDEBAR MOCKUP -->
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Tool Activity Sidebar</span>
+      </div>
+      <div class="mockup-body workbench">
+        <!-- Activity Bar -->
+        <div class="wb-activitybar">
+          <div class="ab-icon" title="Chat">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="ab-icon active" title="Tool Activity">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </div>
+          <div class="ab-icon" title="Connectors">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg>
+          </div>
+          <div class="ab-icon" title="Documents">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+          </div>
+          <div class="ab-spacer"></div>
+          <div class="ab-icon" title="Settings">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+        </div>
+    
+        <!-- Sidebar: Tool Activity -->
+        <div class="wb-sidebar">
+          <div class="sidebar-header">
+            <span class="sidebar-title">Tool Activity</span>
+          </div>
+          <div class="audit-filters" style="padding: 8px 12px; gap: 6px;">
+            <select disabled>
+              <option>All Servers</option>
+            </select>
+            <select disabled>
+              <option>All Statuses</option>
+            </select>
+          </div>
+          <div class="sidebar-list">
+            <!-- Item 1: completed -->
+            <div class="sidebar-item">
+              <span class="tool-call-icon approved" style="width: 20px; height: 20px; font-size: 10px; flex-shrink: 0;">&#10003;</span>
+              <div style="flex: 1; min-width: 0;">
+                <span class="sidebar-item-title">getCellRange</span>
+                <span style="font-size: 11px; color: var(--text-muted); display: block;">google-sheets</span>
+              </div>
+              <span class="sidebar-item-time">1.2s</span>
+            </div>
+            <!-- Item 2: running (spinner) -->
+            <div class="sidebar-item">
+              <span class="tool-call-icon pending" style="width: 20px; height: 20px; font-size: 10px; flex-shrink: 0;">&#8987;</span>
+              <div style="flex: 1; min-width: 0;">
+                <span class="sidebar-item-title">postMessage</span>
+                <span style="font-size: 11px; color: var(--text-muted); display: block;">slack</span>
+              </div>
+              <span class="sidebar-item-time" style="color: var(--color-warning);">pending</span>
+            </div>
+            <!-- Item 3: completed -->
+            <div class="sidebar-item">
+              <span class="tool-call-icon approved" style="width: 20px; height: 20px; font-size: 10px; flex-shrink: 0;">&#10003;</span>
+              <div style="flex: 1; min-width: 0;">
+                <span class="sidebar-item-title">readFile</span>
+                <span style="font-size: 11px; color: var(--text-muted); display: block;">google-drive</span>
+              </div>
+              <span class="sidebar-item-time">0.9s</span>
+            </div>
+            <!-- Item 4: failed -->
+            <div class="sidebar-item">
+              <span class="tool-call-icon failed" style="width: 20px; height: 20px; font-size: 10px; flex-shrink: 0;">&#10005;</span>
+              <div style="flex: 1; min-width: 0;">
+                <span class="sidebar-item-title">searchMessages</span>
+                <span style="font-size: 11px; color: var(--text-muted); display: block;">slack</span>
+              </div>
+              <span class="sidebar-item-time" style="color: var(--color-error);">error</span>
+            </div>
+            <!-- Item 5: expanded -->
+            <div class="sidebar-item active" style="flex-direction: column; align-items: stretch;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="tool-call-icon approved" style="width: 20px; height: 20px; font-size: 10px; flex-shrink: 0;">&#10003;</span>
+                <div style="flex: 1; min-width: 0;">
+                  <span class="sidebar-item-title">FileWrite</span>
+                  <span style="font-size: 11px; color: var(--text-muted); display: block;">built-in</span>
+                </div>
+                <span class="sidebar-item-time">0.1s</span>
+              </div>
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-default);">
+                <div class="tool-call-section">
+                  <div class="tcs-label">Arguments</div>
+                  <div class="tcs-code"><pre>{
+      "path": "~/reports/weekly.md",
+      "content": "# Weekly Sales Report..."
+    }</pre></div>
+                </div>
+                <div class="tool-call-section">
+                  <div class="tcs-label">Result</div>
+                  <div class="tcs-value">File written (2.4 KB)</div>
+                </div>
+                <div class="tool-call-section">
+                  <div class="tcs-label">Permission</div>
+                  <div class="tcs-value">Allowed once (user approved)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    
+        <!-- Main panel (dimmed, sidebar is focus) -->
+        <div class="wb-main" style="opacity: 0.4;">
+          <div class="main-header">
+            <h3 class="main-title">Weekly sales report</h3>
+          </div>
+          <div class="chat-messages">
+            <div class="chat-msg user">
+              <div class="msg-content">Summarize last week's sales data...</div>
+            </div>
+          </div>
+        </div>
+    
+        <!-- Status bar -->
+        <div class="wb-statusbar">
+          <div class="sb-left">
+            <span class="sb-item workspace">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              ~/Projects/sales-reports
+            </span>
+            <span class="sb-item connectors-status">
+              <span class="sb-dot green"></span> 3 connectors
+            </span>
+          </div>
+          <div class="sb-right">
+            <span class="sb-item">Claude Sonnet 4.5</span>
+            <span class="sb-item">
+              <span class="sb-dot yellow"></span> Agent working
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- CONNECTORS SIDEBAR MOCKUP -->
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Connectors Sidebar</span>
+      </div>
+      <div class="mockup-body workbench">
+        <!-- Activity Bar -->
+        <div class="wb-activitybar">
+          <div class="ab-icon" title="Chat">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="ab-icon" title="Tool Activity">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </div>
+          <div class="ab-icon active" title="Connectors">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg>
+          </div>
+          <div class="ab-icon" title="Documents">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+          </div>
+          <div class="ab-spacer"></div>
+          <div class="ab-icon" title="Settings">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+        </div>
+    
+        <!-- Sidebar: Connectors Quick View -->
+        <div class="wb-sidebar">
+          <div class="sidebar-header">
+            <span class="sidebar-title">Connectors</span>
+            <button class="sidebar-action" title="Open Connector Settings">&#9881;</button>
+          </div>
+          <div class="sidebar-list">
+            <!-- Google Drive: connected -->
+            <div class="sidebar-item" style="gap: 10px;">
+              <div class="conn-status-dot connected"></div>
+              <div class="conn-icon-small gdrive"></div>
+              <div style="flex: 1; min-width: 0;">
+                <span class="sidebar-item-title">Google Drive</span>
+                <span style="font-size: 11px; color: var(--text-muted); display: block;">12 tools</span>
+              </div>
+              <label class="toggle-switch small"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+            </div>
+            <!-- Slack: connected -->
+            <div class="sidebar-item" style="gap: 10px;">
+              <div class="conn-status-dot connected"></div>
+              <div class="conn-icon-small slack"></div>
+              <div style="flex: 1; min-width: 0;">
+                <span class="sidebar-item-title">Slack</span>
+                <span style="font-size: 11px; color: var(--text-muted); display: block;">18 tools</span>
+              </div>
+              <label class="toggle-switch small"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+            </div>
+            <!-- Jira: error -->
+            <div class="sidebar-item" style="gap: 10px;">
+              <div class="conn-status-dot error"></div>
+              <div class="conn-icon-small jira"></div>
+              <div style="flex: 1; min-width: 0;">
+                <span class="sidebar-item-title">Jira</span>
+                <span style="font-size: 11px; color: var(--color-error); display: block;">Token expired</span>
+              </div>
+              <label class="toggle-switch small"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+            </div>
+            <!-- GitHub CLI: connected -->
+            <div class="sidebar-item" style="gap: 10px;">
+              <div class="conn-status-dot connected"></div>
+              <div class="conn-icon-small cli">gh</div>
+              <div style="flex: 1; min-width: 0;">
+                <span class="sidebar-item-title">GitHub CLI</span>
+                <span style="font-size: 11px; color: var(--text-muted); display: block;">CLI tool</span>
+              </div>
+              <label class="toggle-switch small"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div style="padding: 12px;">
+            <button class="btn-outline full-width">+ Add Connector</button>
+          </div>
+        </div>
+    
+        <!-- Main panel (dimmed) -->
+        <div class="wb-main" style="opacity: 0.4;">
+          <div class="main-header">
+            <h3 class="main-title">Weekly sales report</h3>
+          </div>
+          <div class="chat-messages">
+            <div class="chat-msg user">
+              <div class="msg-content">Summarize last week's sales data...</div>
+            </div>
+          </div>
+        </div>
+    
+        <!-- Status bar -->
+        <div class="wb-statusbar">
+          <div class="sb-left">
+            <span class="sb-item workspace">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              ~/Projects/sales-reports
+            </span>
+            <span class="sb-item connectors-status">
+              <span class="sb-dot green"></span> 3 connectors
+              <span class="sb-dot red"></span> 1 error
+            </span>
+          </div>
+          <div class="sb-right">
+            <span class="sb-item">Claude Sonnet 4.5</span>
+            <span class="sb-item">
+              <span class="sb-dot green"></span> Agent idle
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- DOCUMENTS SIDEBAR MOCKUP -->
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Documents Sidebar</span>
+      </div>
+      <div class="mockup-body workbench">
+        <!-- Activity Bar -->
+        <div class="wb-activitybar">
+          <div class="ab-icon" title="Chat">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="ab-icon" title="Tool Activity">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </div>
+          <div class="ab-icon" title="Connectors">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg>
+          </div>
+          <div class="ab-icon active" title="Documents">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+          </div>
+          <div class="ab-spacer"></div>
+          <div class="ab-icon" title="Settings">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+        </div>
+    
+        <!-- Sidebar: Documents -->
+        <div class="wb-sidebar">
+          <div class="sidebar-header">
+            <span class="sidebar-title">Documents</span>
+            <button class="sidebar-action" title="Refresh">&#8635;</button>
+          </div>
+          <div class="sidebar-search">
+            <input type="text" placeholder="Filter files..." disabled>
+          </div>
+          <div class="sidebar-list">
+            <!-- Workspace root -->
+            <div class="sidebar-item" style="gap: 6px; font-weight: 600; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 12px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              ~/Projects/sales-reports
+            </div>
+            <!-- Folder: reports -->
+            <div class="sidebar-item" style="gap: 6px; padding-left: 20px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#febc2e" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span class="sidebar-item-title">reports/</span>
+            </div>
+            <!-- File: weekly.md -->
+            <div class="sidebar-item active" style="gap: 6px; padding-left: 36px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b9ff4" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+              <span class="sidebar-item-title">weekly-report.md</span>
+              <span class="sidebar-item-time">2 min</span>
+            </div>
+            <!-- File: q1-summary.docx -->
+            <div class="sidebar-item" style="gap: 6px; padding-left: 36px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4285f4" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+              <span class="sidebar-item-title">q1-summary.docx</span>
+              <span class="sidebar-item-time">1 hr</span>
+            </div>
+            <!-- Folder: data -->
+            <div class="sidebar-item" style="gap: 6px; padding-left: 20px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#febc2e" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span class="sidebar-item-title">data/</span>
+            </div>
+            <!-- File: sales-march.xlsx -->
+            <div class="sidebar-item" style="gap: 6px; padding-left: 36px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0f9d58" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+              <span class="sidebar-item-title">sales-march.xlsx</span>
+              <span class="sidebar-item-time">1 day</span>
+            </div>
+            <!-- File: pipeline.csv -->
+            <div class="sidebar-item" style="gap: 6px; padding-left: 36px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0f9d58" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+              <span class="sidebar-item-title">pipeline.csv</span>
+              <span class="sidebar-item-time">2 days</span>
+            </div>
+            <!-- File: README.md -->
+            <div class="sidebar-item" style="gap: 6px; padding-left: 20px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b9ff4" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+              <span class="sidebar-item-title">README.md</span>
+              <span class="sidebar-item-time">5 days</span>
+            </div>
+          </div>
+          <div style="padding: 8px 12px; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-default);">
+            Right-click for export options
+          </div>
+        </div>
+    
+        <!-- Main panel (dimmed) -->
+        <div class="wb-main" style="opacity: 0.4;">
+          <div class="main-header">
+            <h3 class="main-title">weekly-report.md</h3>
+          </div>
+          <div class="chat-messages">
+            <div class="chat-msg assistant">
+              <div class="msg-content">
+                <strong># Weekly Sales Report</strong><br>
+                Week of March 3-7, 2026...
+              </div>
+            </div>
+          </div>
+        </div>
+    
+        <!-- Status bar -->
+        <div class="wb-statusbar">
+          <div class="sb-left">
+            <span class="sb-item workspace">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              ~/Projects/sales-reports
+            </span>
+            <span class="sb-item">7 files</span>
+          </div>
+          <div class="sb-right">
+            <span class="sb-item">Claude Sonnet 4.5</span>
+            <span class="sb-item">
+              <span class="sb-dot green"></span> Agent idle
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Command Palette</h3>
+    <div class="prose">
+      <p>The command palette (<kbd>Cmd+K</kbd>) provides quick access to commands, skills, and settings from anywhere in the app. It features fuzzy search, grouped results, and keyboard navigation.</p>
+    </div>
+
+    <!-- COMMAND PALETTE MOCKUP -->
+    <!-- COMMAND PALETTE MOCKUP -->
+    <div class="mockup-frame medium">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Command Palette (Cmd+K)</span>
+      </div>
+      <div class="mockup-body" style="min-height: 420px; display: flex; align-items: flex-start; justify-content: center; padding-top: 40px; background: var(--bg-page);">
+        <!-- Overlay background (dimmed workbench behind) -->
+        <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5);"></div>
+    
+        <!-- Command palette dialog -->
+        <div style="position: relative; width: 480px; background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5); overflow: hidden;">
+          <!-- Search input -->
+          <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-default);">
+            <input type="text" placeholder="Type a command or search..." disabled style="width: 100%; background: transparent; border: none; color: var(--text-primary); font-size: 15px; outline: none;">
+          </div>
+    
+          <!-- Results -->
+          <div style="max-height: 340px; overflow-y: auto;">
+            <!-- Group: Recent Commands -->
+            <div style="padding: 6px 16px 4px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Recent Commands</div>
+            <div class="autocomplete-item active">
+              <span class="ac-icon" style="font-size: 14px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </span>
+              <div class="ac-info">
+                <span class="ac-name">New Conversation</span>
+                <span class="ac-desc"><kbd style="font-size: 10px; padding: 1px 4px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 3px;">Cmd+N</kbd></span>
+              </div>
+            </div>
+            <div class="autocomplete-item">
+              <span class="ac-icon" style="font-size: 14px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </span>
+              <div class="ac-info">
+                <span class="ac-name">Search Conversations</span>
+                <span class="ac-desc"><kbd style="font-size: 10px; padding: 1px 4px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 3px;">Cmd+F</kbd></span>
+              </div>
+            </div>
+    
+            <!-- Group: Skills -->
+            <div class="autocomplete-divider"></div>
+            <div style="padding: 6px 16px 4px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Skills</div>
+            <div class="autocomplete-item">
+              <span class="ac-icon">/</span>
+              <div class="ac-info">
+                <span class="ac-name">/draft-email</span>
+                <span class="ac-desc">Draft an email from a brief description</span>
+              </div>
+            </div>
+            <div class="autocomplete-item">
+              <span class="ac-icon">/</span>
+              <div class="ac-info">
+                <span class="ac-name">/meeting-prep</span>
+                <span class="ac-desc">Prepare for an upcoming meeting</span>
+              </div>
+            </div>
+            <div class="autocomplete-item">
+              <span class="ac-icon">/</span>
+              <div class="ac-info">
+                <span class="ac-name">/weekly-report</span>
+                <span class="ac-desc">Generate a weekly summary from multiple sources</span>
+              </div>
+            </div>
+    
+            <!-- Group: Settings -->
+            <div class="autocomplete-divider"></div>
+            <div style="padding: 6px 16px 4px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Settings</div>
+            <div class="autocomplete-item">
+              <span class="ac-icon sys">#</span>
+              <div class="ac-info">
+                <span class="ac-name">Open Settings</span>
+                <span class="ac-desc"><kbd style="font-size: 10px; padding: 1px 4px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 3px;">Cmd+,</kbd></span>
+              </div>
+            </div>
+            <div class="autocomplete-item">
+              <span class="ac-icon sys">#</span>
+              <div class="ac-info">
+                <span class="ac-name">Switch Model</span>
+                <span class="ac-desc">Change the active AI model</span>
+              </div>
+            </div>
+          </div>
+    
+          <!-- Footer hint -->
+          <div style="padding: 8px 16px; border-top: 1px solid var(--border-default); display: flex; gap: 16px; font-size: 11px; color: var(--text-muted);">
+            <span><kbd style="font-size: 10px; padding: 1px 4px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 3px;">&uarr;&darr;</kbd> navigate</span>
+            <span><kbd style="font-size: 10px; padding: 1px 4px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 3px;">Enter</kbd> select</span>
+            <span><kbd style="font-size: 10px; padding: 1px 4px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 3px;">Esc</kbd> close</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="spec-callout">
       <h4>Keyboard Shortcuts</h4>
       <table class="shortcut-table">
@@ -993,6 +1492,251 @@ Great week team! Revenue hit $142.5K...</div>
         <p>In the main panel header. Dropdown to switch models mid-conversation. Also accessible via <code>/model</code>.</p>
       </div>
     </div>
+
+
+    <h3>Model Selector</h3>
+    <div class="spec-note">The model selector appears in the main panel header. Click to open a dropdown showing available models with tier badges, descriptions, and the current selection.</div>
+
+<!-- ===== MOCKUP: Model Selector Dropdown ===== -->
+<div class="mockup-frame small">
+  <div class="mockup-titlebar">
+    <div class="titlebar-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="titlebar-title">GHO Work — Model Selector</span>
+  </div>
+  <div class="mockup-body" style="padding: 16px;">
+    <!-- Panel header bar with model selector -->
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); margin-bottom: 8px;">
+      <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Chat</span>
+      <div style="position: relative;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-surface); border: 1px solid var(--brand-primary); border-radius: var(--radius-sm); cursor: pointer; font-size: 13px;">
+          <span class="model-dot active" style="width: 6px; height: 6px;"></span>
+          <span style="font-weight: 500; color: var(--text-primary);">Claude Sonnet 4.5</span>
+          <span style="color: var(--text-muted); font-size: 11px;">&#9660;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dropdown (positioned below the selector) -->
+    <div style="background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: 0 8px 32px rgba(0,0,0,0.4); overflow: hidden; max-width: 340px; margin-left: auto;">
+      <!-- Dropdown item: Claude Sonnet 4.5 (selected, default) -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(99, 102, 241, 0.08); cursor: pointer;">
+        <span class="model-dot active" style="width: 8px; height: 8px; flex-shrink: 0;"></span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Claude Sonnet 4.5</span>
+            <span class="model-tag default" style="font-size: 10px;">Default</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Fast, balanced reasoning. Best for everyday tasks.</div>
+        </div>
+        <span style="color: var(--brand-primary); font-size: 14px; flex-shrink: 0;">&#10003;</span>
+      </div>
+      <!-- Dropdown item: Claude Opus 4.6 -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--border-subtle); cursor: pointer;">
+        <span class="model-dot active" style="width: 8px; height: 8px; flex-shrink: 0;"></span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Claude Opus 4.6</span>
+            <span class="model-tag" style="font-size: 10px; background: rgba(139, 92, 246, 0.15); color: var(--brand-accent);">Pro+</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Most capable. Complex analysis and multi-step planning.</div>
+        </div>
+      </div>
+      <!-- Dropdown item: GPT-5 -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--border-subtle); cursor: pointer;">
+        <span class="model-dot active" style="width: 8px; height: 8px; flex-shrink: 0;"></span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">GPT-5</span>
+            <span class="model-tag" style="font-size: 10px; background: rgba(139, 92, 246, 0.15); color: var(--brand-accent);">Pro+</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">OpenAI flagship. Strong at structured output and code.</div>
+        </div>
+      </div>
+      <!-- Dropdown item: Gemini 3 Pro -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--border-subtle); cursor: pointer;">
+        <span class="model-dot active" style="width: 8px; height: 8px; flex-shrink: 0;"></span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Gemini 3 Pro</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Google model. Large context window, good at summarization.</div>
+        </div>
+      </div>
+      <!-- Dropdown item: Claude Haiku 4.5 -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--border-subtle); cursor: pointer;">
+        <span class="model-dot" style="width: 8px; height: 8px; flex-shrink: 0; background: var(--color-success);"></span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Claude Haiku 4.5</span>
+            <span class="model-tag fast" style="font-size: 10px;">Fast</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Fastest responses. Ideal for quick questions and drafts.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ===== END: Model Selector Dropdown ===== -->
+
+    <h3>Cancel / Stop Generating</h3>
+    <div class="spec-note">While the agent is streaming a response or executing tool calls, a cancel button appears below the chat. Press Escape or click the button to stop generation.</div>
+
+<!-- ===== MOCKUP: Cancel Button / Stop Generating ===== -->
+<div class="mockup-frame small">
+  <div class="mockup-titlebar">
+    <div class="titlebar-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="titlebar-title">GHO Work — Active Agent Work</span>
+  </div>
+  <div class="mockup-body" style="display: flex; flex-direction: column;">
+    <div class="chat-messages" style="flex: 1; padding: 16px;">
+      <div class="chat-msg assistant">
+        <div class="msg-content streaming">
+          I found the relevant data in your Google Sheets. Let me compile the quarterly summary.
+
+          <strong>Q1 2026 Revenue Summary</strong>
+
+          Based on the sales pipeline data, here are the key metrics:
+          - Total closed revenue: $1.42M (up 18% YoY)
+          - Average deal size: $28,400
+          - Win rate: 34% across all segments
+          - Top performing region: West Coast with $485K in closed<span class="cursor-blink">|</span>
+        </div>
+        <div class="tool-call-card" style="margin-top: 8px;">
+          <div class="tool-call-header">
+            <span class="tool-call-icon pending" style="display: inline-flex; width: 16px; height: 16px; align-items: center; justify-content: center;">
+              <span class="onb-spinner" style="width: 14px; height: 14px; border-width: 2px; margin: 0;"></span>
+            </span>
+            <span class="tool-call-name">google-sheets / getCellRange</span>
+            <span class="tool-call-status pending">Running...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="streaming-status">
+      <button class="btn-cancel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        Stop generating
+      </button>
+      <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">or press <kbd>Esc</kbd></span>
+    </div>
+  </div>
+</div>
+<!-- ===== END: Cancel Button / Stop Generating ===== -->
+
+    <h3>File Drag-and-Drop</h3>
+    <div class="spec-note">Users can drag files from Finder into the chat input area. Files appear as removable pills above the text input. A drop zone hint appears when dragging over the chat area.</div>
+
+<!-- ===== MOCKUP: File Drag-and-Drop ===== -->
+<div class="mockup-frame small">
+  <div class="mockup-titlebar">
+    <div class="titlebar-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="titlebar-title">GHO Work — File Attachments</span>
+  </div>
+  <div class="mockup-body" style="display: flex; flex-direction: column; justify-content: flex-end; min-height: 260px;">
+    <!-- Empty chat area with drop zone hint -->
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; margin: 16px; border: 2px dashed var(--border-strong); border-radius: var(--radius-lg); opacity: 0.5;">
+      <div style="text-align: center; padding: 20px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-muted); margin-bottom: 8px;">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <div style="font-size: 12px; color: var(--text-muted);">Drop files here to attach</div>
+      </div>
+    </div>
+
+    <!-- Input bar with file pills -->
+    <div style="border-top: 1px solid var(--border-default); padding: 12px 16px; background: var(--bg-card);">
+      <!-- File pills row -->
+      <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 100px; font-size: 12px; color: var(--text-secondary);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-success); flex-shrink: 0;">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span>Q1-Sales.xlsx</span>
+          <button style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px;">&#10005;</button>
+        </div>
+        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 100px; font-size: 12px; color: var(--text-secondary);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted); flex-shrink: 0;">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span>Notes.md</span>
+          <button style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px;">&#10005;</button>
+        </div>
+      </div>
+      <!-- Input row -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <input type="text" value="Analyze the sales data from Q1" disabled style="flex: 1; background: var(--bg-input); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 10px 14px; color: var(--text-primary); font-size: 14px; font-family: var(--font-sans);">
+        <button class="btn-primary btn-small" style="padding: 10px 14px; border-radius: var(--radius-md);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ===== END: File Drag-and-Drop ===== -->
+
+    <h3>Conversation Context Menu</h3>
+    <div class="spec-note">Right-clicking a conversation in the sidebar opens a context menu with options to rename, archive, or delete the conversation.</div>
+
+<!-- ===== MOCKUP: Conversation Context Menu ===== -->
+<div class="mockup-frame small">
+  <div class="mockup-body" style="display: flex; min-height: 260px;">
+    <!-- Sidebar conversation list -->
+    <div style="width: 240px; background: #13151d; border-right: 1px solid var(--border-default); padding: 8px 0;">
+      <div style="padding: 10px 14px; border-bottom: 1px solid var(--border-default); display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Conversations</span>
+        <button class="btn-icon-small" style="font-size: 16px;">+</button>
+      </div>
+      <!-- Conversation items -->
+      <div style="padding: 4px 8px;">
+        <div style="padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(99, 102, 241, 0.08); color: var(--text-primary); font-size: 13px; margin-bottom: 2px; cursor: pointer;">
+          Q1 Sales Analysis
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">2 hours ago</div>
+        </div>
+        <!-- This item has the context menu open -->
+        <div style="padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-primary); font-size: 13px; margin-bottom: 2px; cursor: pointer; position: relative; border: 1px solid var(--border-strong);">
+          Meeting prep with Sarah
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Yesterday</div>
+          <!-- Context menu -->
+          <div style="position: absolute; left: 100%; top: 0; margin-left: 4px; background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: 0 8px 32px rgba(0,0,0,0.4); min-width: 160px; z-index: 10; overflow: hidden;">
+            <div style="padding: 6px 14px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">Rename</div>
+            <div style="padding: 6px 14px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">Archive</div>
+            <div style="height: 1px; background: var(--border-default); margin: 4px 0;"></div>
+            <div style="padding: 6px 14px; font-size: 13px; color: var(--color-error); cursor: pointer;">Delete</div>
+          </div>
+        </div>
+        <div style="padding: 8px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 13px; margin-bottom: 2px; cursor: pointer;">
+          Draft email to investors
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">2 days ago</div>
+        </div>
+        <div style="padding: 8px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 13px; margin-bottom: 2px; cursor: pointer;">
+          Competitive analysis
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">3 days ago</div>
+        </div>
+      </div>
+    </div>
+    <!-- Main area (blurred/dimmed to focus on sidebar) -->
+    <div style="flex: 1; background: var(--bg-page); opacity: 0.3; display: flex; align-items: center; justify-content: center;">
+      <span style="color: var(--text-muted); font-size: 13px;">Chat area</span>
+    </div>
+  </div>
+</div>
+<!-- ===== END: Conversation Context Menu ===== -->
 
     <h3>Slash Command Autocomplete</h3>
 
@@ -2233,6 +2977,522 @@ mgc users calendar events list --start "$(date -v-7d +%Y-%m-%d)" --end "$(date +
       </div>
     </div>
 
+    <!-- ==================== SETTINGS: MODELS ==================== -->
+    <h3>Settings: Models</h3>
+    <div class="spec-note">Shows available models based on the user's Copilot tier, default model selection, and usage tracking.</div>
+    
+    <div class="mockup-frame large">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Settings</span>
+      </div>
+      <div class="mockup-body settings-main">
+        <div class="settings-layout">
+          <div class="settings-nav">
+            <div class="settings-nav-item">General</div>
+            <div class="settings-nav-item">Appearance</div>
+            <div class="settings-nav-item active">Models</div>
+            <div class="settings-nav-item">Connectors</div>
+            <div class="settings-nav-item">Permissions</div>
+            <div class="settings-nav-item">Workspace</div>
+            <div class="settings-nav-item">Account</div>
+          </div>
+          <div class="settings-content">
+            <h3>Models</h3>
+    
+            <!-- Available Models Table -->
+            <div class="concept-table" style="margin-bottom: 24px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>Provider</th>
+                    <th>Tier</th>
+                    <th>Context</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Claude Sonnet 4.5</strong></td>
+                    <td>Anthropic</td>
+                    <td>All tiers</td>
+                    <td>200K</td>
+                    <td><span style="color: var(--color-success); font-size: 12px; font-weight: 600;">Available</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Claude Haiku 4.5</strong></td>
+                    <td>Anthropic</td>
+                    <td>All tiers</td>
+                    <td>200K</td>
+                    <td><span style="color: var(--color-success); font-size: 12px; font-weight: 600;">Available</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Claude Opus 4.6</strong></td>
+                    <td>Anthropic</td>
+                    <td>Pro+</td>
+                    <td>200K</td>
+                    <td><span style="color: var(--color-success); font-size: 12px; font-weight: 600;">Available</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>GPT-5</strong></td>
+                    <td>OpenAI</td>
+                    <td>Pro+</td>
+                    <td>128K</td>
+                    <td><span style="color: var(--color-success); font-size: 12px; font-weight: 600;">Available</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Gemini 3 Pro</strong></td>
+                    <td>Google</td>
+                    <td>Pro+</td>
+                    <td>1M</td>
+                    <td><span style="color: var(--text-muted); font-size: 12px; font-weight: 600;">Unavailable</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+    
+            <!-- Default Model Selector -->
+            <div class="setting-group">
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-label">Default Model</span>
+                  <span class="setting-desc">Model used for new conversations when no workspace override is set</span>
+                </div>
+                <select disabled>
+                  <option>Claude Sonnet 4.5</option>
+                  <option>Claude Haiku 4.5</option>
+                  <option>Claude Opus 4.6</option>
+                  <option>GPT-5</option>
+                </select>
+              </div>
+            </div>
+    
+            <!-- Usage Section -->
+            <h4 style="margin-top: 28px; margin-bottom: 12px;">Usage</h4>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">Premium Requests</span>
+                <span style="font-size: 13px; color: var(--text-secondary);">142 of 300 remaining</span>
+              </div>
+              <div style="height: 8px; background: var(--bg-surface); border-radius: 4px; overflow: hidden; margin-bottom: 12px;">
+                <div style="width: 52.7%; height: 100%; background: var(--brand-primary); border-radius: 4px;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="onb-tier-badge">Copilot Pro</span>
+                <a href="#" style="font-size: 13px; color: var(--brand-primary); text-decoration: none;">Upgrade plan</a>
+              </div>
+            </div>
+    
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ==================== SETTINGS: WORKSPACE ==================== -->
+    <h3>Settings: Workspace</h3>
+    <div class="spec-note">Workspace-specific configuration: path, memory files, model overrides, and permission scope.</div>
+    
+    <div class="mockup-frame large">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Settings</span>
+      </div>
+      <div class="mockup-body settings-main">
+        <div class="settings-layout">
+          <div class="settings-nav">
+            <div class="settings-nav-item">General</div>
+            <div class="settings-nav-item">Appearance</div>
+            <div class="settings-nav-item">Models</div>
+            <div class="settings-nav-item">Connectors</div>
+            <div class="settings-nav-item">Permissions</div>
+            <div class="settings-nav-item active">Workspace</div>
+            <div class="settings-nav-item">Account</div>
+          </div>
+          <div class="settings-content">
+            <h3>Workspace</h3>
+    
+            <div class="setting-group">
+              <!-- Workspace Path -->
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-label">Workspace Path</span>
+                  <span class="setting-desc" style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);">~/Projects/sales-reports</span>
+                </div>
+                <button class="btn-outline" disabled>Change...</button>
+              </div>
+    
+              <!-- Model Override -->
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-label">Model Override</span>
+                  <span class="setting-desc">Use a different model for this workspace (overrides global default)</span>
+                </div>
+                <select disabled>
+                  <option>Use global default</option>
+                  <option>Claude Sonnet 4.5</option>
+                  <option>Claude Opus 4.6</option>
+                  <option>GPT-5</option>
+                </select>
+              </div>
+            </div>
+    
+            <!-- Memory Files -->
+            <h4 style="margin-top: 28px; margin-bottom: 12px;">Memory Files</h4>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px;">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <div style="flex: 1;">
+                  <span style="font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); display: block;">CLAUDE.md</span>
+                  <span style="font-size: 11px; color: var(--text-muted);">Project root</span>
+                </div>
+                <button class="btn-small btn-outline" disabled>Edit</button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <div style="flex: 1;">
+                  <span style="font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); display: block;">.github/copilot-instructions.md</span>
+                  <span style="font-size: 11px; color: var(--text-muted);">.github/</span>
+                </div>
+                <button class="btn-small btn-outline" disabled>Edit</button>
+              </div>
+            </div>
+    
+            <!-- Permission Scope -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <span style="font-size: 14px; font-weight: 500; color: var(--text-primary); display: block;">Permission Scope</span>
+                <span style="font-size: 12px; color: var(--text-muted);">3 rules apply to this workspace</span>
+              </div>
+              <a href="#" style="font-size: 13px; color: var(--brand-primary); text-decoration: none;">View rules</a>
+            </div>
+    
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ==================== SETTINGS: ACCOUNT ==================== -->
+    <h3>Settings: Account</h3>
+    <div class="spec-note">GitHub identity, Copilot tier, usage summary, and sign-out.</div>
+    
+    <div class="mockup-frame large">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Settings</span>
+      </div>
+      <div class="mockup-body settings-main">
+        <div class="settings-layout">
+          <div class="settings-nav">
+            <div class="settings-nav-item">General</div>
+            <div class="settings-nav-item">Appearance</div>
+            <div class="settings-nav-item">Models</div>
+            <div class="settings-nav-item">Connectors</div>
+            <div class="settings-nav-item">Permissions</div>
+            <div class="settings-nav-item">Workspace</div>
+            <div class="settings-nav-item active">Account</div>
+          </div>
+          <div class="settings-content">
+            <h3>Account</h3>
+    
+            <!-- Profile Card -->
+            <div style="display: flex; align-items: center; gap: 16px; padding: 20px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); margin-bottom: 20px;">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 22px; flex-shrink: 0;">S</div>
+              <div style="flex: 1;">
+                <span style="font-size: 16px; font-weight: 600; color: var(--text-primary); display: block;">Sarah Chen</span>
+                <span style="font-size: 13px; color: var(--text-muted); display: block;">@sarahchen</span>
+                <span style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: block;">Connected via GitHub OAuth</span>
+              </div>
+              <span class="onb-tier-badge">Copilot Pro</span>
+            </div>
+    
+            <!-- Usage Meter -->
+            <h4 style="margin-top: 0; margin-bottom: 12px;">Usage This Month</h4>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 14px; font-weight: 500; color: var(--text-primary);">Premium Requests</span>
+                <span style="font-size: 13px; color: var(--text-secondary);">158 / 300 used</span>
+              </div>
+              <div style="height: 8px; background: var(--bg-surface); border-radius: 4px; overflow: hidden; margin-bottom: 12px;">
+                <div style="width: 52.7%; height: 100%; background: var(--brand-primary); border-radius: 4px;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; color: var(--text-muted);">Resets April 1, 2026</span>
+                <a href="#" style="font-size: 13px; color: var(--brand-primary); text-decoration: none;">View plan details</a>
+              </div>
+            </div>
+    
+            <!-- Sign Out -->
+            <div style="padding-top: 12px; border-top: 1px solid var(--border-subtle);">
+              <button class="btn-outline danger" disabled>Sign Out</button>
+            </div>
+    
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ==================== SETTINGS: PERMISSIONS ==================== -->
+    <h3>Settings: Permissions</h3>
+    <div class="spec-note">Permission rules management within the settings panel, with scope indicators and audit log access.</div>
+    
+    <div class="mockup-frame large">
+      <div class="mockup-titlebar">
+        <div class="titlebar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="titlebar-title">GHO Work — Settings</span>
+      </div>
+      <div class="mockup-body settings-main">
+        <div class="settings-layout">
+          <div class="settings-nav">
+            <div class="settings-nav-item">General</div>
+            <div class="settings-nav-item">Appearance</div>
+            <div class="settings-nav-item">Models</div>
+            <div class="settings-nav-item">Connectors</div>
+            <div class="settings-nav-item active">Permissions</div>
+            <div class="settings-nav-item">Workspace</div>
+            <div class="settings-nav-item">Account</div>
+          </div>
+          <div class="settings-content">
+            <h3>Permissions</h3>
+    
+            <div class="settings-header">
+              <p>Saved rules that automatically allow or deny tool calls. Rules are evaluated in order; first match wins.</p>
+            </div>
+    
+            <div class="perm-rules-list">
+              <div class="perm-rule-item allow">
+                <span class="rule-decision allow">ALLOW</span>
+                <div class="rule-info">
+                  <span class="rule-pattern">google-sheets/*</span>
+                  <span class="rule-scope">Global</span>
+                </div>
+                <span class="rule-server">Google Sheets MCP</span>
+                <span style="font-size: 11px; color: var(--text-muted); min-width: 70px; text-align: right;">Mar 5, 2026</span>
+                <button class="rule-delete" title="Delete rule">&#10005;</button>
+              </div>
+              <div class="perm-rule-item allow">
+                <span class="rule-decision allow">ALLOW</span>
+                <div class="rule-info">
+                  <span class="rule-pattern">google-drive/readFile</span>
+                  <span class="rule-scope">Global</span>
+                </div>
+                <span class="rule-server">Google Drive MCP</span>
+                <span style="font-size: 11px; color: var(--text-muted); min-width: 70px; text-align: right;">Mar 4, 2026</span>
+                <button class="rule-delete" title="Delete rule">&#10005;</button>
+              </div>
+              <div class="perm-rule-item deny">
+                <span class="rule-decision deny">DENY</span>
+                <div class="rule-info">
+                  <span class="rule-pattern">slack/deleteMessage</span>
+                  <span class="rule-scope">Global</span>
+                </div>
+                <span class="rule-server">Slack MCP</span>
+                <span style="font-size: 11px; color: var(--text-muted); min-width: 70px; text-align: right;">Mar 3, 2026</span>
+                <button class="rule-delete" title="Delete rule">&#10005;</button>
+              </div>
+              <div class="perm-rule-item allow">
+                <span class="rule-decision allow">ALLOW</span>
+                <div class="rule-info">
+                  <span class="rule-pattern">FileRead</span>
+                  <span class="rule-scope">Workspace: sales-reports</span>
+                </div>
+                <span class="rule-server">SDK Built-in</span>
+                <span style="font-size: 11px; color: var(--text-muted); min-width: 70px; text-align: right;">Mar 2, 2026</span>
+                <button class="rule-delete" title="Delete rule">&#10005;</button>
+              </div>
+              <div class="perm-rule-item deny">
+                <span class="rule-decision deny">DENY</span>
+                <div class="rule-info">
+                  <span class="rule-pattern">Bash(rm -rf *)</span>
+                  <span class="rule-scope">Global</span>
+                </div>
+                <span class="rule-server">SDK Built-in</span>
+                <span style="font-size: 11px; color: var(--text-muted); min-width: 70px; text-align: right;">Feb 28, 2026</span>
+                <button class="rule-delete" title="Delete rule">&#10005;</button>
+              </div>
+            </div>
+    
+            <div class="settings-action-bar" style="display: flex; justify-content: space-between; align-items: center;">
+              <button class="btn-outline" disabled>Add Rule</button>
+              <a href="#" style="font-size: 13px; color: var(--brand-primary); text-decoration: none;">View audit log</a>
+            </div>
+    
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ==================== COPILOT USAGE METER DETAIL ==================== -->
+    <h3>Copilot Usage Meter</h3>
+    <div class="spec-note">The status bar shows a compact usage indicator. Clicking it opens a popover with details. Visual states change at usage thresholds.</div>
+    
+    <div class="spec-callout">
+      <h4>Status Bar Indicator States</h4>
+      <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
+    
+        <!-- Normal State -->
+        <div>
+          <span style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Normal (below 80%)</span>
+          <div style="margin-top: 8px; display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--bg-surface); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary);">
+            <div style="width: 40px; height: 4px; background: var(--bg-card); border-radius: 2px; overflow: hidden;">
+              <div style="width: 47%; height: 100%; background: var(--brand-primary); border-radius: 2px;"></div>
+            </div>
+            <span>142 left</span>
+          </div>
+        </div>
+    
+        <!-- Warning State -->
+        <div>
+          <span style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Warning (80%+)</span>
+          <div style="margin-top: 8px; display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--color-warning-bg); border-radius: var(--radius-sm); font-size: 12px; color: var(--color-warning);">
+            <div style="width: 40px; height: 4px; background: var(--bg-card); border-radius: 2px; overflow: hidden;">
+              <div style="width: 85%; height: 100%; background: var(--color-warning); border-radius: 2px;"></div>
+            </div>
+            <span>45 left</span>
+          </div>
+        </div>
+    
+        <!-- Critical State -->
+        <div>
+          <span style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Critical (100%)</span>
+          <div style="margin-top: 8px; display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--color-error-bg); border-radius: var(--radius-sm); font-size: 12px; color: var(--color-error);">
+            <div style="width: 40px; height: 4px; background: var(--bg-card); border-radius: 2px; overflow: hidden;">
+              <div style="width: 100%; height: 100%; background: var(--color-error); border-radius: 2px;"></div>
+            </div>
+            <span>0 left</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Expanded Popover -->
+    <h4 style="margin-top: 24px;">Usage Popover</h4>
+    <div class="spec-note">Appears when the user clicks the status bar usage indicator.</div>
+    
+    <div style="max-width: 280px; background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Copilot Pro</span>
+        <span class="onb-tier-badge">Pro</span>
+      </div>
+      <div style="margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
+          <span>Premium requests</span>
+          <span>158 / 300</span>
+        </div>
+        <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+          <div style="width: 52.7%; height: 100%; background: var(--brand-primary); border-radius: 3px;"></div>
+        </div>
+      </div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Resets April 1, 2026</div>
+      <a href="#" style="font-size: 13px; color: var(--brand-primary); text-decoration: none;">View plans</a>
+    </div>
+    
+    <!-- Limit Reached Banner -->
+    <h4>Limit Reached Banner</h4>
+    <div class="spec-note">Shown inline in the chat area when the user has exhausted premium requests.</div>
+    
+    <div style="max-width: 600px; background: var(--color-warning-bg); border: 1px solid var(--color-warning); border-radius: var(--radius-md); padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div style="flex: 1;">
+        <span style="font-size: 14px; font-weight: 500; color: var(--text-primary); display: block;">You've used all premium requests for this month.</span>
+        <span style="font-size: 13px; color: var(--text-secondary);">Free-tier models are still available.</span>
+      </div>
+      <button class="btn-small btn-outline" disabled>Compare plans</button>
+    </div>
+    
+    <!-- ==================== HOOKS CONFIGURATION ==================== -->
+    <h3>Hooks Configuration</h3>
+    <div class="spec-note">Hooks allow custom scripts to run at defined points in the agent lifecycle. Configured in .claude/settings.json.</div>
+    
+    <div class="spec-callout">
+      <h4>Available Hook Events</h4>
+      <ul>
+        <li><code>pre_tool_call</code> — Runs before a tool is executed (can modify arguments or abort)</li>
+        <li><code>post_tool_call</code> — Runs after a tool completes (can inspect results, trigger follow-up)</li>
+        <li><code>session_start</code> — Runs when a new agent session begins</li>
+        <li><code>session_end</code> — Runs when a session ends (cleanup, reporting)</li>
+      </ul>
+    </div>
+    
+    <!-- Configuration Example -->
+    <div class="code-example">
+      <div class="code-header">
+        <span class="code-filename">.claude/settings.json</span>
+      </div>
+      <div class="code-body">{
+      "hooks": {
+        "pre_tool_call": [
+          {
+            "matcher": "Bash",
+            "command": "scripts/validate-command.sh",
+            "timeout": 5000
+          }
+        ],
+        "post_tool_call": [
+          {
+            "matcher": "*",
+            "command": "scripts/log-tool-call.sh",
+            "timeout": 3000
+          }
+        ],
+        "session_start": [
+          {
+            "command": "scripts/setup-workspace.sh"
+          }
+        ],
+        "session_end": [
+          {
+            "command": "scripts/cleanup.sh"
+          }
+        ]
+      }
+    }</div>
+    </div>
+    
+    <!-- Hook Execution in Tool Activity Feed -->
+    <h4 style="margin-top: 24px;">Hook Execution in Tool Activity</h4>
+    <div class="spec-note">Hooks appear in the tool activity feed as distinct entries before and after the tool call they wrap.</div>
+    
+    <div style="max-width: 500px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px;">
+      <!-- Pre-hook -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span style="font-family: var(--font-mono); color: var(--text-muted); font-size: 12px;">pre_tool_call</span>
+        <span style="color: var(--text-secondary); flex: 1;">validate-command.sh</span>
+        <span style="font-size: 11px; color: var(--color-success);">passed</span>
+      </div>
+      <!-- Actual tool call -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--brand-primary); border-radius: var(--radius-md); font-size: 13px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-primary)" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span style="font-family: var(--font-mono); color: var(--text-primary); font-weight: 500; font-size: 12px;">Bash</span>
+        <span style="color: var(--text-secondary); flex: 1; font-family: var(--font-mono); font-size: 12px;">npm run build</span>
+        <span style="font-size: 11px; color: var(--color-success);">success</span>
+      </div>
+      <!-- Post-hook -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span style="font-family: var(--font-mono); color: var(--text-muted); font-size: 12px;">post_tool_call</span>
+        <span style="color: var(--text-secondary); flex: 1;">log-tool-call.sh</span>
+        <span style="font-size: 11px; color: var(--color-success);">logged</span>
+      </div>
+    </div>
+
     <h3>Workspace Picker</h3>
     <div class="spec-note">Shown on launch if no recent workspace, or via the workspace name in the status bar.</div>
 
@@ -2271,6 +3531,204 @@ mgc users calendar events list --start "$(date -v-7d +%Y-%m-%d)" --end "$(date +
         </div>
       </div>
     </div>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 11. EMPTY & ERROR STATES                                      -->
+<!-- ============================================================ -->
+<section class="spec-section" id="states">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-num">11</span>
+      <h2>Empty & Error States</h2>
+    </div>
+
+    <div class="prose">
+      <p>Every view in GHO Work has a designed empty state that guides users toward their first action. Error states provide clear feedback with recovery options.</p>
+    </div>
+
+    <h3>Empty States</h3>
+    <div class="spec-note">Shown when a view has no content yet. Each empty state includes an icon, a short message, and a call-to-action.</div>
+
+<!-- ===== MOCKUP: Empty States ===== -->
+
+<!-- 5a. Empty Conversation List -->
+<div class="mockup-frame small">
+  <div class="mockup-titlebar">
+    <div class="titlebar-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="titlebar-title">Empty State — Conversations</span>
+  </div>
+  <div class="mockup-body" style="display: flex; align-items: center; justify-content: center; padding: 40px;">
+    <div style="text-align: center; max-width: 280px;">
+      <div style="width: 56px; height: 56px; margin: 0 auto 16px; background: rgba(99, 102, 241, 0.08); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-muted);">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <div style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">No conversations yet</div>
+      <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">Start a new conversation with <kbd>Cmd+N</kbd> or type in the chat input</div>
+    </div>
+  </div>
+</div>
+
+<!-- 5b. Empty Connectors -->
+<div class="mockup-frame small">
+  <div class="mockup-titlebar">
+    <div class="titlebar-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="titlebar-title">Empty State — Connectors</span>
+  </div>
+  <div class="mockup-body" style="display: flex; align-items: center; justify-content: center; padding: 40px;">
+    <div style="text-align: center; max-width: 280px;">
+      <div style="width: 56px; height: 56px; margin: 0 auto 16px; background: rgba(99, 102, 241, 0.08); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-muted);">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+          <line x1="6" y1="6" x2="6.01" y2="6"/>
+          <line x1="6" y1="18" x2="6.01" y2="18"/>
+        </svg>
+      </div>
+      <div style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">No connectors configured</div>
+      <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">Add your first MCP server to get started</div>
+      <button class="btn-primary btn-small">Browse Registry</button>
+    </div>
+  </div>
+</div>
+
+<!-- 5c. Empty Documents -->
+<div class="mockup-frame small">
+  <div class="mockup-titlebar">
+    <div class="titlebar-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="titlebar-title">Empty State — Documents</span>
+  </div>
+  <div class="mockup-body" style="display: flex; align-items: center; justify-content: center; padding: 40px;">
+    <div style="text-align: center; max-width: 280px;">
+      <div style="width: 56px; height: 56px; margin: 0 auto 16px; background: rgba(99, 102, 241, 0.08); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-muted);">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <div style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">No files in workspace</div>
+      <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">Open a workspace folder to see your files here</div>
+    </div>
+  </div>
+</div>
+<!-- ===== END: Empty States ===== -->
+
+    <h3>Error States</h3>
+    <div class="spec-note">Error states appear inline in the relevant context (chat area for agent errors, sidebar for connector errors). Each includes a clear description and a retry action.</div>
+
+<!-- ===== MOCKUP: Error States ===== -->
+
+<!-- 6a. Agent Error in Chat -->
+<div class="mockup-frame small">
+  <div class="mockup-titlebar">
+    <div class="titlebar-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="titlebar-title">Error State — Agent Disconnect</span>
+  </div>
+  <div class="mockup-body" style="padding: 16px;">
+    <div class="chat-messages">
+      <div class="chat-msg user">
+        <div class="msg-content">Summarize the latest board deck and send highlights to #leadership.</div>
+      </div>
+      <div class="chat-msg assistant">
+        <div class="msg-content">I'll start by reading the board deck. Let me fetch it from Google Drive.</div>
+        <div class="tool-call-card">
+          <div class="tool-call-header">
+            <span class="tool-call-icon approved">&#10003;</span>
+            <span class="tool-call-name">google-drive / readFile</span>
+            <span class="tool-call-status done">Done — 1.4s</span>
+          </div>
+        </div>
+      </div>
+      <!-- Error message -->
+      <div style="margin-top: 12px; padding: 14px 16px; background: var(--color-error-bg); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); display: flex; align-items: center; gap: 12px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-error); flex-shrink: 0;">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600; color: var(--color-error); margin-bottom: 2px;">Agent Host disconnected</div>
+          <div style="font-size: 12px; color: var(--text-muted);">Reconnecting...</div>
+        </div>
+        <button class="btn-outline btn-small" style="border-color: var(--color-error); color: var(--color-error);">Retry</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 6b. MCP Server Error in Sidebar -->
+<div class="mockup-frame small">
+  <div class="mockup-titlebar">
+    <div class="titlebar-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="titlebar-title">Error State — MCP Server Failure</span>
+  </div>
+  <div class="mockup-body" style="display: flex; min-height: 260px;">
+    <!-- Sidebar connector list -->
+    <div style="width: 260px; background: #13151d; border-right: 1px solid var(--border-default);">
+      <div style="padding: 10px 14px; border-bottom: 1px solid var(--border-default);">
+        <span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Connectors</span>
+      </div>
+      <div style="padding: 8px;">
+        <!-- Healthy connector -->
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); margin-bottom: 4px; font-size: 13px; color: var(--text-secondary);">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-success); flex-shrink: 0;"></span>
+          <span style="flex: 1;">Google Sheets</span>
+          <span style="font-size: 11px; color: var(--text-muted);">3 tools</span>
+        </div>
+        <!-- Healthy connector -->
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); margin-bottom: 4px; font-size: 13px; color: var(--text-secondary);">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-success); flex-shrink: 0;"></span>
+          <span style="flex: 1;">Google Drive</span>
+          <span style="font-size: 11px; color: var(--text-muted);">5 tools</span>
+        </div>
+        <!-- ERRORED connector with tooltip -->
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); margin-bottom: 4px; font-size: 13px; color: var(--text-secondary); background: var(--color-error-bg); border: 1px solid rgba(239, 68, 68, 0.2); cursor: pointer; position: relative;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-error); flex-shrink: 0;"></span>
+          <span style="flex: 1; color: var(--text-primary);">Slack</span>
+          <span style="font-size: 11px; color: var(--color-error);">Error</span>
+          <!-- Tooltip -->
+          <div style="position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 10px 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); min-width: 240px; z-index: 10;">
+            <div style="font-size: 12px; font-weight: 600; color: var(--color-error); margin-bottom: 4px;">Connection failed</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">timeout after 30s. Click to retry.</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Last attempt: 14:32:01</div>
+          </div>
+        </div>
+        <!-- Healthy connector -->
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); margin-bottom: 4px; font-size: 13px; color: var(--text-secondary);">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-success); flex-shrink: 0;"></span>
+          <span style="flex: 1;">Google Calendar</span>
+          <span style="font-size: 11px; color: var(--text-muted);">4 tools</span>
+        </div>
+      </div>
+    </div>
+    <!-- Main area dimmed -->
+    <div style="flex: 1; background: var(--bg-page); opacity: 0.3;"></div>
+  </div>
+</div>
+<!-- ===== END: Error States ===== -->
 
   </div>
 </section>

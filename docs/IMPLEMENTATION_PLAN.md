@@ -147,65 +147,66 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 
 ### Phase 2: Agent Integration (Weeks 4-7)
 
-**Goal:** A user can type a prompt, the Copilot SDK processes it, tools execute (with permission approval), and streaming output appears in the chat UI.
+**Goal:** A user can type a prompt, the Copilot SDK processes it, tools execute via the SDK's native handlers, and streaming output appears in the chat UI.
 
 **Deliverables:**
 
 - [ ] 1. **Copilot SDK wrapper** (`packages/agent`)
-   - `ICopilotSDK` interface: `createSession()`, `configureModel()`, `registerTool()`, `streamEvents()`
-   - Implementation wrapping `@github/copilot-cli-sdk`
-   - Copilot CLI server lifecycle: detect, start, connect (JSON-RPC over stdio)
-   - Session configuration: model selection, max iterations, custom instructions
-   - Event streaming: text chunks, tool calls, thinking, completion
+   - `ICopilotSDK` interface: `start()`, `stop()`, `createSession()`, `resumeSession()`, `listSessions()`, `deleteSession()`, `ping()`
+   - `ISDKSession` interface: `send()`, `sendAndWait()`, `abort()`, `on()`, `getMessages()`, `disconnect()`
+   - Implementation wrapping `CopilotClient` from `@github/copilot-sdk`
+   - CLI server lifecycle managed by SDK (`autoStart: true`, `autoRestart: true`, `useStdio: true`)
+   - Session configuration: `model`, `systemMessage`, `mcpServers` (MCP server passthrough config), `streaming`
+   - Event bridging: map SDK events (`assistant.message_delta`, `tool.execution_start`, `session.idle`, etc.) to our `AgentEvent` discriminated union
+   - Auth: pass GitHub token from `IAuthService` to SDK via `githubToken` option
 
 - [ ] 2. **Agent service** (`packages/agent`)
-   - `IAgentService` interface: `executeTask()`, `cancelTask()`, `getTaskStatus()`
-   - Context injection: loads CLAUDE.md / .github/copilot-instructions.md, conversation history
-   - MCP tool registration with SDK session (tools from `IToolRegistry`)
-   - Subagent spawning for parallel subtasks
+   - `IAgentService` interface: `executeTask()`, `cancelTask()`, `getActiveTaskId()`
+   - `executeTask()` flow: create SDK session with `model`, `systemMessage`, `mcpServers` → bridge SDK events to `AsyncIterable<AgentEvent>` → yield events to caller
+   - Context injection: loads CLAUDE.md / .github/copilot-instructions.md into `systemMessage`
+   - `AsyncQueue<AgentEvent>` utility for bridging SDK callback events to async iterable
+   - Subagent spawning for parallel subtasks (separate SDK sessions)
    - Task queue: accept new tasks while agent is busy (addresses Claude Cowork parity item)
 
-- [ ] 3. **Tool registry** (`packages/agent`)
-   - `IToolRegistry` interface: `registerTool()`, `getTools()`, `getToolsByServer()`
-   - Unified registry for SDK built-in tools + MCP tools + Agent Skills
-   - Tool metadata: name, description, schema, source, server
+- [ ] 3. **SDK native tool handling** (`packages/agent`)
+   - The SDK manages all tools natively: built-in tools (file, bash, git, web) execute through SDK handlers; MCP servers are passed via `mcpServers` session config
+   - No custom tool registry, no `defineTool()` wrapping, no built-in re-implementation
+   - Tool call events from the SDK are mapped to our `AgentEvent` union and persisted via `IConversationService`
 
-- [ ] 4. **Permission service** (`packages/agent`)
-   - `IPermissionService` interface: `checkPermission()`, `recordDecision()`, `getRules()`
-   - Intercepts tool calls before execution
-   - Evaluates persisted rules (glob pattern matching on tool names)
-   - Surfaces approval request to Renderer via IPC when no rule matches
-   - Stores decisions (allow once, allow always, deny, deny always)
-   - Audit log: every tool call and decision written to workspace SQLite
+- [ ] 4. **Permission system (deferred)**
+   - Permission enforcement is deferred to a later phase. The SDK executes tools without our approval layer
+   - Tool calls are logged to the conversation database for audit purposes
+   - A permission system with rule matching, glob patterns, and interactive approval will be designed and implemented in a future phase once the core agent loop is stable
 
 - [ ] 5. **Chat UI** (`packages/ui`) — see [UX Tutorial Site](tutorial/index.html#chat) for visual spec
    - `ChatPanel` widget: message list, auto-growing input area, send button
-   - Streaming text rendering (token-by-token with Markdown, cursor blink indicator)
+   - Streaming text rendering (token-by-token with Markdown via `marked` + `DOMPurify`, cursor blink indicator)
    - Tool call visualization: collapsible cards (collapsed after completion) showing tool name, status icon, duration. Expand for: server, arguments (JSON), result, permission decision.
    - Thinking indicator: animated dots with step label (e.g., "Analyzing spreadsheet data...")
-   - Permission prompt: inline in chat flow (not modal) with keyboard shortcuts: Enter=Allow Once, Shift+Enter=Allow Always, Esc=Deny, Shift+Esc=Deny Always. Shell commands shown with warning header and full command text.
-   - Model selector dropdown in main panel header (also via `/model` command)
+   - Model selector dropdown in main panel header (also via `/model` command) — see [Model Selector mockup](tutorial/index.html#chat)
    - Slash command autocomplete: type `/` to show skills + system commands inline
-   - File drag-and-drop: drop files onto input area to attach (shown as file pills)
-   - Cancel button: "Stop generating" appears during agent work
-   - Conversation list in sidebar: search filter, right-click context menu (rename, archive, delete)
+   - File drag-and-drop: drop files onto input area to attach (shown as file pills) — see [File Drag-and-Drop mockup](tutorial/index.html#chat)
+   - Cancel button: "Stop generating" appears during agent work — see [Cancel Button mockup](tutorial/index.html#chat)
+   - Conversation list in sidebar: search filter, right-click context menu (rename, archive, delete) — see [Context Menu mockup](tutorial/index.html#chat)
+   - Empty state: no conversations yet (with Cmd+N prompt) — see [Empty States mockup](tutorial/index.html#states)
+   - Error state: agent host disconnect with retry — see [Error States mockup](tutorial/index.html#states)
 
-- [ ] 6. **Conversation persistence**
-   - Save messages and tool calls to workspace SQLite
-   - Load conversation history on session restore
-   - Auto-title generation (first user message summary)
+- [ ] 6. **Conversation persistence** (`packages/agent`)
+   - `IConversationService` interface: `listConversations()`, `createConversation()`, `addMessage()`, `addToolCall()`, `updateToolCall()`, `getMessages()`, `getToolCalls()`
+   - Implementation using workspace SQLite via `IStorageService`
+   - Save messages and tool calls at each event (see design spec Section 8.2)
+   - Load conversation history on session restore; resume SDK session if possible
+   - Auto-title generation (first user message summary, truncated to ~60 chars)
 
 - [ ] 7. **Phase 2 tests**
-   - Unit tests: tool registry CRUD (register, get, getByServer, remove), tool name collision detection
-   - Unit tests: permission rule matching — glob patterns on tool names, rule precedence (specific > general), all four decision types (allow once, allow always, deny, deny always)
    - Unit tests: conversation persistence — save/load messages, save/load tool calls, auto-title generation
-   - Integration test: agent service end-to-end — mock Copilot SDK → tool call → permission check → response streamed back
-   - E2E test (Playwright): full chat interaction — send message → streaming response completes → all transient UI clears (thinking indicator, cursor) → tool call card renders and collapses → permission prompt appears and responds to keyboard → input re-enabled. Tests must exercise real user flows, not just check element existence.
+   - Unit tests: SDK event to AgentEvent mapping — all event types correctly mapped
+   - Integration test: agent service end-to-end — mock Copilot SDK → tool call → response streamed back
+   - E2E test (Playwright): full chat interaction — send message → streaming response completes → all transient UI clears (thinking indicator, cursor) → tool call card renders and collapses → input re-enabled. Tests must exercise real user flows, not just check element existence.
 
 **Acceptance criteria:**
 - [ ] User types "Hello, what can you do?" and receives a streaming response
-- [ ] User types "Read the file at ~/test.txt" -- permission prompt appears, user approves, file content shown
-- [ ] User types "List files in ~/Documents" -- bash tool executes with approval, output shown
+- [ ] SDK built-in tools execute natively (file read, bash, etc.) — no permission prompts in Phase 2
 - [ ] Tool calls appear as expandable cards with arguments and results
 - [ ] Conversation persists across app restart
 - [ ] Model can be switched mid-session
@@ -262,12 +263,14 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - CLI Tools tab: detected CLIs with version/auth status, install links for missing
    - Custom tab: form for manual MCP server config (name, transport, command/args/env or URL/headers)
    - Per-connector detail view (gear icon): tools list with per-tool enable/disable toggles, credentials, test connection, disconnect
-   - Also accessible as sidebar Connectors view (quick status + enable/disable)
+   - Sidebar Connectors quick-view: status dots, tool count, enable/disable toggles — see [Connectors Sidebar mockup](tutorial/index.html#workbench)
+   - Empty state: no connectors configured (with Browse Registry button) — see [Empty States mockup](tutorial/index.html#states)
+   - Error state: MCP server connection failure with tooltip details — see [Error States mockup](tutorial/index.html#states)
 
 - [ ] 7. **Tool bridge: MCP tools to SDK**
-   - When MCP server connects and lists tools, register each as a custom tool with the SDK session via `IToolRegistry`
-   - Route SDK tool calls for MCP tools through the MCP Manager
-   - Handle MCP tool results and feed back to SDK
+   - MCP servers are passed to the SDK via its native `mcpServers` session config — no custom `defineTool()` wrapping needed
+   - When MCP Manager connects/disconnects servers, update the `mcpServers` config for new SDK sessions
+   - SDK handles MCP tool discovery and invocation natively
 
 - [ ] 8. **Phase 3 tests**
    - Unit tests: MCP client connect/disconnect lifecycle, tool list change handling (debounce, cache invalidation), health check ping timeout
@@ -275,11 +278,11 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Unit tests: CLI detection — mock PATH scanning, version parsing, missing tool handling
    - Integration test: stdio MCP server lifecycle — spawn mock server → connect → list tools → call tool → shutdown (using a minimal test MCP server fixture)
    - Integration test: registry API search — mock HTTP responses, parse server list, generate install config
-   - Smoke test (`tests/smoke/phase3.ts`): install a test MCP server from config, verify tools appear in tool registry, call a tool and see result
+   - Smoke test (`tests/smoke/phase3.ts`): install a test MCP server from config, verify tools appear via SDK's `mcpServers` config, call a tool and see result
 
 **Acceptance criteria:**
 - [ ] Registry browser displays servers from MCP Registry API, search works
-- [ ] A community MCP server (e.g., Google Drive) installed from the registry connects and exposes tools in the tool registry
+- [ ] A community MCP server (e.g., Google Drive) installed from the registry connects and exposes tools via SDK's `mcpServers` config
 - [ ] A remote MCP server connected via Streamable HTTP + OAuth authenticates and lists tools
 - [ ] `gh` CLI detected, version shown in settings, agent can run `gh issue list`
 - [ ] `mgc` CLI detected, agent can query OneDrive files via shell
@@ -308,11 +311,13 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Workspace-scoped settings and permission rules
    - Multiple windows sharing MCP Manager (if separated from Agent Host)
 
-- [ ] 3. **Document model** (`packages/ui`, `packages/agent`)
+- [ ] 3. **Document model** (`packages/ui`, `packages/agent`) — see [Documents Sidebar mockup](tutorial/index.html#workbench)
+   - Documents sidebar: file tree with folder/type icons, workspace root, filter, right-click for export — see mockup
    - Markdown preview panel (using `marked` or `remark` with direct DOM insertion)
    - Document export: Markdown to DOCX (via `docx` library or `pandoc` CLI), Markdown to PDF
    - Document import: DOCX to Markdown (via `mammoth`), Excel to structured data (via `exceljs`)
    - CSV/Excel analysis: `papaparse` for CSV, `exceljs` for Excel, agent can query data
+   - Empty state: no files in workspace — see [Empty States mockup](tutorial/index.html#states)
 
 - [ ] 4. **Built-in skills** (`skills/`)
    - `/draft-email`: compose email from brief description with context
@@ -328,24 +333,31 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Register skills as slash commands in the chat
    - Dynamic context injection (shell command output in skill body)
 
-- [ ] 6. **Hooks system** (`packages/agent`)
+- [ ] 6. **Hooks system** (`packages/agent`) — see [Hooks Configuration mockup](tutorial/index.html#settings)
    - Parse hooks from `.claude/settings.json`
-   - Execute pre/post tool call hooks
-   - Session start/end hooks
+   - Execute pre/post tool call hooks (pre_tool_call, post_tool_call)
+   - Session start/end hooks (session_start, session_end)
    - Timeout enforcement
+   - Hook execution visible in Tool Activity feed
 
-- [ ] 7. **Tool activity panel** (`packages/ui`)
+- [ ] 7. **Tool activity panel** (`packages/ui`) — see [Tool Activity Sidebar mockup](tutorial/index.html#workbench)
    - `ToolActivityPanel` showing live and historical tool calls
    - Filter by server, status, time range
-   - Expandable detail view per tool call
+   - Expandable detail view per tool call (args, result, permission decision)
    - Audit log viewer
 
-- [ ] 8. **Parallel task queue** (`packages/agent`)
+- [ ] 8. **Command palette** (`packages/ui`) — see [Command Palette mockup](tutorial/index.html#workbench)
+   - `Cmd+K` to open overlay dialog with search input
+   - Groups: Recent Commands, Skills (slash commands), Settings
+   - Keyboard navigation (arrows, Enter, Esc)
+   - Fuzzy matching on command names
+
+- [ ] 9. **Parallel task queue** (`packages/agent`)
    - Task queue in Agent Host: accept new tasks while agent is processing
    - Queue UI: show pending, active, completed tasks
    - Task status transitions and notifications
 
-- [ ] 9. **Phase 4 tests**
+- [ ] 10. **Phase 4 tests**
    - Unit tests: memory context loading — CLAUDE.md parsing, .github/copilot-instructions.md fallback, global memory merge
    - Unit tests: skill YAML frontmatter parsing — valid/invalid YAML, allowed tools extraction, dynamic context shell commands
    - Unit tests: hook execution — pre/post tool call hooks, timeout enforcement, hook failure isolation
@@ -403,14 +415,21 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Keyboard navigation for all panels
    - Screen reader testing (VoiceOver on macOS)
 
-- [ ] 7. **Documentation**
+- [ ] 7. **Settings sub-pages** (`packages/ui`) — see [UX Tutorial Site](tutorial/index.html#settings) for visual spec
+   - Settings: Models — available models table, default selector, usage meter — see [Models mockup](tutorial/index.html#settings)
+   - Settings: Workspace — path, model override, memory files, permission scope — see [Workspace mockup](tutorial/index.html#settings)
+   - Settings: Account — GitHub profile, Copilot tier badge, usage this month, sign out — see [Account mockup](tutorial/index.html#settings)
+   - Settings: Permissions — saved rules list with scope/decision/server/date, add/delete rules, audit log link — see [Permissions mockup](tutorial/index.html#settings)
+   - Copilot Usage Meter: status bar indicator (normal/warning/critical states), click-to-expand popover, limit reached banner — see [Usage Meter mockup](tutorial/index.html#settings)
+
+- [ ] 8. **Documentation**
    - README with setup instructions
    - Architecture documentation
    - Connector development guide
    - Skill authoring guide
    - CLI integration patterns (cli-guides/)
 
-- [ ] 8. **Phase 5 comprehensive test suite**
+- [ ] 9. **Phase 5 comprehensive test suite**
    - Full E2E suite (Playwright): auth flow (login → verify tier → land on workbench), chat conversation (send → stream → tool call → permission → result), connector setup (install MCP server → verify tools → call tool), permission rules (create rule → verify auto-decision)
    - Performance benchmarks: renderer startup < 2s to interactive, SQLite query time for 10k messages, MCP server spawn time, memory usage under sustained agent conversation
    - Accessibility audit: `@axe-core/playwright` on all panels (chat, settings, connectors, tool activity), keyboard-only navigation test, VoiceOver smoke test script
