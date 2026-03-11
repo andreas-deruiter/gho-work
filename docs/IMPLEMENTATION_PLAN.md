@@ -10,6 +10,8 @@
 
 The project is divided into six phases. Phases 0 and 1 are strictly sequential. Phases 2 and 3 can overlap once the IPC and DI foundations from Phase 1 are stable. Phase 4 depends on Phases 2 and 3. Phase 5 is ongoing from Phase 2 onward.
 
+**Execution workflow:** Before starting each phase, a detailed execution plan is created at `docs/superpowers/plans/` with exact files, code, commands, and commit points. The detailed plan is then executed task-by-task. Phase deliverables and acceptance criteria are checked off in this document as they're completed.
+
 | Phase | Name | Duration (est.) | Key Outcome |
 |-------|------|-----------------|-------------|
 | 0 | Project Scaffolding | 1 week | Monorepo, tooling, CI, empty Electron shell boots |
