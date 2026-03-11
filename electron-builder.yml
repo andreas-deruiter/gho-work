@@ -9,7 +9,8 @@ files:
   - '!**/src/*'
   - '!**/*.ts'
   - '!**/*.map'
-# asarUnpack for better-sqlite3 will be added in Phase 1 when the dependency is introduced
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**"
 win:
   executableName: gho-work
   target:
