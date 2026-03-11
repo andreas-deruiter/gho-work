@@ -12,9 +12,7 @@ const ALLOWED_INVOKE_CHANNELS = [
   'conversation:create',
 ];
 
-const ALLOWED_LISTEN_CHANNELS = [
-  'agent:event',
-];
+const ALLOWED_LISTEN_CHANNELS = ['agent:event'];
 
 contextBridge.exposeInMainWorld('ghoWorkIPC', {
   invoke: (channel: string, ...args: unknown[]) => {

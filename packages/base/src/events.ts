@@ -30,7 +30,9 @@ export class Emitter<T> implements IDisposable {
   }
 
   fire(event: T): void {
-    if (this._disposed) { return; }
+    if (this._disposed) {
+      return;
+    }
     for (const listener of this.listeners) {
       try {
         listener(event);

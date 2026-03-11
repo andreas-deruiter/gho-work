@@ -13,9 +13,7 @@ const ALLOWED_INVOKE_CHANNELS = [
   IPC_CHANNELS.CONVERSATION_CREATE,
 ];
 
-const ALLOWED_LISTEN_CHANNELS = [
-  IPC_CHANNELS.AGENT_EVENT,
-];
+const ALLOWED_LISTEN_CHANNELS = [IPC_CHANNELS.AGENT_EVENT];
 
 export function createPreloadScript(): void {
   contextBridge.exposeInMainWorld('ghoWorkIPC', {

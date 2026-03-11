@@ -2,7 +2,13 @@
  * Core agent service interfaces (from PRD Section 6.4).
  */
 import { createServiceId } from '@gho-work/base';
-import type { AgentContext, AgentEvent, ToolCall, PermissionDecision, ConnectorConfig } from '@gho-work/base';
+import type {
+  AgentContext,
+  AgentEvent,
+  ToolCall,
+  PermissionDecision,
+  ConnectorConfig,
+} from '@gho-work/base';
 
 // --- ICopilotSDK ---
 
