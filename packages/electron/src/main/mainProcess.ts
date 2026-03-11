@@ -150,11 +150,26 @@ export function createMainProcess(
       model: request.model,
     };
 
+    // Persist user message
+    if (conversationService) {
+      try {
+        conversationService.addMessage(request.conversationId, {
+          role: 'user',
+          content: request.content,
+        });
+      } catch { /* non-critical */ }
+    }
+
     // Stream events to renderer in background
     (async () => {
+      let assistantContent = '';
       try {
         for await (const event of agentService.executeTask(request.content, context)) {
           ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, event);
+          // Accumulate assistant text for persistence
+          if (event.type === 'text_delta') {
+            assistantContent += event.content;
+          }
         }
       } catch (err) {
         const errorEvent: AgentEvent = {
@@ -162,6 +177,29 @@ export function createMainProcess(
           error: err instanceof Error ? err.message : String(err),
         };
         ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, errorEvent);
+      }
+
+      // Persist assistant message
+      if (conversationService && assistantContent) {
+        try {
+          conversationService.addMessage(request.conversationId, {
+            role: 'assistant',
+            content: assistantContent,
+          });
+        } catch { /* non-critical */ }
+      }
+
+      // Auto-title: on first message, use prompt as title (truncated to 60 chars)
+      if (conversationService && request.content) {
+        try {
+          const conv = conversationService.getConversation(request.conversationId);
+          if (conv && conv.title === 'New Conversation') {
+            const title = request.content.length > 60
+              ? request.content.substring(0, 57) + '...'
+              : request.content;
+            conversationService.renameConversation(request.conversationId, title);
+          }
+        } catch { /* non-critical */ }
       }
     })();
 
