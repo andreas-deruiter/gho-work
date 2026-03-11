@@ -114,3 +114,33 @@ describe('InstantiationService', () => {
     expect(consumer.serviceA.a()).toBe('A');
   });
 });
+
+import { TestInstantiationService } from './testInstantiationService.js';
+
+describe('TestInstantiationService', () => {
+  it('should stub services with partial implementations', () => {
+    const testInst = new TestInstantiationService();
+    testInst.stub(IServiceA, { a: () => 'mocked-A' });
+    const a = testInst.getService(IServiceA);
+    expect(a.a()).toBe('mocked-A');
+  });
+
+  it('should throw on unimplemented stub methods', () => {
+    const testInst = new TestInstantiationService();
+    testInst.stub<IServiceA>(IServiceA, {});
+    const a = testInst.getService(IServiceA);
+    expect(() => a.a()).toThrow('Stubbed method not implemented');
+  });
+
+  it('should support createInstance with stubs', () => {
+    const testInst = new TestInstantiationService();
+    testInst.stub(IServiceA, { a: () => 'stub-A' });
+
+    class Consumer {
+      constructor(@IServiceA public readonly svc: IServiceA) {}
+    }
+
+    const consumer = testInst.createInstance(Consumer);
+    expect(consumer.svc.a()).toBe('stub-A');
+  });
+});
