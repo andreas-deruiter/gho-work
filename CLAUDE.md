@@ -118,7 +118,7 @@ Use these skills at the appropriate points in the development cycle:
 - **before-task** — Self-assess readiness, capture baseline, plan approach
 - **after-edit** — Lint, type check, run affected tests after every code change
 - **verify-task** — Evidence-based verification against acceptance criteria
-- **retrospective** — End-of-session learning capture
+- **reflect** — End-of-session failure analysis and instruction improvement
 - **vscode-patterns** — Reference guide for VS Code patterns (consult before implementing DI, events, disposables, services, widgets, IPC)
 - **electron-hardening** — Security, packaging, signing, native modules, safeStorage, multi-process, crash recovery
 - **mcp-client** — MCP protocol client: transports, tool management, sampling, elicitation, OAuth, health monitoring
@@ -149,6 +149,9 @@ Before modifying existing code: note current test state, capture which files wil
 
 ### Evidence over assertions
 Never claim "it works" without proof. Show test output, build output, or runtime evidence. The verify-task skill enforces this standard. Automated test pass is necessary but not sufficient — if the tests don't cover the user-facing behavior, they don't count as evidence for that behavior.
+
+### HARD GATE: Launch the app before declaring completion
+**After completing any phase or feature that touches UI, IPC, or service wiring: you MUST run `npm run desktop:dev`, exercise the primary user flow, and report what you observed BEFORE committing the final commit.** This is not optional. This is not deferrable. Unit tests passing is not a substitute. "I'll add a Playwright test" is not a substitute. You must launch the real app and verify it works the way a user would use it. If you cannot launch the app (e.g., headless environment), you must explicitly tell the user "I was unable to verify this in the running app" — never silently skip this step.
 
 ### Run every executable artifact in its actual runtime
 A build pass and unit test pass say nothing about whether the app works in its real environment. Different runtimes have different capabilities:
@@ -195,7 +198,7 @@ When a stored memory or rule turns out to be wrong:
 3. If it came from auto memory, update the memory file
 
 ### Periodic review
-During retrospectives, review:
+During reflections, review:
 - Are the skills still accurate and useful?
 - Are there patterns that keep recurring that should become skills?
 - Are there lint suppressions that are no longer needed?
