@@ -4,16 +4,20 @@
  */
 import { Disposable } from '@gho-work/base';
 import type { IIPCRenderer } from '@gho-work/platform/common';
+import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { h } from './dom.js';
 import { ActivityBar } from './activityBar.js';
 import { StatusBar } from './statusBar.js';
 import { KeyboardShortcuts } from './keyboardShortcuts.js';
 import { ChatPanel } from './chatPanel.js';
+import { ConversationListPanel } from './conversationList.js';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
   private readonly _statusBar: StatusBar;
   private readonly _shortcuts: KeyboardShortcuts;
+  private _chatPanel!: ChatPanel;
+  private _conversationList!: ConversationListPanel;
   private _sidebarVisible = true;
   private _sidebarEl!: HTMLElement;
 
@@ -43,9 +47,21 @@ export class Workbench extends Disposable {
     layout.activityBar.appendChild(this._activityBar.getDomNode());
     this._sidebarEl = layout.sidebar;
 
+    // Conversation list in sidebar
+    this._conversationList = this._register(new ConversationListPanel(this._ipc));
+    this._conversationList.render(this._sidebarEl);
+
+    this._conversationList.onDidSelectConversation((conversationId) => {
+      void this._chatPanel.loadConversation(conversationId);
+    });
+
+    this._conversationList.onDidRequestNewConversation(() => {
+      void this._createNewConversation();
+    });
+
     // Chat panel in main content
-    const chatPanel = this._register(new ChatPanel(this._ipc));
-    chatPanel.render(layout.main);
+    this._chatPanel = this._register(new ChatPanel(this._ipc));
+    this._chatPanel.render(layout.main);
 
     // Status bar
     const statusBarWrapper = h('div.workbench-statusbar');
@@ -60,7 +76,20 @@ export class Workbench extends Disposable {
 
     // Status bar items
     this._statusBar.addLeftItem('Ready');
-    this._statusBar.addRightItem('Mock Agent');
+    this._statusBar.addRightItem('Copilot SDK');
+  }
+
+  private async _createNewConversation(): Promise<void> {
+    try {
+      const response = await this._ipc.invoke<{ id: string; title: string }>(
+        IPC_CHANNELS.CONVERSATION_CREATE,
+      );
+      this._chatPanel.conversationId = response.id;
+      await this._chatPanel.loadConversation(response.id);
+      await this._conversationList.refresh();
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+    }
   }
 
   private _setupShortcuts(): void {
@@ -68,6 +97,12 @@ export class Workbench extends Disposable {
       key: 'b',
       meta: true,
       handler: () => this._toggleSidebar(),
+    });
+    // Cmd+N for new conversation
+    this._shortcuts.bind({
+      key: 'n',
+      meta: true,
+      handler: () => void this._createNewConversation(),
     });
   }
 
