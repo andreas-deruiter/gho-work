@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { ServiceCollection, createServiceId } from '../di.js';
+import { ServiceCollection, createServiceIdentifier } from '../../index.js';
 
 interface IGreeter {
   greet(name: string): string;
 }
 
-const IGreeter = createServiceId<IGreeter>('IGreeter');
+const IGreeter = createServiceIdentifier<IGreeter>('IGreeter');
 
 class MockGreeter implements IGreeter {
   greet(name: string): string {

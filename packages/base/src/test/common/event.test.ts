@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Emitter, DisposableStore } from '../events.js';
+import { Emitter } from '../../common/event.js';
+import { DisposableStore } from '../../common/lifecycle.js';
 
 describe('Emitter', () => {
   it('should fire events to listeners', () => {

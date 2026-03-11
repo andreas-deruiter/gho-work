@@ -1,11 +1,8 @@
 /**
- * VS Code-inspired Event system.
- * Lightweight typed event emitter with Disposable support.
+ * Typed event system — adapted from VS Code's event.ts.
+ * @see references/vscode/src/vs/base/common/event.ts
  */
-
-export interface IDisposable {
-  dispose(): void;
-}
+import { IDisposable } from './lifecycle.js';
 
 export interface Event<T> {
   (listener: (e: T) => void): IDisposable;
@@ -48,21 +45,21 @@ export class Emitter<T> implements IDisposable {
   }
 }
 
-/**
- * Collects disposables for batch disposal.
- */
-export class DisposableStore implements IDisposable {
-  private disposables: IDisposable[] = [];
-
-  add<T extends IDisposable>(disposable: T): T {
-    this.disposables.push(disposable);
-    return disposable;
+// Event composition utilities — map and filter now, more added in Task 6
+export namespace Event {
+  export function map<I, O>(event: Event<I>, fn: (i: I) => O): Event<O> {
+    return (listener: (e: O) => void): IDisposable => {
+      return event((e) => listener(fn(e)));
+    };
   }
 
-  dispose(): void {
-    for (const d of this.disposables) {
-      d.dispose();
-    }
-    this.disposables = [];
+  export function filter<T>(event: Event<T>, predicate: (e: T) => boolean): Event<T> {
+    return (listener: (e: T) => void): IDisposable => {
+      return event((e) => {
+        if (predicate(e)) {
+          listener(e);
+        }
+      });
+    };
   }
 }
