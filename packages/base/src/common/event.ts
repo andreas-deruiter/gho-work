@@ -62,4 +62,43 @@ export namespace Event {
       });
     };
   }
+
+  export function once<T>(event: Event<T>): Event<T> {
+    return (listener: (e: T) => void): IDisposable => {
+      let didFire = false;
+      const sub = event((e) => {
+        if (!didFire) {
+          didFire = true;
+          sub.dispose();
+          listener(e);
+        }
+      });
+      return sub;
+    };
+  }
+
+  export function debounce<T>(event: Event<T>, delayMs: number): Event<T> {
+    return (listener: (e: T) => void): IDisposable => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let lastValue: T;
+      const sub = event((e) => {
+        lastValue = e;
+        if (timer !== undefined) {
+          clearTimeout(timer);
+        }
+        timer = setTimeout(() => {
+          timer = undefined;
+          listener(lastValue);
+        }, delayMs);
+      });
+      return {
+        dispose: () => {
+          if (timer !== undefined) {
+            clearTimeout(timer);
+          }
+          sub.dispose();
+        },
+      };
+    };
+  }
 }
