@@ -132,11 +132,14 @@ Every code change must pass before moving on:
 - **E2E/smoke tests** (Playwright): cover critical user flows on the Electron app. In `tests/e2e/`.
 - **User smoke tests** (tsx scripts): interactive step-by-step verification. In `tests/smoke/`. Run with `npx tsx tests/smoke/<name>.ts`.
 
+### E2E tests must exercise real user flows
+Automated tests that only check "element exists" or "module exports" give false confidence. Every e2e test must exercise the actual interaction: type input, trigger the action, wait for the result, verify the final state (including absence of transient UI like loading indicators). A test that doesn't interact like a user would is a structural check, not a behavior check — label and treat it accordingly.
+
 ### Baseline-before-change (Anvil-inspired)
 Before modifying existing code: note current test state, capture which files will change. After the change, compare to baseline to verify no regressions. The before-task and verify-task skills enforce this.
 
 ### Evidence over assertions
-Never claim "it works" without proof. Show test output, build output, or runtime evidence. The verify-task skill enforces this standard.
+Never claim "it works" without proof. Show test output, build output, or runtime evidence. The verify-task skill enforces this standard. Automated test pass is necessary but not sufficient — if the tests don't cover the user-facing behavior, they don't count as evidence for that behavior.
 
 ## Task execution
 

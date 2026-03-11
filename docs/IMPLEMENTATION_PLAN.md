@@ -66,7 +66,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 
 - [x] 6. **Phase 0 tests**
    - Unit test example per package (verify Vitest resolves cross-package imports)
-   - Playwright smoke test: Electron window launches and renders HTML (`tests/e2e/app-launches.spec.ts`)
+   - Playwright e2e: Electron window launches, workbench renders, chat flow works end-to-end (send message → streaming response → thinking indicator clears → input re-enabled) (`tests/e2e/app-launches.spec.ts`)
 
 **Acceptance criteria:**
 - [x] `npm run dev` launches Electron window on macOS
@@ -200,7 +200,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Unit tests: permission rule matching — glob patterns on tool names, rule precedence (specific > general), all four decision types (allow once, allow always, deny, deny always)
    - Unit tests: conversation persistence — save/load messages, save/load tool calls, auto-title generation
    - Integration test: agent service end-to-end — mock Copilot SDK → tool call → permission check → response streamed back
-   - Smoke test (`tests/smoke/phase2.ts`): send message and receive streaming response, tool call card renders with expand/collapse
+   - E2E test (Playwright): full chat interaction — send message → streaming response completes → all transient UI clears (thinking indicator, cursor) → tool call card renders and collapses → permission prompt appears and responds to keyboard → input re-enabled. Tests must exercise real user flows, not just check element existence.
 
 **Acceptance criteria:**
 - [ ] User types "Hello, what can you do?" and receives a streaming response
