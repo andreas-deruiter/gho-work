@@ -7,13 +7,15 @@
   "scripts": {
     "build": "echo 'UI is bundled by electron-vite via apps/desktop'",
     "clean": "echo 'nothing to clean'",
-    "lint": "eslint 'src/**/*.ts'"
+    "lint": "eslint 'src/**/*.ts'",
+    "test": "vitest run"
   },
   "dependencies": {
     "@gho-work/base": "*",
     "@gho-work/platform": "*"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }
