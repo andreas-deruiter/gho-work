@@ -27,7 +27,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 
 ### Phase 0: Project Scaffolding (Week 1)
 
-**Goal:** A developer can clone the repo, run `pnpm install && pnpm dev`, and see an empty Electron window.
+**Goal:** A developer can clone the repo, run `npm install && npm run dev`, and see an empty Electron window.
 
 **Deliverables:**
 
