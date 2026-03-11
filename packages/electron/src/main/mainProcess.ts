@@ -24,7 +24,15 @@ import type {
   ConversationRenameRequest,
   ModelSelectRequest,
 } from '@gho-work/platform';
-import { ConversationServiceImpl, IConversationService } from '@gho-work/agent';
+import {
+  ConversationServiceImpl,
+  IConversationService,
+  MockCopilotSDK,
+  AgentServiceImpl,
+  ICopilotSDK,
+  IAgentService,
+} from '@gho-work/agent';
+import type { AgentContext } from '@gho-work/base';
 
 /**
  * Sets up the main process: DI container, IPC handlers, conversation service.
@@ -114,23 +122,46 @@ export function createMainProcess(
   };
   services.set(IIPCMain, ipcMainAdapter);
 
+  // --- Agent service (runs in main process for now, will move to utility process later) ---
+  const mockSDK = new MockCopilotSDK();
+  void mockSDK.start();
+  const agentService = new AgentServiceImpl(mockSDK);
+  services.set(ICopilotSDK, mockSDK);
+  services.set(IAgentService, agentService);
+
   // --- Set up IPC handlers ---
 
-  // Agent send/cancel: fallback handlers for when renderer uses IPC instead of MessagePort.
-  // In normal operation, the renderer talks directly to the Agent Host via MessagePort.
   ipcMainAdapter.handle(IPC_CHANNELS.AGENT_SEND_MESSAGE, async (...args: unknown[]) => {
     const request = args[0] as SendMessageRequest;
-    // Fallback: forward to renderer as an error since agent runs in utility process
-    const errorEvent: AgentEvent = {
-      type: 'error',
-      error: 'Agent host not connected. Send messages via MessagePort to the agent host process.',
+    const context: AgentContext = {
+      conversationId: request.conversationId,
+      workspaceId: workspaceId ?? 'default',
+      model: request.model,
     };
-    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, errorEvent);
-    return { messageId: request.conversationId ?? 'fallback' };
+
+    // Stream events to renderer in background
+    (async () => {
+      try {
+        for await (const event of agentService.executeTask(request.content, context)) {
+          ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, event);
+        }
+      } catch (err) {
+        const errorEvent: AgentEvent = {
+          type: 'error',
+          error: err instanceof Error ? err.message : String(err),
+        };
+        ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, errorEvent);
+      }
+    })();
+
+    return { messageId: 'pending' };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.AGENT_CANCEL, async () => {
-    // No-op fallback — agent cancel should go through MessagePort to agent host
+    const taskId = agentService.getActiveTaskId();
+    if (taskId) {
+      agentService.cancelTask(taskId);
+    }
   });
 
   // Conversation handlers
