@@ -1,0 +1,212 @@
+/* Chat Progress UX — shimmer, collapsibles, tool call states, chain-of-thought line */
+
+/* === Shimmer animation === */
+@keyframes chat-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg,
+    var(--fg-secondary) 0%,
+    var(--fg-secondary) 30%,
+    var(--fg-accent) 50%,
+    var(--fg-secondary) 70%,
+    var(--fg-secondary) 100%);
+  background-size: 400% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: chat-shimmer 2s linear infinite;
+}
+
+/* === Spinner animation === */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.icon-spinner::before {
+  content: '⟳';
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+/* === Icon pseudo-elements === */
+.icon-check::before  { content: '✓'; color: var(--fg-success); }
+.icon-error::before  { content: '✕'; color: var(--fg-error); }
+.icon-cancelled::before { content: '—'; color: var(--fg-muted); }
+.icon-search::before { content: '🔍'; font-size: 12px; }
+.icon-file::before   { content: '📄'; font-size: 12px; }
+.icon-pencil::before { content: '✏️'; font-size: 12px; }
+.icon-terminal::before { content: '>_'; font-family: var(--font-mono); font-size: 10px; color: var(--fg-accent); }
+.icon-globe::before  { content: '🌐'; font-size: 12px; }
+.icon-tool::before   { content: '🔧'; font-size: 12px; }
+
+/* === Collapsible base === */
+.chat-collapsible {
+  margin: 4px 0;
+}
+
+.chat-collapsible .collapsible-button {
+  background: none;
+  border: none;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  width: 100%;
+  text-align: left;
+  border-radius: var(--radius-sm);
+}
+
+.chat-collapsible .collapsible-button:hover {
+  background: var(--bg-tertiary);
+  color: var(--fg-primary);
+}
+
+/* Chevron */
+.collapsible-chevron::before {
+  content: '▸';
+  font-size: 10px;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.chat-collapsible:not(.collapsed) .collapsible-chevron::before {
+  transform: rotate(90deg);
+}
+
+/* Content area */
+.collapsible-content {
+  overflow: hidden;
+  transition: max-height 0.15s ease;
+}
+
+.chat-collapsible.collapsed .collapsible-content {
+  max-height: 0;
+}
+
+.chat-collapsible:not(.collapsed) .collapsible-content {
+  max-height: none;
+}
+
+/* === Thinking section === */
+.chat-thinking-section {
+  margin: 6px 0 8px 0;
+}
+
+.chat-thinking-section.thinking-active .collapsible-title-label {
+  background: linear-gradient(90deg,
+    var(--fg-secondary) 0%,
+    var(--fg-secondary) 30%,
+    var(--fg-accent) 50%,
+    var(--fg-secondary) 70%,
+    var(--fg-secondary) 100%);
+  background-size: 400% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: chat-shimmer 2s linear infinite;
+}
+
+/* Chain-of-thought bordered box */
+.chat-thinking-section .collapsible-content {
+  border: 1px solid var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  margin-top: 4px;
+  padding: 0;
+}
+
+.chat-thinking-section.collapsed .collapsible-content {
+  border: none;
+}
+
+/* Thinking text */
+.thinking-text {
+  padding: 8px 12px 8px 24px;
+  font-size: 12px;
+  color: var(--fg-secondary);
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  position: relative;
+}
+
+.thinking-text:empty {
+  display: none;
+}
+
+/* Tool call list inside thinking */
+.thinking-tool-list {
+  padding: 0;
+}
+
+/* === Tool call item === */
+.chat-tool-call-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 18px;
+  font-size: 12px;
+  position: relative;
+}
+
+/* Chain-of-thought vertical line */
+.chat-tool-call-item::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--bg-tertiary);
+}
+
+.chat-tool-call-item:first-child::before {
+  top: 50%;
+}
+
+.chat-tool-call-item:last-child::before {
+  bottom: 50%;
+}
+
+.chat-tool-call-item:only-child::before {
+  display: none;
+}
+
+/* Status icon */
+.tool-call-status-icon {
+  width: 14px;
+  text-align: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Type icon */
+.tool-call-type-icon {
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Label */
+.tool-call-label {
+  color: var(--fg-secondary);
+}
+
+.tool-call-executing .tool-call-label {
+  color: var(--fg-primary);
+}
+
+.tool-call-completed .tool-call-label {
+  color: var(--fg-secondary);
+}
+
+.tool-call-failed .tool-call-label {
+  color: var(--fg-error);
+}

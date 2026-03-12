@@ -382,47 +382,6 @@ html, body {
   font-style: italic;
 }
 
-/* Tool Calls */
-.chat-tool-calls {
-  margin-bottom: 8px;
-}
-
-.tool-call-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  margin-bottom: 4px;
-  border-left: 2px solid var(--fg-muted);
-}
-
-.tool-call-running {
-  border-left-color: var(--fg-warning);
-}
-
-.tool-call-completed {
-  border-left-color: var(--fg-success);
-}
-
-.tool-call-icon {
-  font-family: var(--font-mono);
-  color: var(--fg-muted);
-  font-size: 11px;
-}
-
-.tool-call-name {
-  font-family: var(--font-mono);
-  color: var(--fg-accent);
-}
-
-.tool-call-status {
-  color: var(--fg-muted);
-  margin-left: auto;
-}
-
 /* Cursor animation */
 .chat-cursor {
   display: inline-block;

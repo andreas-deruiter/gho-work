@@ -5,6 +5,7 @@ import type { IIPCRenderer, OnboardingStatusResponse } from '@gho-work/platform/
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { Workbench, OnboardingFlow } from '@gho-work/ui';
 import './styles.css';
+import './chatProgress.css';
 
 // Declare the IPC bridge exposed by preload
 declare global {
