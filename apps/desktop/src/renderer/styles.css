@@ -362,17 +362,250 @@ html, body {
   word-wrap: break-word;
 }
 
+/* — Markdown element styling inside chat messages — */
+
+.chat-message-content p {
+  margin-bottom: 12px;
+}
+
+.chat-message-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Headings */
+.chat-message-content h1,
+.chat-message-content h2,
+.chat-message-content h3,
+.chat-message-content h4,
+.chat-message-content h5,
+.chat-message-content h6 {
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  line-height: 1.25;
+  color: var(--fg-primary);
+}
+
+.chat-message-content h1:first-child,
+.chat-message-content h2:first-child,
+.chat-message-content h3:first-child {
+  margin-top: 0;
+}
+
+.chat-message-content h1 { font-size: 1.5em; }
+.chat-message-content h2 { font-size: 1.3em; }
+.chat-message-content h3 { font-size: 1.1em; }
+.chat-message-content h4 { font-size: 1em; }
+.chat-message-content h5 { font-size: 0.9em; }
+.chat-message-content h6 { font-size: 0.85em; }
+
+/* Bold / emphasis */
 .chat-message-content strong {
   color: var(--fg-primary);
   font-weight: 600;
 }
 
+.chat-message-content em {
+  font-style: italic;
+}
+
+/* Inline code */
 .chat-message-content code {
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   background: var(--bg-tertiary);
   padding: 1px 4px;
   border-radius: 3px;
+}
+
+/* Code blocks */
+.chat-message-content pre {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin: 8px 0;
+  overflow-x: auto;
+}
+
+.chat-message-content pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  tab-size: 4;
+  display: block;
+  color: var(--fg-primary);
+}
+
+/* Lists */
+.chat-message-content ul,
+.chat-message-content ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.chat-message-content li {
+  margin-bottom: 4px;
+}
+
+.chat-message-content li p {
+  margin-bottom: 4px;
+}
+
+.chat-message-content ul ul,
+.chat-message-content ul ol,
+.chat-message-content ol ul,
+.chat-message-content ol ol {
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+/* Blockquotes */
+.chat-message-content blockquote {
+  margin: 8px 0;
+  padding: 4px 16px;
+  border-left: 3px solid var(--fg-accent);
+  color: var(--fg-secondary);
+  background: transparent;
+}
+
+.chat-message-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tables */
+.chat-message-content table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+
+.chat-message-content th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--fg-primary);
+  border-bottom: 2px solid var(--border-primary);
+  padding: 6px 12px;
+}
+
+.chat-message-content td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.chat-message-content tr:last-child td {
+  border-bottom: none;
+}
+
+/* Horizontal rule */
+.chat-message-content hr {
+  border: 0;
+  height: 1px;
+  background: var(--border-primary);
+  margin: 16px 0;
+}
+
+/* Links */
+.chat-message-content a {
+  color: var(--fg-accent);
+  text-decoration: none;
+}
+
+.chat-message-content a:hover {
+  text-decoration: underline;
+}
+
+/* Images */
+.chat-message-content img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+/* Strikethrough */
+.chat-message-content del {
+  text-decoration: line-through;
+  color: var(--fg-muted);
+}
+
+/* Sub/sup line height fix (from VS Code) */
+.chat-message-content sub,
+.chat-message-content sup {
+  line-height: 0;
+}
+
+/* — Syntax highlighting (highlight.js theme) — */
+/* VS Code Dark+ colors for familiar syntax coloring */
+
+.chat-message-content .hljs {
+  color: var(--fg-primary);
+}
+
+.chat-message-content .hljs-keyword,
+.chat-message-content .hljs-selector-tag,
+.chat-message-content .hljs-built_in,
+.chat-message-content .hljs-type {
+  color: #569cd6;
+}
+
+.chat-message-content .hljs-string,
+.chat-message-content .hljs-addition {
+  color: #ce9178;
+}
+
+.chat-message-content .hljs-number,
+.chat-message-content .hljs-literal {
+  color: #b5cea8;
+}
+
+.chat-message-content .hljs-comment,
+.chat-message-content .hljs-quote,
+.chat-message-content .hljs-deletion {
+  color: #6a9955;
+}
+
+.chat-message-content .hljs-title,
+.chat-message-content .hljs-section,
+.chat-message-content .hljs-title.function_ {
+  color: #dcdcaa;
+}
+
+.chat-message-content .hljs-variable,
+.chat-message-content .hljs-template-variable {
+  color: #9cdcfe;
+}
+
+.chat-message-content .hljs-attr,
+.chat-message-content .hljs-attribute {
+  color: #9cdcfe;
+}
+
+.chat-message-content .hljs-meta {
+  color: #c586c0;
+}
+
+.chat-message-content .hljs-regexp {
+  color: #d16969;
+}
+
+.chat-message-content .hljs-symbol,
+.chat-message-content .hljs-bullet {
+  color: #4ec9b0;
+}
+
+.chat-message-content .hljs-params {
+  color: var(--fg-primary);
+}
+
+.chat-message-content .hljs-emphasis {
+  font-style: italic;
+}
+
+.chat-message-content .hljs-strong {
+  font-weight: 600;
 }
 
 .chat-message-status {
