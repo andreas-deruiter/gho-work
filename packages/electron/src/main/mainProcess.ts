@@ -47,9 +47,11 @@ import {
   IConnectorRegistry,
   IMCPClientManager,
   ICLIDetectionService,
+  IPlatformDetectionService,
   ConnectorRegistryImpl,
   MCPClientManagerImpl,
   CLIDetectionServiceImpl,
+  PlatformDetectionServiceImpl,
 } from '@gho-work/connectors';
 import { mapConnectorsToSDKConfig } from './connectorMapping.js';
 import type {
@@ -207,6 +209,13 @@ export function createMainProcess(
   let connectorRegistry: ConnectorRegistryImpl | null = null;
   let mcpClientManager: MCPClientManagerImpl | null = null;
   let cliDetectionService: CLIDetectionServiceImpl | null = null;
+  const platformDetectionService: PlatformDetectionServiceImpl = new PlatformDetectionServiceImpl(
+    async (cmd: string, args: string[]) => {
+      const { stdout } = await execFileAsync(cmd, args);
+      return stdout;
+    },
+  );
+  services.set(IPlatformDetectionService, platformDetectionService);
 
   const globalDb = storageService?.getGlobalDatabase?.();
   if (globalDb) {
@@ -733,6 +742,17 @@ export function createMainProcess(
       return;
     }
     await cliDetectionService.refresh();
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CLI_GET_PLATFORM_CONTEXT, async () => {
+    return platformDetectionService.detect();
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CLI_CREATE_INSTALL_CONVERSATION, async (...args: unknown[]) => {
+    const { toolId } = args[0] as { toolId: string };
+    const platformContext = await platformDetectionService.detect();
+    const conversationId = await agentService.createInstallConversation(toolId, platformContext);
+    return { conversationId };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {

@@ -39,6 +39,8 @@ export const IPC_CHANNELS = {
   CONNECTOR_TOOLS_CHANGED: 'connector:tools-changed',
   CLI_DETECT_ALL: 'cli:detect-all',
   CLI_REFRESH: 'cli:refresh',
+  CLI_CREATE_INSTALL_CONVERSATION: 'cli:create-install-conversation',
+  CLI_GET_PLATFORM_CONTEXT: 'cli:get-platform-context',
 } as const;
 
 export const SendMessageRequestSchema = z.object({
@@ -272,3 +274,24 @@ export const CLIDetectResponseSchema = z.object({
   tools: z.array(CLIToolStatusSchema),
 });
 export type CLIDetectResponse = z.infer<typeof CLIDetectResponseSchema>;
+
+export const CLICreateInstallRequestSchema = z.object({
+  toolId: z.string(),
+});
+export type CLICreateInstallRequest = z.infer<typeof CLICreateInstallRequestSchema>;
+
+export const CLICreateInstallResponseSchema = z.object({
+  conversationId: z.string(),
+});
+export type CLICreateInstallResponse = z.infer<typeof CLICreateInstallResponseSchema>;
+
+export const PlatformContextSchema = z.object({
+  os: z.enum(['darwin', 'win32', 'linux']),
+  arch: z.enum(['arm64', 'x64', 'ia32']),
+  packageManagers: z.object({
+    brew: z.boolean(),
+    winget: z.boolean(),
+    chocolatey: z.boolean(),
+  }),
+});
+export type PlatformContextIPC = z.infer<typeof PlatformContextSchema>;
