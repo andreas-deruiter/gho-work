@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "paths": {
+      "@modelcontextprotocol/sdk/client/stdio": ["../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.d.ts"],
+      "@modelcontextprotocol/sdk/client/streamableHttp": ["../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.d.ts"]
+    }
   },
   "include": ["src"]
 }
