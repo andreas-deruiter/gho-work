@@ -206,17 +206,18 @@ export function createMainProcess(
   // --- Connector Services ---
   let connectorRegistry: ConnectorRegistryImpl | null = null;
   let mcpClientManager: MCPClientManagerImpl | null = null;
-  let cliDetectionService: CLIDetectionServiceImpl | null = null;
+
+  // CLI detection doesn't depend on sqlite — always available
+  const cliDetectionService = new CLIDetectionServiceImpl();
+  services.set(ICLIDetectionService, cliDetectionService);
 
   const globalDb = storageService?.getGlobalDatabase?.();
   if (globalDb) {
     connectorRegistry = new ConnectorRegistryImpl(globalDb);
     mcpClientManager = new MCPClientManagerImpl(connectorRegistry);
-    cliDetectionService = new CLIDetectionServiceImpl();
 
     services.set(IConnectorRegistry, connectorRegistry);
     services.set(IMCPClientManager, mcpClientManager);
-    services.set(ICLIDetectionService, cliDetectionService);
 
     // Forward status/tools events to renderer
     mcpClientManager.onDidChangeStatus((event) => {
@@ -721,24 +722,15 @@ export function createMainProcess(
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CLI_DETECT_ALL, async () => {
-    if (!cliDetectionService) {
-      return { tools: [] };
-    }
     const tools = await cliDetectionService.detectAll();
     return { tools };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CLI_REFRESH, async () => {
-    if (!cliDetectionService) {
-      return;
-    }
     await cliDetectionService.refresh();
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CLI_INSTALL, async (...args: unknown[]) => {
-    if (!cliDetectionService) {
-      return { success: false, error: 'Service not available' };
-    }
     const request = args[0] as { toolId: string };
     const result = await cliDetectionService.installTool(request.toolId);
     if (result.success && result.installUrl) {
@@ -748,9 +740,6 @@ export function createMainProcess(
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CLI_AUTHENTICATE, async (...args: unknown[]) => {
-    if (!cliDetectionService) {
-      return { success: false, error: 'Service not available' };
-    }
     const request = args[0] as { toolId: string };
     const result = await cliDetectionService.authenticateTool(request.toolId);
     if (result.success) {
