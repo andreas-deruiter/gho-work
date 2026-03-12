@@ -156,17 +156,25 @@ test.describe('Chat flow', () => {
     const cancelBtn = page.locator('.chat-cancel-btn');
     await expect(cancelBtn).toBeVisible({ timeout: 2000 });
 
-    // Tool call card should appear
-    const toolCall = page.locator('.tool-call-item').first();
-    await expect(toolCall).toBeVisible({ timeout: 5000 });
+    // Thinking section should appear with tool calls
+    const thinkingSection = page.locator('.chat-thinking-section').last();
+    await expect(thinkingSection).toBeVisible({ timeout: 5000 });
 
     // Wait for response to complete
     const assistantMsgs = page.locator('.chat-message-assistant');
     const lastAssistant = assistantMsgs.last();
     await expect(lastAssistant.locator('.chat-cursor')).toBeHidden({ timeout: 30000 });
 
+    // Expand thinking section to verify tool call items
+    await thinkingSection.locator('button').click();
+    const toolCallItem = thinkingSection.locator('.chat-tool-call-item').first();
+    await expect(toolCallItem).toBeVisible({ timeout: 5000 });
+
     // Tool call should show completed status
-    await expect(lastAssistant.locator('.tool-call-completed')).toBeVisible({ timeout: 5000 });
+    await expect(thinkingSection.locator('.tool-call-completed')).toBeVisible({ timeout: 5000 });
+
+    // Thinking section should be deactivated (no shimmer)
+    await expect(thinkingSection).not.toHaveClass(/thinking-active/);
 
     // Send button should reappear, cancel should hide
     await expect(sendBtn).toBeVisible({ timeout: 5000 });
