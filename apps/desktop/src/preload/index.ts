@@ -10,9 +10,41 @@ const ALLOWED_INVOKE_CHANNELS = [
   'agent:cancel',
   'conversation:list',
   'conversation:create',
+  'conversation:get',
+  'conversation:delete',
+  'conversation:rename',
+  'model:list',
+  'model:select',
+  'auth:login',
+  'auth:logout',
+  'auth:state',
+  'storage:get',
+  'storage:set',
+  'onboarding:check-gh',
+  'onboarding:gh-login',
+  'onboarding:check-copilot',
+  'onboarding:detect-tools',
+  'onboarding:complete',
+  'onboarding:status',
+  'connector:list',
+  'connector:add',
+  'connector:remove',
+  'connector:update',
+  'connector:test',
+  'connector:get-tools',
+  'cli:detect-all',
+  'cli:refresh',
+  'cli:install',
+  'cli:authenticate',
 ];
 
-const ALLOWED_LISTEN_CHANNELS = ['agent:event'];
+const ALLOWED_LISTEN_CHANNELS = [
+  'agent:event',
+  'auth:state-changed',
+  'onboarding:gh-login-event',
+  'connector:status-changed',
+  'connector:tools-changed',
+];
 
 contextBridge.exposeInMainWorld('ghoWorkIPC', {
   invoke: (channel: string, ...args: unknown[]) => {

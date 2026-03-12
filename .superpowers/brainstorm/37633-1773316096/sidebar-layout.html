@@ -1,0 +1,63 @@
+<h2>How should Connectors live in the workbench?</h2>
+<p class="subtitle">The sidebar shows quick status; the settings panel has full configuration. How do they relate?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Sidebar + Settings in Main Area</h3>
+      <p>Clicking "Connectors" in the activity bar shows a <strong>quick-view sidebar</strong> (status dots, toggles, tool counts). A gear icon in the sidebar header opens the <strong>full settings panel in the main content area</strong> (replacing the chat). This matches VS Code's pattern: sidebar for browsing, editor area for details.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Familiar VS Code pattern</li>
+          <li>Sidebar stays visible while configuring</li>
+          <li>Full width for forms and tab content</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Navigating away from chat to configure</li>
+          <li>Two separate UI areas to maintain</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Sidebar Only (Expandable)</h3>
+      <p>Everything lives in the sidebar. The default view shows the connector list. Clicking a connector <strong>expands it inline</strong> to show tools, toggle, and a "Configure" section. Adding a new connector opens a form <strong>within the sidebar</strong>. No separate settings panel.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Single location for everything</li>
+          <li>Chat stays visible while managing connectors</li>
+          <li>Simpler navigation</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Sidebar width (240px) is tight for forms</li>
+          <li>Deep nesting: list → detail → tools → config</li>
+          <li>Scrolling issues with many connectors</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Sidebar + Slide-over Panel</h3>
+      <p>Activity bar shows the <strong>connector sidebar</strong> (list view). Clicking a connector or "Add New" opens a <strong>slide-over panel from the right</strong> (like a drawer, 400px wide) that overlays the main content. Chat remains underneath. Close the drawer to go back.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Chat stays visible (partially)</li>
+          <li>More room than sidebar for forms</li>
+          <li>Clear "I'm configuring" mode</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>New UI pattern not in the app yet</li>
+          <li>Overlay can feel modal/blocking</li>
+          <li>More complex implementation</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>

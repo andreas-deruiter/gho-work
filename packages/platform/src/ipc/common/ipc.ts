@@ -41,6 +41,8 @@ export const IPC_CHANNELS = {
   CLI_REFRESH: 'cli:refresh',
   CLI_CREATE_INSTALL_CONVERSATION: 'cli:create-install-conversation',
   CLI_GET_PLATFORM_CONTEXT: 'cli:get-platform-context',
+  CLI_INSTALL: 'cli:install',
+  CLI_AUTHENTICATE: 'cli:authenticate',
 } as const;
 
 export const SendMessageRequestSchema = z.object({
@@ -295,3 +297,27 @@ export const PlatformContextSchema = z.object({
   }),
 });
 export type PlatformContextIPC = z.infer<typeof PlatformContextSchema>;
+
+export const CLIInstallRequestSchema = z.object({
+  toolId: z.string(),
+});
+export type CLIInstallRequest = z.infer<typeof CLIInstallRequestSchema>;
+
+export const CLIInstallResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+  version: z.string().optional(),
+  installUrl: z.string().optional(),
+});
+export type CLIInstallResponse = z.infer<typeof CLIInstallResponseSchema>;
+
+export const CLIAuthenticateRequestSchema = z.object({
+  toolId: z.string(),
+});
+export type CLIAuthenticateRequest = z.infer<typeof CLIAuthenticateRequestSchema>;
+
+export const CLIAuthenticateResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type CLIAuthenticateResponse = z.infer<typeof CLIAuthenticateResponseSchema>;

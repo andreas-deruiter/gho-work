@@ -110,6 +110,32 @@ export class CLIDetectionServiceImpl extends Disposable implements ICLIDetection
     this._onDidChangeTools.fire(results);
   }
 
+  async installTool(toolId: string): Promise<{ success: boolean; installUrl?: string; error?: string }> {
+    const def = CLI_TOOLS.find(t => t.id === toolId);
+    if (!def) {
+      return { success: false, error: `Unknown tool: ${toolId}` };
+    }
+    return { success: true, installUrl: def.installUrl };
+  }
+
+  async authenticateTool(toolId: string): Promise<{ success: boolean; error?: string }> {
+    const def = CLI_TOOLS.find(t => t.id === toolId);
+    if (!def) {
+      return { success: false, error: `Unknown tool: ${toolId}` };
+    }
+    if (!def.authCommand) {
+      return { success: false, error: `No auth command for ${def.name}` };
+    }
+    const parts = def.authCommand.split(' ');
+    try {
+      await this._execFile(parts[0], parts.slice(1));
+      this._cache = null;
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
   private async _detectOne(def: CLIToolDef): Promise<CLIToolStatus> {
     const status: CLIToolStatus = {
       id: def.id,

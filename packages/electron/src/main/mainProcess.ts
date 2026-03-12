@@ -208,8 +208,11 @@ export function createMainProcess(
   // --- Connector Services ---
   let connectorRegistry: ConnectorRegistryImpl | null = null;
   let mcpClientManager: MCPClientManagerImpl | null = null;
-  let cliDetectionService: CLIDetectionServiceImpl | null = null;
-  const platformDetectionService: PlatformDetectionServiceImpl = new PlatformDetectionServiceImpl(
+  // CLI detection doesn't depend on sqlite — always available
+  const cliDetectionService = new CLIDetectionServiceImpl();
+  services.set(ICLIDetectionService, cliDetectionService);
+
+  const platformDetectionService = new PlatformDetectionServiceImpl(
     async (cmd: string, args: string[]) => {
       const { stdout } = await execFileAsync(cmd, args);
       return stdout;
@@ -221,11 +224,9 @@ export function createMainProcess(
   if (globalDb) {
     connectorRegistry = new ConnectorRegistryImpl(globalDb);
     mcpClientManager = new MCPClientManagerImpl(connectorRegistry);
-    cliDetectionService = new CLIDetectionServiceImpl();
 
     services.set(IConnectorRegistry, connectorRegistry);
     services.set(IMCPClientManager, mcpClientManager);
-    services.set(ICLIDetectionService, cliDetectionService);
 
     // Forward status/tools events to renderer
     mcpClientManager.onDidChangeStatus((event) => {
@@ -730,17 +731,11 @@ export function createMainProcess(
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CLI_DETECT_ALL, async () => {
-    if (!cliDetectionService) {
-      return { tools: [] };
-    }
     const tools = await cliDetectionService.detectAll();
     return { tools };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CLI_REFRESH, async () => {
-    if (!cliDetectionService) {
-      return;
-    }
     await cliDetectionService.refresh();
   });
 
@@ -753,6 +748,24 @@ export function createMainProcess(
     const platformContext = await platformDetectionService.detect();
     const conversationId = await agentService.createInstallConversation(toolId, platformContext);
     return { conversationId };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CLI_INSTALL, async (...args: unknown[]) => {
+    const request = args[0] as { toolId: string };
+    const result = await cliDetectionService.installTool(request.toolId);
+    if (result.success && result.installUrl) {
+      await shell.openExternal(result.installUrl);
+    }
+    return result;
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CLI_AUTHENTICATE, async (...args: unknown[]) => {
+    const request = args[0] as { toolId: string };
+    const result = await cliDetectionService.authenticateTool(request.toolId);
+    if (result.success) {
+      await cliDetectionService.refresh();
+    }
+    return result;
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {

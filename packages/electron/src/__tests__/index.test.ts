@@ -43,7 +43,7 @@ import { IPC_CHANNELS } from '@gho-work/platform';
 describe('electron main process', () => {
   it('createMainProcess returns a ServiceCollection', () => {
     const win = new BrowserWindow() as InstanceType<typeof BrowserWindow>;
-    const services = createMainProcess(win);
+    const services = createMainProcess(win, undefined, undefined, { useMockSDK: true });
     expect(services).toBeDefined();
   });
 
@@ -53,7 +53,7 @@ describe('electron main process', () => {
     const sendSpy = win.webContents.send as ReturnType<typeof vi.fn>;
     sendSpy.mockClear();
 
-    createMainProcess(win);
+    createMainProcess(win, undefined, undefined, { useMockSDK: true });
 
     // Wait for async SDK initialization (CopilotSDKImpl starts async with mock fallback)
     await new Promise((r) => setTimeout(r, 3000));
@@ -83,7 +83,7 @@ describe('electron main process', () => {
   it('AGENT_CANCEL handler does not throw', async () => {
     ipcHandlers.clear();
     const win = new BrowserWindow() as InstanceType<typeof BrowserWindow>;
-    createMainProcess(win);
+    createMainProcess(win, undefined, undefined, { useMockSDK: true });
 
     const handler = ipcHandlers.get(IPC_CHANNELS.AGENT_CANCEL);
     expect(handler).toBeDefined();
