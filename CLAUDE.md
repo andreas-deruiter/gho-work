@@ -71,6 +71,8 @@ Code in `common/` must never import from `browser/` or `node/`. This enables cod
 
 Browser code (`packages/ui/src/browser/`, renderer entry points) must import from `/common` subpaths, never from the full barrel of packages that contain Node.js code.
 
+**Native modules and bundling:** Before instantiating a class that uses a native module (like `better-sqlite3`), trace the bundling chain: is the module externalized in `electron.vite.config.ts`? Is the `require()` at the top level or lazy (inside a function)? Will tree-shaking remove it if the class is only used as a type? Adding a single `new Foo()` call can force the bundler to include a previously tree-shaken native module import, crashing the app in a different runtime (e.g., Electron vs Node.js ABI mismatch). Native modules used in Electron must be lazy-loaded (`const load = () => require('mod')`) so the `require` only executes when the code path is actually reached.
+
 ### Dependency decisions
 
 Follow VS Code's framework for deciding build vs buy:
@@ -178,6 +180,9 @@ A successful `turbo build` is not a proxy for "the app launches." A successful `
 
 ### Verify bundled resource paths at runtime
 `app.getAppPath()` returns different values in dev vs packaged builds. In dev it returns the directory of the main entry script (e.g., `apps/desktop/out/main`), not the project root. After adding any path that resolves relative to `app.getAppPath()`, verify it resolves correctly by logging and checking at runtime — don't assume the path is right from reading the code.
+
+### Verify tool output, not just exit code
+When a build or rebuild tool reports success, verify the artifact was actually modified (check file timestamp, size, or content hash). Tools can report success while producing no change — e.g., `@electron/rebuild` may skip rebuilding if it thinks the binary is current, even when it's compiled for the wrong ABI.
 
 ### Catch blocks must not silently swallow errors
 Every `catch` block that falls back to an alternative path must log the error (`console.error` or `console.warn`). Silent catch blocks mask the real failure and make debugging impossible. If the fallback is intentional, the log message should explain what failed and why the fallback was chosen.
