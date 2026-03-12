@@ -3,11 +3,12 @@
  * VS Code-style direct DOM manipulation with event-driven updates.
  * Uses marked for markdown rendering and DOMPurify for XSS prevention.
  */
-import { Disposable, Emitter, generateUUID } from '@gho-work/base';
+import { Disposable, Emitter, generateUUID, MutableDisposable } from '@gho-work/base';
 import type { Event, AgentEvent } from '@gho-work/base';
 import type { IIPCRenderer } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { ModelSelector } from './modelSelector.js';
+import { ChatThinkingSection } from './chatThinkingSection.js';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -39,6 +40,7 @@ export class ChatPanel extends Disposable {
   private _cancelBtnEl!: HTMLButtonElement;
   private _isProcessing = false;
   private _currentAssistantMessage: ChatMessage | null = null;
+  private readonly _currentThinkingSection = this._register(new MutableDisposable<ChatThinkingSection>());
 
   private _modelSelector!: ModelSelector;
   private _conversationId: string = generateUUID();
@@ -343,6 +345,16 @@ export class ChatPanel extends Disposable {
     this._messages.push(this._currentAssistantMessage);
     this._renderMessage(this._currentAssistantMessage);
 
+    // Create thinking section for this message
+    const thinkingSection = new ChatThinkingSection();
+    this._currentThinkingSection.value = thinkingSection; // auto-disposes previous
+    const msgEl = document.getElementById(`msg-${this._currentAssistantMessage.id}`);
+    const toolCallsEl = msgEl?.querySelector('.chat-tool-calls');
+    if (toolCallsEl) {
+      toolCallsEl.appendChild(thinkingSection.getDomNode());
+    }
+    thinkingSection.setActive(true);
+
     // Fire the event
     this._onDidSendMessage.fire({
       conversationId: this._conversationId,
@@ -384,7 +396,11 @@ export class ChatPanel extends Disposable {
 
     switch (event.type) {
       case 'thinking': {
-        this._updateAssistantStatus('Thinking...');
+        this._currentThinkingSection.value?.setActive(true);
+        break;
+      }
+      case 'thinking_delta': {
+        this._currentThinkingSection.value?.appendThinkingText(event.content);
         break;
       }
       case 'text_delta': {
@@ -393,26 +409,15 @@ export class ChatPanel extends Disposable {
         break;
       }
       case 'tool_call_start': {
-        this._currentAssistantMessage.toolCalls = this._currentAssistantMessage.toolCalls || [];
-        this._currentAssistantMessage.toolCalls.push({
-          id: event.toolCall.id,
-          name: event.toolCall.toolName,
-          status: 'running',
-        });
-        this._updateAssistantToolCalls();
+        this._currentThinkingSection.value?.addToolCall(
+          event.toolCall.id,
+          event.toolCall.toolName,
+        );
         break;
       }
       case 'tool_call_result': {
-        if (this._currentAssistantMessage.toolCalls?.length) {
-          // Match tool call by ID, not just last in array
-          const toolCall = this._currentAssistantMessage.toolCalls.find(
-            (tc) => tc.id === event.toolCallId,
-          );
-          if (toolCall) {
-            toolCall.status = event.result.success ? 'completed' : 'failed';
-          }
-          this._updateAssistantToolCalls();
-        }
+        const state = event.result.success ? 'completed' : 'failed';
+        this._currentThinkingSection.value?.updateToolCall(event.toolCallId, state);
         break;
       }
       case 'error': {
@@ -431,8 +436,10 @@ export class ChatPanel extends Disposable {
     if (this._currentAssistantMessage) {
       this._currentAssistantMessage.isStreaming = false;
       this._updateAssistantContent();
-      this._updateAssistantStatus('');
     }
+    this._currentThinkingSection.value?.setActive(false);
+    // Don't clear the MutableDisposable — the section stays in the DOM for scrollback.
+    // It will be disposed when the next message creates a new section.
     this._currentAssistantMessage = null;
     this._isProcessing = false;
     this._sendBtnEl.disabled = false;
@@ -522,55 +529,6 @@ export class ChatPanel extends Disposable {
       }
     }
     this._scrollToBottom();
-  }
-
-  private _updateAssistantStatus(status: string): void {
-    if (!this._currentAssistantMessage) {
-      return;
-    }
-    const el = document.getElementById(`msg-${this._currentAssistantMessage.id}`);
-    if (!el) {
-      return;
-    }
-    const statusEl = el.querySelector('.chat-message-status');
-    if (statusEl) {
-      statusEl.textContent = status;
-    }
-  }
-
-  private _updateAssistantToolCalls(): void {
-    if (!this._currentAssistantMessage) {
-      return;
-    }
-    const el = document.getElementById(`msg-${this._currentAssistantMessage.id}`);
-    if (!el) {
-      return;
-    }
-    const toolCallsEl = el.querySelector('.chat-tool-calls');
-    if (toolCallsEl && this._currentAssistantMessage.toolCalls?.length) {
-      this._clearElement(toolCallsEl);
-      for (const tc of this._currentAssistantMessage.toolCalls) {
-        const item = document.createElement('div');
-        item.className = `tool-call-item tool-call-${tc.status}`;
-
-        const icon = document.createElement('span');
-        icon.className = 'tool-call-icon';
-        icon.textContent = tc.status === 'running' ? '...' : tc.status === 'failed' ? 'x' : '+';
-        item.appendChild(icon);
-
-        const name = document.createElement('span');
-        name.className = 'tool-call-name';
-        name.textContent = tc.name;
-        item.appendChild(name);
-
-        const statusSpan = document.createElement('span');
-        statusSpan.className = 'tool-call-status';
-        statusSpan.textContent = tc.status;
-        item.appendChild(statusSpan);
-
-        toolCallsEl.appendChild(item);
-      }
-    }
   }
 
   private _showErrorBanner(message: string): void {
