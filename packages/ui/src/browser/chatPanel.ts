@@ -9,14 +9,7 @@ import type { IIPCRenderer } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { ModelSelector } from './modelSelector.js';
 import { ChatThinkingSection } from './chatThinkingSection.js';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
-
-// Configure marked for safe rendering
-marked.setOptions({
-  breaks: true,
-  gfm: true,
-});
+import { renderChatMarkdown } from './chatMarkdownRenderer.js';
 
 interface ChatMessage {
   id: string;
@@ -229,7 +222,11 @@ export class ChatPanel extends Disposable {
     try {
       const response = await this._ipc.invoke<{
         models: Array<{ id: string; name: string; provider: string }>;
+        error?: string;
       }>(IPC_CHANNELS.MODEL_LIST);
+      if (response.error) {
+        console.error('[chatPanel] Model list error from SDK:', response.error);
+      }
       this._modelSelector.setModels(response.models);
     } catch (err) {
       console.error('Failed to load models:', err);
@@ -308,6 +305,12 @@ export class ChatPanel extends Disposable {
 
     welcome.appendChild(suggestions);
     this._messageListEl.appendChild(welcome);
+  }
+
+  /** Programmatically send a message (e.g., auto-kickoff for install conversations). */
+  async sendMessage(content: string): Promise<void> {
+    this._inputEl.value = content;
+    await this._sendMessage();
   }
 
   private async _sendMessage(): Promise<void> {
@@ -500,14 +503,11 @@ export class ChatPanel extends Disposable {
   }
 
   /**
-   * Renders markdown content into an element using marked + DOMPurify.
+   * Renders markdown content into an element using renderChatMarkdown (marked + highlight.js + DOMPurify).
    * All output is sanitized to prevent XSS attacks.
    */
-  private _setSanitizedMarkdown(el: Element, markdownText: string): void {
-    const rawHtml = marked.parse(markdownText) as string;
-    const cleanHtml = DOMPurify.sanitize(rawHtml);
-    // Safe: DOMPurify.sanitize() strips all dangerous content
-    el.innerHTML = cleanHtml;
+  private _setSanitizedMarkdown(el: Element, markdownText: string, isStreaming = false): void {
+    renderChatMarkdown(el, markdownText, { isStreaming });
   }
 
   private _updateAssistantContent(): void {
@@ -520,8 +520,8 @@ export class ChatPanel extends Disposable {
     }
     const contentEl = el.querySelector('.chat-message-content');
     if (contentEl) {
-      // Sanitize markdown output with DOMPurify
-      this._setSanitizedMarkdown(contentEl, this._currentAssistantMessage.content);
+      // Sanitize markdown output with DOMPurify + highlight.js
+      this._setSanitizedMarkdown(contentEl, this._currentAssistantMessage.content, this._currentAssistantMessage.isStreaming ?? false);
       if (this._currentAssistantMessage.isStreaming) {
         const cursor = document.createElement('span');
         cursor.className = 'chat-cursor';
@@ -529,6 +529,10 @@ export class ChatPanel extends Disposable {
       }
     }
     this._scrollToBottom();
+  }
+
+  showError(message: string): void {
+    this._showErrorBanner(message);
   }
 
   private _showErrorBanner(message: string): void {
