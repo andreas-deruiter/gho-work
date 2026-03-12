@@ -7,9 +7,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@gho-work/platform": "*"
+    "@gho-work/base": "*",
+    "@gho-work/connectors": "*",
+    "@gho-work/platform": "*",
+    "better-sqlite3": "^12.6.2"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "vitest": "^3.0.0"
   }
 }

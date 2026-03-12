@@ -1,6 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
+import { ToolListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types';
 import { Disposable, Emitter, toDisposable } from '@gho-work/base';
 import type { ConnectorConfig, Event } from '@gho-work/base';
 import type { ToolInfo } from '../common/mcpClientManager.js';
@@ -38,10 +39,9 @@ export class MCPConnection extends Disposable {
       this._setStatus('connected');
       this._startHeartbeat();
 
-      // Listen for tool list changes — cast through unknown because the SDK's
-      // AnyObjectSchema is a Zod schema type; we pass a compatible shape at runtime.
+      // Listen for tool list changes using the SDK's exported Zod schema.
       this._client.setNotificationHandler(
-        { method: 'notifications/tools/list_changed' } as unknown as Parameters<Client['setNotificationHandler']>[0],
+        ToolListChangedNotificationSchema,
         async () => {
           await this._refreshTools();
         },
