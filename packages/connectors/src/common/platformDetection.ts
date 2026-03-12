@@ -1,14 +1,8 @@
 import { createServiceIdentifier } from '@gho-work/base';
+import type { PlatformContext } from '@gho-work/base';
 
-export interface PlatformContext {
-	readonly os: 'darwin' | 'win32' | 'linux';
-	readonly arch: 'arm64' | 'x64' | 'ia32';
-	readonly packageManagers: {
-		readonly brew: boolean;
-		readonly winget: boolean;
-		readonly chocolatey: boolean;
-	};
-}
+// Re-export from @gho-work/base for convenience
+export type { PlatformContext } from '@gho-work/base';
 
 export interface IPlatformDetectionService {
 	detect(): Promise<PlatformContext>;
