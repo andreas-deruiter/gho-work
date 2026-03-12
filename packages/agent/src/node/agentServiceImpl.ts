@@ -6,7 +6,7 @@ import { generateUUID } from '@gho-work/base';
 import type { AgentContext, AgentEvent } from '@gho-work/base';
 import type { IAgentService } from '../common/agent.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
-import type { SessionEvent } from '../common/types.js';
+import type { MCPServerConfig, SessionEvent } from '../common/types.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
 
 export class AgentServiceImpl implements IAgentService {
@@ -18,7 +18,7 @@ export class AgentServiceImpl implements IAgentService {
     private readonly _readContextFiles?: () => Promise<string>,
   ) {}
 
-  async *executeTask(prompt: string, context: AgentContext): AsyncIterable<AgentEvent> {
+  async *executeTask(prompt: string, context: AgentContext, mcpServers?: Record<string, MCPServerConfig>): AsyncIterable<AgentEvent> {
     const taskId = generateUUID();
     this._activeTaskId = taskId;
 
@@ -39,6 +39,7 @@ export class AgentServiceImpl implements IAgentService {
         sessionId: context.conversationId,
         systemMessage: systemContent ? { mode: 'append', content: systemContent } : undefined,
         streaming: true,
+        mcpServers,
       });
       this._activeSession = session;
 
