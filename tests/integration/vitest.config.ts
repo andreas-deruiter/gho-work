@@ -9,6 +9,7 @@ export default defineConfig({
       '@gho-work/base': resolve(root, 'packages/base/src/index.ts'),
       '@gho-work/platform': resolve(root, 'packages/platform/src/index.ts'),
       '@gho-work/connectors': resolve(root, 'packages/connectors/src/index.ts'),
+      '@gho-work/agent': resolve(root, 'packages/agent/src/index.ts'),
     },
   },
   test: {
