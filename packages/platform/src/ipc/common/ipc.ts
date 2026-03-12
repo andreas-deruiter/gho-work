@@ -85,10 +85,12 @@ const ToolResultSchema = z.object({
   error: z.string().optional(),
 });
 
+// NOTE: AgentEvent is defined in both types.ts and ipc.ts — keep in sync.
 export const AgentEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('text'), content: z.string() }),
   z.object({ type: z.literal('text_delta'), content: z.string() }),
   z.object({ type: z.literal('thinking'), content: z.string() }),
+  z.object({ type: z.literal('thinking_delta'), content: z.string() }),
   z.object({ type: z.literal('tool_call_start'), toolCall: ToolCallPartialSchema }),
   z.object({ type: z.literal('tool_call_result'), toolCallId: z.string(), result: ToolResultSchema }),
   z.object({ type: z.literal('error'), error: z.string() }),

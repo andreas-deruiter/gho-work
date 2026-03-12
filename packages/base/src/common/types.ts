@@ -80,6 +80,15 @@ export interface ToolResult {
 
 export type PermissionDecision = 'allow_once' | 'allow_always' | 'deny' | 'deny_always' | 'pending';
 
+export enum ToolCallState {
+  Streaming = 'streaming',
+  WaitingForConfirmation = 'waiting_for_confirmation',
+  Executing = 'executing',
+  Completed = 'completed',
+  Failed = 'failed',
+  Cancelled = 'cancelled',
+}
+
 // --- Connectors ---
 
 export interface ConnectorConfig {
@@ -119,10 +128,12 @@ export interface PermissionRule {
 
 // --- Agent Events (event-driven architecture) ---
 
+// NOTE: AgentEvent is defined in both types.ts and ipc.ts — keep in sync.
 export type AgentEvent =
   | { type: 'text'; content: string }
   | { type: 'text_delta'; content: string }
   | { type: 'thinking'; content: string }
+  | { type: 'thinking_delta'; content: string }
   | { type: 'tool_call_start'; toolCall: Omit<ToolCall, 'result' | 'durationMs'> }
   | { type: 'tool_call_result'; toolCallId: string; result: ToolResult }
   | { type: 'error'; error: string }
