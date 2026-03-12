@@ -1,6 +1,3 @@
-import { createServiceIdentifier } from '@gho-work/base';
-import type { ConnectorConfig } from '@gho-work/base';
-
 export interface SessionConfig {
   model?: string;
   sessionId?: string;
@@ -73,12 +70,3 @@ export interface PingResponse {
   message: string;
   timestamp: number;
 }
-
-export interface IMCPManager {
-  connect(config: ConnectorConfig): Promise<void>;
-  disconnect(connectorId: string): Promise<void>;
-  listTools(connectorId: string): Promise<Array<{ name: string; description: string }>>;
-  callTool(connectorId: string, toolName: string, args: Record<string, unknown>): Promise<unknown>;
-}
-
-export const IMCPManager = createServiceIdentifier<IMCPManager>('IMCPManager');
