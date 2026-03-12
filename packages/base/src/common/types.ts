@@ -80,6 +80,7 @@ export interface ToolResult {
 
 export type PermissionDecision = 'allow_once' | 'allow_always' | 'deny' | 'deny_always' | 'pending';
 
+/** Full tool call lifecycle states (agent-side). UI uses a subset via ToolCallDisplayState. */
 export enum ToolCallState {
   Streaming = 'streaming',
   WaitingForConfirmation = 'waiting_for_confirmation',

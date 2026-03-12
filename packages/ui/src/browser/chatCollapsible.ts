@@ -1,6 +1,8 @@
 import { Disposable } from '@gho-work/base';
 import { h, addDisposableListener } from './dom.js';
 
+let collapsibleCounter = 0;
+
 export interface ChatCollapsibleOptions {
   createContent?: (contentEl: HTMLElement) => void;
   startExpanded?: boolean;
@@ -43,9 +45,16 @@ export class ChatCollapsible extends Disposable {
     this._titleLabel = result['label'];
     this._contentEl = result['content'];
 
+    const contentId = `collapsible-content-${collapsibleCounter++}`;
+    this._contentEl.id = contentId;
+    this._contentEl.setAttribute('role', 'region');
+
     this._titleLabel.textContent = title;
     this._button.setAttribute('aria-expanded', String(this._expanded));
     this._button.setAttribute('aria-label', title);
+    this._button.setAttribute('aria-controls', contentId);
+    this._contentEl.setAttribute('aria-labelledby', `${contentId}-btn`);
+    this._button.id = `${contentId}-btn`;
 
     if (options?.iconClass) {
       this._icon.className = `collapsible-icon ${options.iconClass}`;
