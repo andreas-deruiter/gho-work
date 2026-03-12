@@ -12,6 +12,8 @@ import { StatusBar } from './statusBar.js';
 import { KeyboardShortcuts } from './keyboardShortcuts.js';
 import { ChatPanel } from './chatPanel.js';
 import { ConversationListPanel } from './conversationList.js';
+import { ConnectorSidebarWidget } from './connectors/connectorSidebar.js';
+import { ConnectorDrawerWidget } from './connectors/connectorDrawer.js';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
@@ -20,6 +22,8 @@ export class Workbench extends Disposable {
   private readonly _sidebar: Sidebar;
   private _chatPanel!: ChatPanel;
   private _conversationList!: ConversationListPanel;
+  private _connectorSidebar!: ConnectorSidebarWidget;
+  private _connectorDrawer!: ConnectorDrawerWidget;
   private _sidebarVisible = true;
 
   constructor(
@@ -65,9 +69,21 @@ export class Workbench extends Disposable {
       void this._createNewConversation();
     });
 
-    // Wire activity bar to sidebar panel switching
-    this._register(this._activityBar.onDidSelectItem((item) => {
+    // Connector sidebar (lazy — activated on first selection)
+    this._connectorSidebar = this._register(new ConnectorSidebarWidget(this._ipc));
+    const connectorSidebarContainer = document.createElement('div');
+    connectorSidebarContainer.className = 'sidebar-panel-connectors';
+    connectorSidebarContainer.appendChild(this._connectorSidebar.getDomNode());
+    this._sidebar.addPanel('connectors', connectorSidebarContainer);
+
+    // Wire activity bar — activate connector sidebar lazily
+    let connectorSidebarActivated = false;
+    this._register(this._activityBar.onDidSelectItem(async (item) => {
       this._sidebar.showPanel(item);
+      if (item === 'connectors' && !connectorSidebarActivated) {
+        connectorSidebarActivated = true;
+        await this._connectorSidebar.activate();
+      }
     }));
 
     // Chat panel in main content
@@ -84,6 +100,64 @@ export class Workbench extends Disposable {
     ]);
 
     this._container.appendChild(wrapper.root);
+
+    // Connector drawer (overlays main content)
+    this._connectorDrawer = this._register(new ConnectorDrawerWidget(this._ipc));
+    wrapper.root.appendChild(this._connectorDrawer.getDomNode());
+
+    // Wire sidebar events to drawer
+    this._connectorSidebar.onDidSelectConnector(async (id) => {
+      this._connectorSidebar.highlightConnector(id);
+      await this._connectorDrawer.openForConnector(id);
+    });
+
+    this._connectorSidebar.onDidRequestAddConnector(() => {
+      this._connectorSidebar.highlightConnector(null);
+      this._connectorDrawer.openForNew();
+    });
+
+    this._connectorDrawer.onDidClose(() => {
+      this._connectorSidebar.highlightConnector(null);
+    });
+
+    // Handle CLI install from sidebar with loading states
+    this._connectorSidebar.onDidRequestInstallCLI(async (toolId) => {
+      this._connectorSidebar.setCLIToolLoading(toolId, 'Installing...');
+      const result = await this._ipc.invoke<{ success: boolean; installUrl?: string }>(IPC_CHANNELS.CLI_INSTALL, { toolId });
+      await this._connectorSidebar.refreshCLITools();
+      if (result.success && !this._connectorSidebar.isCLIToolInstalled(toolId)) {
+        this._connectorSidebar.showCLIToolCheckAgain(toolId);
+      }
+    });
+
+    // Handle CLI auth from sidebar with loading states
+    this._connectorSidebar.onDidRequestAuthCLI(async (toolId) => {
+      this._connectorSidebar.setCLIToolLoading(toolId, 'Authenticating...');
+      await this._ipc.invoke(IPC_CHANNELS.CLI_AUTHENTICATE, { toolId });
+      await this._connectorSidebar.refreshCLITools();
+    });
+
+    // Handle save/delete from drawer
+    this._connectorDrawer.onDidSaveConnector(async (data) => {
+      const existing = await this._ipc.invoke<{ connectors: Array<{ id: string }> }>(IPC_CHANNELS.CONNECTOR_LIST);
+      const isNew = !existing.connectors.some(c => c.id === data.id);
+      if (isNew) {
+        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_ADD, {
+          id: data.id, type: 'local_mcp', name: data.name, transport: data.transport,
+          command: data.command, args: data.args, url: data.url, env: data.env, headers: data.headers,
+          enabled: true, status: 'disconnected',
+        });
+      } else {
+        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_UPDATE, { id: data.id, updates: data });
+      }
+      await this._connectorSidebar.refreshConnectors();
+    });
+
+    this._connectorDrawer.onDidDeleteConnector(async (id) => {
+      await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_REMOVE, { id });
+      this._connectorDrawer.close();
+      await this._connectorSidebar.refreshConnectors();
+    });
 
     // Status bar items
     this._statusBar.addLeftItem('Ready');
