@@ -116,15 +116,81 @@ html, body {
   overflow: hidden;
 }
 
-/* Sidebar */
-.sidebar {
+/* Activity Bar — narrow icon column on the far left */
+.workbench-activity-bar {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.activity-bar {
   width: var(--sidebar-width);
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-secondary);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  padding: 8px 0;
+  flex-shrink: 0;
+}
+
+.activity-bar-top,
+.activity-bar-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   align-items: center;
-  padding-top: 8px;
+}
+
+.activity-bar-item {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  transition: color 0.15s, background 0.15s;
+  position: relative;
+}
+
+.activity-bar-item:hover {
+  color: var(--fg-primary);
+  background: var(--bg-hover);
+}
+
+.activity-bar-item.active {
+  color: var(--fg-primary);
+  border-left: 2px solid var(--fg-accent);
+}
+
+/* Secondary Sidebar — panel content to the right of the activity bar */
+.workbench-sidebar {
+  flex-shrink: 0;
+  width: 240px;
+  display: flex;
+  overflow: hidden;
+}
+
+.sidebar {
+  flex: 1;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-secondary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-panel-chat,
+.sidebar-panel-connectors {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .sidebar-nav {
