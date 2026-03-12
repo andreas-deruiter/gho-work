@@ -15,7 +15,7 @@ export default defineConfig({
           index: resolve(__dirname, 'src/main/index.ts'),
           agentHost: resolve(__dirname, '../../packages/electron/src/agentHost/agentHostMain.ts'),
         },
-        external: ['better-sqlite3'],
+        external: ['better-sqlite3', '@github/copilot-sdk', '@modelcontextprotocol/sdk'],
         output: {
           entryFileNames: '[name].js',
         },

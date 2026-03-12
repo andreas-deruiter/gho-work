@@ -13,7 +13,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@gho-work/base": "*"
+    "@gho-work/base": "*",
+    "@modelcontextprotocol/sdk": "^1.27.1"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
