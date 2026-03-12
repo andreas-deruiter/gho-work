@@ -11,3 +11,5 @@ export { ChatPanel } from './browser/chatPanel.js';
 export { KeyboardShortcuts } from './browser/keyboardShortcuts.js';
 export * from './browser/conversationList.js';
 export * from './browser/modelSelector.js';
+export { OnboardingFlow } from './browser/onboarding/onboardingFlow.js';
+export { ConnectorsPanel } from './browser/connectorsPanel.js';
