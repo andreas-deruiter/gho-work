@@ -4,8 +4,10 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "paths": {
+      "@modelcontextprotocol/sdk/client": ["../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.d.ts"],
       "@modelcontextprotocol/sdk/client/stdio": ["../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.d.ts"],
-      "@modelcontextprotocol/sdk/client/streamableHttp": ["../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.d.ts"]
+      "@modelcontextprotocol/sdk/client/streamableHttp": ["../../node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.d.ts"],
+      "@modelcontextprotocol/sdk/types": ["../../node_modules/@modelcontextprotocol/sdk/dist/esm/types.d.ts"]
     }
   },
   "include": ["src"]
