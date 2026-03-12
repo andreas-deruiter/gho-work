@@ -55,6 +55,16 @@ Workbench
         └── ConnectorConfigFormWidget (view/edit connector config)
 ```
 
+### Sidebar Panel Switching
+
+The workbench currently hardcodes `ConversationListPanel` in the sidebar. Phase 3B adds panel switching:
+
+- The workbench maintains a `Map<string, Disposable>` mapping activity bar item IDs to sidebar panel widgets.
+- On `ActivityBar.onDidSelectItem`, the workbench hides the current sidebar panel (CSS `display: none`) and shows the selected one.
+- Panels are lazily created on first activation and cached thereafter.
+- The `ConnectorSidebarWidget` is registered under the `'connectors'` activity bar item ID.
+- The existing `ConversationListPanel` is registered under the `'chat'` item ID (default active).
+
 ## Sidebar Detail
 
 ### Installed Connectors Group
@@ -80,9 +90,9 @@ A list of detected CLI tools loaded via `CLI_DETECT_ALL` IPC call on activation.
 **Install flow:**
 1. Button changes to spinner with "Installing..."
 2. `CLI_INSTALL` IPC call sends tool ID to main process
-3. Main process runs install command via `execFile` (not `exec`, to prevent shell injection)
-4. Success: row updates with version + green checkmark
-5. Failure: row shows red "Failed" label; clicking opens drawer with error output and "Retry" / "Manual Instructions"
+3. Main process opens the tool's `installUrl` in the default browser via `shell.openExternal()`, then re-detects the tool after a brief delay
+4. Success (tool now detected): row updates with version + green checkmark
+5. Not yet detected: row shows "Check Again" button to re-trigger detection
 
 **Auth flow:**
 1. Button changes to spinner with "Authenticating..."
@@ -90,7 +100,7 @@ A list of detected CLI tools loaded via `CLI_DETECT_ALL` IPC call on activation.
 3. Main process runs auth command via `execFile`
 4. Success/failure: row updates accordingly
 
-Listens to `CLI_REFRESH` push events.
+After install or auth actions complete, the sidebar calls `CLI_REFRESH` (invoke channel) to re-detect all tools and update the list.
 
 ### Add Connector Button
 
@@ -125,7 +135,9 @@ Single scrollable view with three sections in vertical flow. No tabs.
 
 ### Tools Section (Unified Tool View)
 
-Shows ALL tools from ALL connected connectors, not just the connector that opened the drawer. Tools are grouped by connector name with collapsible group headers.
+Shows ALL tools from ALL connected connectors, not just the connector that opened the drawer. This gives the user a single place to see everything the agent has access to. Tools are grouped by connector name with collapsible group headers.
+
+**Data loading:** On drawer open, the renderer calls `CONNECTOR_LIST` to get all connectors, then calls `CONNECTOR_GET_TOOLS` for each connected connector. Results are merged into the grouped view. This is acceptable because the number of connectors is small (typically < 10).
 
 **Default state when opened for a specific connector:** That connector's group is expanded, others are collapsed.
 
@@ -136,7 +148,7 @@ Shows ALL tools from ALL connected connectors, not just the connector that opene
 
 **Search/filter input** at the top of the section. Filters across all groups by tool name or description.
 
-**Toggle behavior:** Checking/unchecking a tool calls `CONNECTOR_UPDATE` IPC with the updated `toolsConfig` for that tool's parent connector. The update is immediate (optimistic UI).
+**Toggle behavior:** Checking/unchecking a tool calls `CONNECTOR_UPDATE` IPC with the updated `toolsConfig` for that tool's parent connector. The update is optimistic — the checkbox flips immediately. On IPC failure, the checkbox reverts to its previous state and a brief inline error message appears below the tool row.
 
 Listens to `CONNECTOR_TOOLS_CHANGED` push events.
 
@@ -162,7 +174,7 @@ Advanced toggle reveals:
 Buttons: "Save" / "Cancel" (edit mode), "Add Connector" / "Cancel" (new mode)
 
 **Save flow:**
-- New connector: `CONNECTOR_ADD` IPC, sidebar updates, drawer shows the new connector's status
+- New connector: `CONNECTOR_ADD` IPC with `type: 'local_mcp'` (default for user-created connectors) and auto-generated UUID `id`. Sidebar updates, drawer shows the new connector's status.
 - Edit connector: `CONNECTOR_UPDATE` IPC, sidebar updates
 - Validation: name required, command or URL required based on transport
 
@@ -174,17 +186,25 @@ Phase 3A provides 10 IPC channels. Phase 3B adds two:
 
 ### CLI_INSTALL
 
-- **Direction:** Renderer to Main to Renderer
-- **Request:** `{ toolId: string }`
-- **Response:** `{ success: boolean, error?: string, version?: string }`
-- **Implementation:** `CLIDetectionServiceImpl.installTool(id)` runs the hardcoded install command via `execFile`. Returns the newly detected version on success.
+- **Direction:** Renderer to Main to Renderer (invoke)
+- **Request schema:** `CLIInstallRequestSchema = z.object({ toolId: z.string() })`
+- **Response schema:** `CLIInstallResponseSchema = z.object({ success: z.boolean(), error: z.string().optional(), version: z.string().optional() })`
+- **Implementation:** `CLIDetectionServiceImpl.installTool(id)` opens the tool's `installUrl` in the default browser via `shell.openExternal()`. After a brief delay, re-detects the tool to check if it was installed. Returns the newly detected version on success.
+
+```typescript
+installTool(toolId: string): Promise<{ success: boolean; error?: string; version?: string }>;
+```
 
 ### CLI_AUTHENTICATE
 
-- **Direction:** Renderer to Main to Renderer
-- **Request:** `{ toolId: string }`
-- **Response:** `{ success: boolean, error?: string }`
+- **Direction:** Renderer to Main to Renderer (invoke)
+- **Request schema:** `CLIAuthenticateRequestSchema = z.object({ toolId: z.string() })`
+- **Response schema:** `CLIAuthenticateResponseSchema = z.object({ success: z.boolean(), error: z.string().optional() })`
 - **Implementation:** `CLIDetectionServiceImpl.authenticateTool(id)` runs the auth command via `execFile`. Returns success/failure.
+
+```typescript
+authenticateTool(toolId: string): Promise<{ success: boolean; error?: string }>;
+```
 
 ### Existing channels reused
 
@@ -199,7 +219,7 @@ Phase 3A provides 10 IPC channels. Phase 3B adds two:
 | `CONNECTOR_STATUS_CHANGED` | Sidebar dot updates, drawer banner |
 | `CONNECTOR_TOOLS_CHANGED` | Drawer tools section |
 | `CLI_DETECT_ALL` | Sidebar CLI group initial load |
-| `CLI_REFRESH` | Sidebar CLI group updates |
+| `CLI_REFRESH` | Sidebar calls this invoke channel to re-detect CLI tools (e.g., after install attempt). Not a push event — the sidebar polls on demand. |
 
 ## File Structure
 
@@ -225,10 +245,9 @@ All in `packages/ui/src/browser/connectors/`:
 | `packages/ui/src/browser/activityBar.ts` | Add Connectors icon, wire sidebar activation |
 | `packages/ui/src/index.ts` | Export new connectors UI module |
 | `packages/connectors/src/node/cliDetectionImpl.ts` | Add `installTool()` and `authenticateTool()` methods |
-| `packages/connectors/src/common/cliDetection.ts` | Add install/auth methods to `ICLIDetectionService` interface |
 | `packages/platform/src/ipc/common/ipc.ts` | Add `CLI_INSTALL` and `CLI_AUTHENTICATE` channels + Zod schemas |
 | `packages/electron/src/main/mainProcess.ts` | Add IPC handlers for CLI_INSTALL and CLI_AUTHENTICATE |
-| `packages/base/src/common/types.ts` | Add `installCommand` to `CLIToolStatus` if not already present |
+| `packages/connectors/src/common/cliDetection.ts` | Add `installTool()` and `authenticateTool()` method signatures to `ICLIDetectionService`; `CLIToolStatus` already has `installUrl` and `authCommand` fields |
 
 ## Testing Strategy
 
@@ -260,12 +279,48 @@ Specific coverage:
 - Drawer closes on backdrop click
 - Error banner appears when connector status is error
 
+## Accessibility
+
+### Drawer
+
+- `role="dialog"` and `aria-modal="true"` on the drawer container
+- `aria-labelledby` pointing to the drawer header element
+- Focus trapped inside the drawer when open (Tab cycles within drawer elements)
+- Escape key closes the drawer
+- On close, focus returns to the element that triggered the drawer open (connector row or "Add Connector" button)
+
+### Sidebar
+
+- Connector list items and CLI tool items are focusable (`tabindex="0"`)
+- Enter/Space activates the focused item (opens drawer or triggers install/auth)
+- Status dots have `aria-label` describing the status (e.g., "Connected", "Error: connection refused")
+
+### Tool List
+
+- Checkboxes use native `<input type="checkbox">` with associated `<label>`
+- Search input has `aria-label="Filter tools"`
+- Collapsible groups use `aria-expanded` on the group header button
+
+## Loading and Empty States
+
+### Sidebar loading
+
+- On activation, each group shows a brief loading indicator (small spinner or "Loading..." text)
+- Installed Connectors group: if no connectors configured, shows "No connectors configured" with a subtle "Add one" link
+- CLI Tools group: if detection is slow (> 2s), shows "Detecting tools..." placeholder
+
+### Drawer loading
+
+- Tools section shows "Loading tools..." while `CONNECTOR_GET_TOOLS` calls are in flight
+- If no tools are available (no connected connectors), shows "No tools available — connect a connector to see its tools"
+
 ## CSS/Styling Notes
 
-- Drawer: `position: fixed`, `right: 0`, `top: 0`, `height: 100%`, `width: 400px`
+- Drawer: `position: fixed`, `right: 0`, `top: 0`, `height: 100%`, `width: 400px`, `max-width: 50vw`
 - Backdrop: `position: fixed`, full viewport, `background: rgba(0,0,0,0.3)`
 - Transition: `transform 0.2s ease-out` for slide-in, `opacity 0.2s` for backdrop
 - Status dots: 8px circles, CSS classes for colors (`.status-connected`, `.status-error`, etc.)
 - Error banner: full-width within drawer, padding, icon + text + button layout
 - Follow existing app color variables and font sizes
 - Form inputs match existing app input styling
+- Responsive: on windows narrower than 800px, drawer width clamps to `max-width: 50vw`
