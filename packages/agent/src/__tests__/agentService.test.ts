@@ -10,7 +10,7 @@ describe('AgentServiceImpl', () => {
   beforeEach(async () => {
     sdk = new MockCopilotSDK();
     await sdk.start();
-    service = new AgentServiceImpl(sdk);
+    service = new AgentServiceImpl(sdk, null, '');
   });
 
   afterEach(async () => {
@@ -130,7 +130,7 @@ describe('AgentServiceImpl', () => {
   });
 
   it('uses context file reader when provided', async () => {
-    const serviceWithContext = new AgentServiceImpl(sdk, async () => 'Context from files');
+    const serviceWithContext = new AgentServiceImpl(sdk, null, '', async () => 'Context from files');
 
     const context: AgentContext = {
       conversationId: 'test-conv',
@@ -149,7 +149,7 @@ describe('AgentServiceImpl', () => {
   it('emits error event when SDK fails', async () => {
     const badSdk = new MockCopilotSDK();
     // Don't call start() — createSession will throw
-    const badService = new AgentServiceImpl(badSdk);
+    const badService = new AgentServiceImpl(badSdk, null, '');
 
     const context: AgentContext = {
       conversationId: 'test-conv',

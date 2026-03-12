@@ -17,7 +17,7 @@ let protocol: MessagePortProtocol | null = null;
     const sdk = new MockCopilotSDK();
     await sdk.start();
 
-    const agentService = new AgentServiceImpl(sdk);
+    const agentService = new AgentServiceImpl(sdk, null, '');
 
     protocol.onRequest('agent:send-message', async (args) => {
       const { conversationId, content, model } = args as {

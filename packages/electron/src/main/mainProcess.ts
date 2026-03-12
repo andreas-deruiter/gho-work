@@ -199,7 +199,7 @@ export function createMainProcess(
     }
   })();
 
-  const agentService = new AgentServiceImpl(sdk);
+  const agentService = new AgentServiceImpl(sdk, conversationService, path.join(app.getAppPath(), 'resources', 'skills'));
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 

@@ -20,7 +20,7 @@ describe('Agent Integration', () => {
 
     sdk = new MockCopilotSDK();
     await sdk.start();
-    agentService = new AgentServiceImpl(sdk);
+    agentService = new AgentServiceImpl(sdk, null, '');
   });
 
   afterEach(async () => {

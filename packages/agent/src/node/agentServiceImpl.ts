@@ -3,18 +3,32 @@
  * Creates SDK sessions, injects context, maps SDK events to AgentEvents via AsyncQueue.
  */
 import { generateUUID } from '@gho-work/base';
-import type { AgentContext, AgentEvent } from '@gho-work/base';
+import type { AgentContext, AgentEvent, PlatformContext } from '@gho-work/base';
 import type { IAgentService } from '../common/agent.js';
+import type { IConversationService } from '../common/conversation.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
 import type { MCPServerConfig, SessionEvent } from '../common/types.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+
+function formatPackageManagers(pm: PlatformContext['packageManagers']): string {
+  const items: string[] = [];
+  items.push(pm.brew ? 'brew: available' : 'brew: not found');
+  items.push(pm.winget ? 'winget: available' : 'winget: not found');
+  items.push(pm.chocolatey ? 'chocolatey: available' : 'chocolatey: not found');
+  return items.join(', ');
+}
 
 export class AgentServiceImpl implements IAgentService {
   private _activeTaskId: string | null = null;
   private _activeSession: ISDKSession | null = null;
+  private readonly _installContexts = new Map<string, string>();
 
   constructor(
     private readonly _sdk: ICopilotSDK,
+    private readonly _conversationService: IConversationService | null,
+    private readonly _bundledSkillsPath: string,
     private readonly _readContextFiles?: () => Promise<string>,
   ) {}
 
@@ -32,6 +46,12 @@ export class AgentServiceImpl implements IAgentService {
       }
       if (context.systemPrompt) {
         systemContent += (systemContent ? '\n\n' : '') + context.systemPrompt;
+      }
+
+      // Prepend install context if available for this conversation
+      const installContext = this._installContexts.get(context.conversationId);
+      if (installContext) {
+        systemContent = installContext + (systemContent ? '\n\n' + systemContent : '');
       }
 
       const session = await this._sdk.createSession({
@@ -85,6 +105,45 @@ export class AgentServiceImpl implements IAgentService {
 
   getActiveTaskId(): string | null {
     return this._activeTaskId;
+  }
+
+  async createInstallConversation(toolId: string, platformContext: PlatformContext): Promise<string> {
+    if (!this._conversationService) {
+      throw new Error('Install conversations require conversation service (no workspace)');
+    }
+    const skillContent = await this._loadInstallSkill(toolId);
+    if (!skillContent) {
+      throw new Error(`Install skill not found for tool: ${toolId}`);
+    }
+    const platformInfo = [
+      `## Platform`,
+      `- OS: ${platformContext.os}`,
+      `- Architecture: ${platformContext.arch}`,
+      `- Package managers: ${formatPackageManagers(platformContext.packageManagers)}`,
+    ].join('\n');
+    const systemMessage = `${skillContent}\n\n${platformInfo}`;
+    const toolNames: Record<string, string> = {
+      gh: 'GitHub CLI', pandoc: 'pandoc', git: 'git',
+      mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
+      gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
+    };
+    const conversation = this._conversationService.createConversation('default');
+    this._conversationService.renameConversation(conversation.id, `Install ${toolNames[toolId] ?? toolId}`);
+    this._installContexts.set(conversation.id, systemMessage);
+    return conversation.id;
+  }
+
+  getInstallContext(conversationId: string): string | undefined {
+    return this._installContexts.get(conversationId);
+  }
+
+  private async _loadInstallSkill(toolId: string): Promise<string | undefined> {
+    const skillPath = path.join(this._bundledSkillsPath, 'install', `${toolId}.md`);
+    try {
+      return await fs.readFile(skillPath, 'utf-8');
+    } catch {
+      return undefined;
+    }
   }
 
   private _mapEvent(event: SessionEvent): AgentEvent | null {

@@ -1,4 +1,5 @@
 export * from './common/lifecycle.js';
+export * from './common/platformContext.js';
 export * from './common/instantiation.js';
 export * from './common/event.js';
 export * from './common/types.js';
