@@ -205,13 +205,14 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - E2E test (Playwright): full chat interaction — send message → streaming response completes → all transient UI clears (thinking indicator, cursor) → tool call card renders and collapses → input re-enabled. Tests must exercise real user flows, not just check element existence.
 
 **Acceptance criteria:**
-- [x] User types "Hello, what can you do?" and receives a streaming response
-- [x] SDK built-in tools execute natively (file read, bash, etc.) — no permission prompts in Phase 2
+- [ ] User types "Hello, what can you do?" and receives a streaming response from the **real Copilot SDK** (not mock fallback)
+- [ ] SDK built-in tools execute natively (file read, bash, etc.) — no permission prompts in Phase 2
 - [x] Tool calls appear as expandable cards with arguments and results
 - [x] Conversation persists across app restart
 - [x] Model can be switched mid-session
 - [x] Task can be canceled mid-execution
 - [x] All Phase 2 unit and integration tests pass (`npx vitest run`)
+- [x] Real SDK import succeeds without ESM resolution errors (vscode-jsonrpc patch applied)
 
 ### Phase 3: Connectors and Integrations (Weeks 5-8, overlaps Phase 2)
 
@@ -366,7 +367,18 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - State is per-conversation: switching conversations updates the panel
    - Auto-show when agent starts multi-step task, remember collapsed state per session
 
-- [ ] 11. **Phase 4 tests**
+- [ ] 11. **CLI tool install skills** (`skills/install/`) — see [Agent-Assisted CLI Install spec](superpowers/specs/2026-03-12-agent-assisted-cli-install-design.md)
+   - Install skill files for 7 tools: `gh`, `pandoc`, `git`, `mgc`, `az`, `gcloud`, `wiq`
+   - Each skill: platform-specific install steps (macOS/Windows), post-install auth flow, verification command, common pitfalls
+   - Skills are baselines — the agent adapts when steps fail (diagnose, web search, propose fix)
+
+- [ ] 12. **Agent-assisted CLI install UX** (`packages/ui`, `packages/agent`)
+   - "Install" button in Connectors settings > CLI Tools for missing tools
+   - Clicking "Install" creates a new conversation with: tool's install skill loaded as context, platform info injected (OS, arch, available package managers)
+   - Platform detection utility: detect OS, architecture, Homebrew/winget/chocolatey availability
+   - Post-install: Connectors settings auto-refreshes CLI detection status
+
+- [ ] 13. **Phase 4 tests**
    - Unit tests: memory context loading — CLAUDE.md parsing, .github/copilot-instructions.md fallback, global memory merge
    - Unit tests: skill YAML frontmatter parsing — valid/invalid YAML, allowed tools extraction, dynamic context shell commands
    - Unit tests: hook execution — pre/post tool call hooks, timeout enforcement, hook failure isolation
@@ -374,6 +386,9 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Unit tests: context panel state — step progression, file list updates, context item tracking, per-conversation isolation
    - Integration test: skill invocation end-to-end — load skill definition → inject context → agent executes with skill tools
    - Integration test: context panel receives agent events — plan decomposition → progress steps, tool invocation → context items, file creation → downloads list
+   - Unit tests: platform detection utility — OS, architecture, package manager availability
+   - Integration test: "Install" button creates conversation with correct skill and platform context
+   - E2E test (Playwright): click Install button → conversation opens with skill context → mock agent completes install → Connectors settings refreshes and shows tool installed
    - Smoke test (`tests/smoke/phase4.ts`): run `/draft-email` skill, queue two tasks and verify sequential execution
 
 **Acceptance criteria:**
@@ -387,6 +402,9 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 - [ ] Context panel shows progress steps, downloads, and referenced tools/files during a multi-step task
 - [ ] Context panel auto-shows when agent starts working, collapses via Cmd+Shift+B
 - [ ] Clicking a download opens preview; clicking a context tool scrolls to its chat card
+- [ ] "Install" button on missing CLI tool creates conversation with install skill pre-loaded
+- [ ] Agent-assisted install of `pandoc` completes successfully on macOS (trivial case)
+- [ ] Agent-assisted install of `gh` completes including `gh auth login` (auth case)
 - [ ] All Phase 4 unit and integration tests pass (`npx vitest run`)
 
 ### Phase 5: Polish, Testing, and Launch Prep (Weeks 11-14)
@@ -407,9 +425,9 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Sentry integration for crash reporting (opt-in)
 
 - [ ] 3. **Onboarding flow** — see [UX Tutorial Site](tutorial/index.html#onboarding) for visual spec
-   - 5-step first-launch wizard: Welcome screen, GitHub OAuth (browser), Copilot tier verification (shows available models), CLI tool detection (PATH scan for gh/mgc/pandoc/az/gcloud with version + install links), first connector setup (popular MCP servers grid + registry link)
+   - 5-step first-launch wizard: Welcome screen, GitHub OAuth (browser), Copilot tier verification (shows available models), CLI tool detection (PATH scan for gh/mgc/pandoc/az/gcloud — detection-only, with "Install from Settings" note for missing tools), first connector setup (popular MCP servers grid + registry link)
    - On subsequent launches, open directly to workbench with last workspace
-   - CLI tool detection with install guidance
+   - CLI tool detection is informational only during onboarding — install actions are in Settings > Connectors (see Phase 4 agent-assisted CLI install)
    - Telemetry opt-in prompt
    - Sample workspace with example CLAUDE.md
 

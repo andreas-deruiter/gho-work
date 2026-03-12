@@ -5,6 +5,84 @@ import { h } from './dom.js';
 
 export type ActivityBarItem = 'chat' | 'tools' | 'connectors' | 'documents' | 'settings';
 
+/**
+ * Create an SVG icon element for an activity bar item.
+ * Icons match the tutorial design spec (24x24 viewBox, stroke-width 2).
+ * Uses DOM APIs directly (no innerHTML) to avoid XSS surface.
+ */
+function createIcon(id: ActivityBarItem): SVGElement {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', '22');
+  svg.setAttribute('height', '22');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.classList.add('activity-bar-icon');
+
+  const STROKE_ATTRS = { stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' } as const;
+
+  function setAttrs(el: SVGElement, attrs: Record<string, string>): void {
+    for (const [k, v] of Object.entries(attrs)) {
+      el.setAttribute(k, v);
+    }
+  }
+
+  function makePath(d: string): SVGPathElement {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    setAttrs(p, { ...STROKE_ATTRS });
+    return p;
+  }
+
+  function makeCircle(cx: string, cy: string, r: string): SVGCircleElement {
+    const c = document.createElementNS(NS, 'circle');
+    setAttrs(c, { cx, cy, r, ...STROKE_ATTRS });
+    return c;
+  }
+
+  function makePolyline(points: string): SVGPolylineElement {
+    const pl = document.createElementNS(NS, 'polyline');
+    setAttrs(pl, { points, ...STROKE_ATTRS });
+    return pl;
+  }
+
+  switch (id) {
+    case 'chat': {
+      // Speech bubble (Feather: message-square)
+      svg.appendChild(makePath('M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'));
+      break;
+    }
+    case 'tools': {
+      // Wrench (Feather: tool)
+      svg.appendChild(makePath(
+        'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
+      ));
+      break;
+    }
+    case 'connectors': {
+      // Crosshair hub (circle + cross lines)
+      svg.appendChild(makeCircle('12', '12', '3'));
+      svg.appendChild(makePath('M12 1v6m0 6v6m11-7h-6m-6 0H1'));
+      break;
+    }
+    case 'documents': {
+      // Document with folded corner (Feather: file)
+      svg.appendChild(makePath('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'));
+      svg.appendChild(makePolyline('14,2 14,8 20,8'));
+      break;
+    }
+    case 'settings': {
+      // Gear (Feather: settings)
+      svg.appendChild(makeCircle('12', '12', '3'));
+      svg.appendChild(makePath(
+        'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+      ));
+      break;
+    }
+  }
+  return svg;
+}
+
 export class ActivityBar extends Widget {
   private _activeItem: ActivityBarItem = 'chat';
   private readonly _onDidSelectItem = this._register(new Emitter<ActivityBarItem>());
@@ -32,7 +110,7 @@ export class ActivityBar extends Widget {
       btn.root.setAttribute('aria-label', item.label);
       btn.root.setAttribute('role', 'tab');
       btn.root.dataset.item = item.id;
-      btn.root.textContent = item.label.charAt(0);
+      btn.root.appendChild(createIcon(item.id));
 
       this.listen(btn.root, 'click', () => {
         this.setActiveItem(item.id);

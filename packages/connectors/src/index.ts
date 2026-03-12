@@ -11,4 +11,5 @@ export type { PlatformContext } from './common/platformDetection.js';
 export { ConnectorRegistryImpl } from './node/connectorRegistryImpl.js';
 export { MCPClientManagerImpl } from './node/mcpClientManagerImpl.js';
 export { CLIDetectionServiceImpl } from './node/cliDetectionImpl.js';
+export { MockCLIDetectionService } from './node/mockCLIDetection.js';
 export { PlatformDetectionServiceImpl } from './node/platformDetectionImpl.js';

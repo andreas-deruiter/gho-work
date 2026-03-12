@@ -1,71 +1,105 @@
-# Playwright Testing for Electron
+---
+name: playwright-testing
+description: Playwright CLI-based E2E testing for Electron — exploration, test generation, screenshots, debugging
+---
 
-> Adapted from [github/awesome-copilot](https://github.com/github/awesome-copilot/tree/main/plugins/testing-automation) (MIT)
+# Playwright Testing for Electron (CLI)
 
-Use when writing e2e tests, exploring the app for testable flows, or generating Playwright tests from scenarios.
+Use the Playwright **CLI** (not MCP) for all E2E testing, app exploration, and screenshot capture.
 
-## Explore App for Test Cases
+## Prerequisites
 
-Before writing tests, explore the running app to identify key user flows.
+```bash
+# Check install
+npx playwright --version
 
-### Process
-
-1. Launch the app: `npm run desktop:dev`
-2. Navigate to the app using Playwright MCP or manual exploration
-3. Identify and interact with 3-5 core features or user flows
-4. Document the user interactions, relevant UI elements (and their locators), and expected outcomes
-5. Propose test cases based on the exploration
-
-### Output Format
-
-```markdown
-## Exploration Summary
-
-### User Flow: [name]
-- **Steps:** [what the user does]
-- **Locators:** [CSS selectors, roles, test IDs used]
-- **Expected outcome:** [what should happen]
-- **Edge cases:** [what could go wrong]
+# Install browsers (may need sudo on macOS)
+npx playwright install
+# If permission denied: ask the user to run `sudo npx playwright install`
 ```
 
-## Generate Playwright Test from Scenario
+## Taking Screenshots
 
-Given a scenario, generate a Playwright test. Do NOT generate test code prematurely.
+Use Playwright's screenshot API via `npx playwright test` or a quick script:
 
-### Process
+```bash
+# Run tests and capture screenshots on failure (automatic)
+npx playwright test --screenshot on
 
-1. If no scenario provided, ask the user for one
-2. Run through the scenario steps manually first using the Playwright MCP tools
-3. Verify each step works as expected before writing test code
-4. Only after all steps are validated, write the Playwright TypeScript test
-5. Save the test file in `tests/e2e/`
-6. Execute the test and iterate until it passes
+# Take a screenshot during a test (in test code)
+await page.screenshot({ path: 'screenshot.png', fullPage: true });
 
-### Test Structure
+# Quick one-off screenshot script
+npx tsx -e "
+import { _electron as electron } from 'playwright';
+import { resolve } from 'path';
+const app = await electron.launch({ args: [resolve('apps/desktop/out/main/index.js')], cwd: resolve('apps/desktop') });
+const page = await app.firstWindow();
+await page.waitForLoadState('domcontentloaded');
+await page.screenshot({ path: '/tmp/app-screenshot.png', fullPage: true });
+await app.close();
+console.log('Screenshot saved to /tmp/app-screenshot.png');
+"
+```
+
+## Exploring the App
+
+Use Playwright's codegen or interactive mode to explore the running app:
+
+```bash
+# Interactive UI mode — lets you see the app and step through tests
+npx playwright test --ui
+
+# Debug mode — pauses at each step with inspector
+npx playwright test --debug
+
+# Run headed (visible browser window)
+npx playwright test --headed
+```
+
+For Electron apps, exploration is best done via a test that pauses:
 
 ```typescript
-import { test, expect, _electron as electron } from '@playwright/test';
+test('explore app', async () => {
+  // App is launched in beforeAll
+  await page.pause(); // Opens Playwright Inspector
+});
+```
 
-test.describe('Feature: [name]', () => {
-  test('should [expected behavior]', async () => {
-    // Launch Electron app
-    const electronApp = await electron.launch({
-      args: ['apps/desktop/out/main/index.js'],
-    });
-    const window = await electronApp.firstWindow();
+## Test Structure (Electron)
 
-    // Interact like a real user
-    await window.getByRole('textbox').fill('test input');
-    await window.getByRole('button', { name: 'Send' }).click();
+```typescript
+import { test, expect, ElectronApplication, Page } from '@playwright/test';
+import { _electron as electron } from 'playwright';
+import { resolve } from 'path';
 
-    // Wait for actual result, not just element presence
-    await expect(window.getByText('expected result')).toBeVisible();
+const appPath = resolve(__dirname, '../../apps/desktop');
 
-    // Verify transient UI is gone
-    await expect(window.locator('.loading')).not.toBeVisible();
+let electronApp: ElectronApplication;
+let page: Page;
 
-    await electronApp.close();
+test.beforeAll(async () => {
+  electronApp = await electron.launch({
+    args: [resolve(appPath, 'out/main/index.js')],
+    cwd: appPath,
   });
+  page = await electronApp.firstWindow();
+});
+
+test.afterAll(async () => {
+  await electronApp.close();
+});
+
+test('should [expected behavior]', async () => {
+  // Interact like a real user
+  await page.locator('.chat-input').fill('test input');
+  await page.locator('.chat-input').press('Enter');
+
+  // Wait for actual result, not just element presence
+  await expect(page.locator('.chat-message-assistant')).toBeVisible({ timeout: 10000 });
+
+  // Verify transient UI is gone
+  await expect(page.locator('.chat-cursor')).toBeHidden({ timeout: 30000 });
 });
 ```
 
@@ -73,42 +107,39 @@ test.describe('Feature: [name]', () => {
 
 - **Exercise real user flows** — don't just check "element exists"
 - Every test: input -> action -> wait for completion -> verify final state
-- Verify absence of transient UI (loading indicators, spinners)
-- Run with: `npx playwright test`
-- Headed mode for debugging: `npx playwright test --headed`
+- Verify absence of transient UI (loading indicators, spinners, cursors)
+- Tests live in `tests/e2e/`
+- Config at `playwright.config.ts`
 
-## Electron-Specific Patterns
+## CLI Commands Reference
 
-### Launching the app
+```bash
+# Run all e2e tests
+npx playwright test
 
-```typescript
-const electronApp = await electron.launch({
-  args: ['apps/desktop/out/main/index.js'],
-  env: { ...process.env, NODE_ENV: 'test' },
-});
-```
+# Run specific test file
+npx playwright test tests/e2e/chat.spec.ts
 
-### Getting the main window
+# Run with trace (for debugging failures)
+npx playwright test --trace on
 
-```typescript
-const window = await electronApp.firstWindow();
-// Or wait for a specific window
-const window = await electronApp.waitForEvent('window');
-```
+# View trace from test results
+npx playwright show-trace test-results/trace.zip
 
-### IPC testing
+# Run headed (visible window)
+npx playwright test --headed
 
-```typescript
-// Evaluate in main process
-const result = await electronApp.evaluate(async ({ app }) => {
-  return app.getPath('userData');
-});
-```
+# Debug mode (step through with inspector)
+npx playwright test --debug
 
-### Waiting for renderer ready
+# UI mode (interactive test runner)
+npx playwright test --ui
 
-```typescript
-await window.waitForSelector('#app > *', { state: 'attached' });
+# List available tests
+npx playwright test --list
+
+# Generate HTML report
+npx playwright show-report
 ```
 
 ## Locator Strategy (priority order)
@@ -116,17 +147,38 @@ await window.waitForSelector('#app > *', { state: 'attached' });
 1. `getByRole()` — accessible roles (best)
 2. `getByText()` — visible text
 3. `getByTestId()` — `data-testid` attributes
-4. CSS selectors — last resort
+4. CSS class selectors (`.chat-input`) — acceptable for our app since we control all classes
+5. Complex CSS selectors — last resort
 
-## Debugging Failed Tests
+## Electron-Specific Patterns
 
-```bash
-# Run with UI mode
-npx playwright test --ui
-
-# Run specific test with trace
-npx playwright test tests/e2e/chat.spec.ts --trace on
-
-# View trace
-npx playwright show-trace test-results/trace.zip
+### IPC testing from Playwright
+```typescript
+// Evaluate in main process context
+const result = await electronApp.evaluate(async ({ app }) => {
+  return app.getPath('userData');
+});
 ```
+
+### Waiting for renderer ready
+```typescript
+await page.waitForSelector('.chat-panel', { state: 'attached' });
+```
+
+### Screenshots in tests
+```typescript
+// Full page screenshot
+await page.screenshot({ path: 'screenshots/chat-flow.png', fullPage: true });
+
+// Element screenshot
+await page.locator('.chat-messages').screenshot({ path: 'screenshots/messages.png' });
+```
+
+## When to Use Playwright (not optional)
+
+Per CLAUDE.md HARD GATE: **After completing any phase or feature that touches UI, IPC, or service wiring, you MUST verify the app works.** Playwright E2E tests are the primary mechanism for this verification.
+
+If you cannot run Playwright (missing browsers, permission issues):
+1. **Ask the user for help** (e.g., "Could you run `sudo npx playwright install`?")
+2. **Do NOT silently switch to a different approach**
+3. **Do NOT skip E2E verification**

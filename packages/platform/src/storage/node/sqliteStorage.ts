@@ -1,16 +1,29 @@
-import Database from 'better-sqlite3';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type { IStorageService } from '../common/storage.js';
 import { configurePragmas, migrateDatabase } from './migrations.js';
 import { GLOBAL_MIGRATIONS } from './globalSchema.js';
 import { WORKSPACE_MIGRATIONS } from './workspaceSchema.js';
 
+// Lazy-load better-sqlite3 to avoid crashing at module load time when the native
+// module is compiled for a different Node ABI (e.g., system Node vs Electron).
+import type Database from 'better-sqlite3';
+
+type DatabaseConstructor = typeof Database;
+type DatabaseInstance = Database.Database;
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const loadDatabase = (): DatabaseConstructor => require('better-sqlite3');
+
 export class SqliteStorageService implements IStorageService {
-  private readonly _globalDb: Database.Database;
-  private readonly _workspaceDbs = new Map<string, Database.Database>();
+  private readonly _globalDb: DatabaseInstance;
+  private readonly _workspaceDbs = new Map<string, DatabaseInstance>();
   private readonly _workspaceDbPath: string;
 
   constructor(globalDbPath: string, workspaceDbPath: string) {
     this._workspaceDbPath = workspaceDbPath;
+    mkdirSync(dirname(globalDbPath), { recursive: true });
+    const Database = loadDatabase();
     this._globalDb = new Database(globalDbPath);
     configurePragmas(this._globalDb);
     migrateDatabase(this._globalDb, GLOBAL_MIGRATIONS);
@@ -29,21 +42,26 @@ export class SqliteStorageService implements IStorageService {
       .run(key, value);
   }
 
-  getGlobalDatabase(): Database.Database {
+  getGlobalDatabase(): DatabaseInstance {
     return this._globalDb;
   }
 
-  getWorkspaceDatabase(workspaceId: string): Database.Database {
-    let db = this._workspaceDbs.get(workspaceId);
-    if (!db) {
-      const dbPath = this._workspaceDbPath === ':memory:'
-        ? ':memory:'
-        : `${this._workspaceDbPath}/${workspaceId}/workspace.db`;
-      db = new Database(dbPath);
-      configurePragmas(db);
-      migrateDatabase(db, WORKSPACE_MIGRATIONS);
-      this._workspaceDbs.set(workspaceId, db);
+  getWorkspaceDatabase(workspaceId: string): DatabaseInstance {
+    const existing = this._workspaceDbs.get(workspaceId);
+    if (existing) {
+      return existing;
     }
+    const dbPath = this._workspaceDbPath === ':memory:'
+      ? ':memory:'
+      : `${this._workspaceDbPath}/${workspaceId}/workspace.db`;
+    if (dbPath !== ':memory:') {
+      mkdirSync(dirname(dbPath), { recursive: true });
+    }
+    const Database = loadDatabase();
+    const db = new Database(dbPath);
+    configurePragmas(db);
+    migrateDatabase(db, WORKSPACE_MIGRATIONS);
+    this._workspaceDbs.set(workspaceId, db);
     return db;
   }
 

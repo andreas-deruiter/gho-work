@@ -10,6 +10,7 @@ export interface ICopilotSDK {
   deleteSession(sessionId: string): Promise<void>;
   listModels(): Promise<ModelInfo[]>;
   ping(message?: string): Promise<PingResponse>;
+  restart(options?: { githubToken?: string; useMock?: boolean }): Promise<void>;
 }
 
 export const ICopilotSDK = createServiceIdentifier<ICopilotSDK>('ICopilotSDK');

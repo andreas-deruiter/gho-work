@@ -94,11 +94,20 @@ export class Workbench extends Disposable {
     const statusBarWrapper = h('div.workbench-statusbar');
     statusBarWrapper.root.appendChild(this._statusBar.getDomNode());
 
+    // Title bar — drag region for macOS traffic lights
+    const titleBar = h('div.title-bar', [
+      h('div.title-bar-content', [
+        h('span.title-bar-logo@logo'),
+      ]),
+    ]);
+    titleBar.logo.textContent = 'GHO Work';
+
     const wrapper = h('div.workbench-wrapper', [
       layout,
       statusBarWrapper,
     ]);
 
+    this._container.appendChild(titleBar.root);
     this._container.appendChild(wrapper.root);
 
     // Connector drawer (overlays main content)
@@ -129,7 +138,8 @@ export class Workbench extends Disposable {
           { toolId },
         );
         await this._openInstallConversation(result.conversationId);
-      } catch {
+      } catch (err) {
+        console.error('[workbench] Install conversation failed, falling back:', err);
         // Fallback to direct install if conversation creation fails
         const result = await this._ipc.invoke<{ success: boolean; installUrl?: string }>(IPC_CHANNELS.CLI_INSTALL, { toolId });
         await this._connectorSidebar.refreshCLITools();

@@ -89,4 +89,29 @@ describe('electron main process', () => {
     expect(handler).toBeDefined();
     await expect(handler!({} as never)).resolves.not.toThrow();
   });
+
+  it('registers all ONBOARDING IPC handlers', () => {
+    ipcHandlers.clear();
+    const win = new BrowserWindow() as InstanceType<typeof BrowserWindow>;
+    createMainProcess(win, undefined, undefined, { useMockSDK: true });
+
+    expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_STATUS)).toBe(true);
+    expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_CHECK_GH)).toBe(true);
+    expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_GH_LOGIN)).toBe(true);
+    expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_CHECK_COPILOT)).toBe(true);
+    expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_DETECT_TOOLS)).toBe(true);
+    expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_COMPLETE)).toBe(true);
+  });
+
+  it('ONBOARDING_STATUS returns complete: false by default', async () => {
+    ipcHandlers.clear();
+    const win = new BrowserWindow() as InstanceType<typeof BrowserWindow>;
+    createMainProcess(win, undefined, undefined, { useMockSDK: true });
+
+    const handler = ipcHandlers.get(IPC_CHANNELS.ONBOARDING_STATUS);
+    expect(handler).toBeDefined();
+    const result = await handler!({} as never) as { complete: boolean };
+    // Default is false since no onboarding-complete.json exists in /mock
+    expect(result.complete).toBe(false);
+  });
 });

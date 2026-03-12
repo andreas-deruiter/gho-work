@@ -2,6 +2,37 @@ import { describe, it, expect } from 'vitest';
 import { CopilotSDKImpl } from '../node/copilotSDKImpl.js';
 import type { SessionEvent } from '../common/types.js';
 
+describe('CopilotSDKImpl (real SDK import)', () => {
+	it('should dynamically import @github/copilot-sdk without module resolution errors', async () => {
+		// This test verifies that the vscode-jsonrpc ESM exports patch is applied.
+		// Without the patch, `import('@github/copilot-sdk')` fails because the SDK's
+		// session.js imports `from "vscode-jsonrpc/node"` and vscode-jsonrpc lacks
+		// an `exports` field for ESM subpath resolution.
+		const sdk = await import('@github/copilot-sdk');
+		expect(sdk.CopilotClient).toBeDefined();
+		expect(typeof sdk.CopilotClient).toBe('function');
+		expect(sdk.CopilotSession).toBeDefined();
+		expect(sdk.approveAll).toBeDefined();
+	});
+
+	it('should construct CopilotClient without throwing', async () => {
+		const sdk = await import('@github/copilot-sdk');
+		// autoStart: false prevents it from trying to connect to the Copilot CLI
+		const client = new sdk.CopilotClient({ autoStart: false });
+		expect(client).toBeDefined();
+	});
+
+	it('should start real SDK without falling back to mock', async () => {
+		// Without useMock flag, CopilotClient starts successfully (auth errors
+		// surface later during API calls, not at startup). Crucially, the SDK
+		// does NOT silently fall back to mock mode.
+		const impl = new CopilotSDKImpl();
+		await impl.start();
+		expect(impl.isMockFallback).toBe(false);
+		await impl.stop();
+	});
+});
+
 describe('CopilotSDKImpl (mock fallback mode)', () => {
 	it('should instantiate with useMock option', () => {
 		const sdk = new CopilotSDKImpl({ useMock: true });
@@ -98,6 +129,22 @@ describe('CopilotSDKImpl (mock fallback mode)', () => {
 		await sdk.stop();
 	});
 
+	it('should restart in mock mode', async () => {
+		const sdk = new CopilotSDKImpl({ useMock: true });
+		await sdk.start();
+		expect(sdk.isMockFallback).toBe(true);
+
+		// Restart — still mock
+		await sdk.restart({ useMock: true });
+		expect(sdk.isMockFallback).toBe(true);
+
+		// Verify it works after restart
+		const models = await sdk.listModels();
+		expect(models.length).toBeGreaterThan(0);
+
+		await sdk.stop();
+	});
+
 	it('should resume an existing session', async () => {
 		const sdk = new CopilotSDKImpl({ useMock: true });
 		await sdk.start();
@@ -109,16 +156,14 @@ describe('CopilotSDKImpl (mock fallback mode)', () => {
 		await sdk.stop();
 	});
 
-	it('should fall back to mock when real SDK fails', async () => {
-		// No useMock, but no valid token/CLI either — should auto-fallback
+	it('should start without falling back to mock when SDK import succeeds', async () => {
+		// With the vscode-jsonrpc ESM patch, the real SDK imports and constructs
+		// successfully. An invalid token doesn't cause startup failure — auth
+		// errors surface later during API calls, not at client.start().
 		const sdk = new CopilotSDKImpl({ githubToken: 'invalid-token-for-test' });
 		await sdk.start();
-		expect(sdk.isMockFallback).toBe(true);
-
-		// Should still work in mock mode
-		const ping = await sdk.ping();
-		expect(ping.message).toBe('pong');
-
+		// Real SDK started successfully — not in mock fallback mode
+		expect(sdk.isMockFallback).toBe(false);
 		await sdk.stop();
 	});
 });

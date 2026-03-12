@@ -1,50 +1,57 @@
 /**
- * Preload script — re-exports from @gho-work/electron.
- * This file is the preload entry point for electron-vite.
+ * Preload script — exposes safe IPC bridge to renderer via contextBridge.
+ * This is the security boundary between main and renderer processes.
  */
 import { contextBridge, ipcRenderer } from 'electron';
+import { IPC_CHANNELS } from '@gho-work/platform/common';
 
 // Whitelist of allowed channels
 const ALLOWED_INVOKE_CHANNELS = [
-  'agent:send-message',
-  'agent:cancel',
-  'conversation:list',
-  'conversation:create',
-  'conversation:get',
-  'conversation:delete',
-  'conversation:rename',
-  'model:list',
-  'model:select',
-  'auth:login',
-  'auth:logout',
-  'auth:state',
-  'storage:get',
-  'storage:set',
-  'onboarding:check-gh',
-  'onboarding:gh-login',
-  'onboarding:check-copilot',
-  'onboarding:detect-tools',
-  'onboarding:complete',
-  'onboarding:status',
-  'connector:list',
-  'connector:add',
-  'connector:remove',
-  'connector:update',
-  'connector:test',
-  'connector:get-tools',
-  'cli:detect-all',
-  'cli:refresh',
-  'cli:install',
-  'cli:authenticate',
+  IPC_CHANNELS.AGENT_SEND_MESSAGE,
+  IPC_CHANNELS.AGENT_CANCEL,
+  IPC_CHANNELS.CONVERSATION_LIST,
+  IPC_CHANNELS.CONVERSATION_CREATE,
+  IPC_CHANNELS.CONVERSATION_GET,
+  IPC_CHANNELS.CONVERSATION_DELETE,
+  IPC_CHANNELS.CONVERSATION_RENAME,
+  IPC_CHANNELS.MODEL_LIST,
+  IPC_CHANNELS.MODEL_SELECT,
+  IPC_CHANNELS.AUTH_LOGIN,
+  IPC_CHANNELS.AUTH_LOGOUT,
+  IPC_CHANNELS.AUTH_STATE,
+  IPC_CHANNELS.ONBOARDING_CHECK_GH,
+  IPC_CHANNELS.ONBOARDING_GH_LOGIN,
+  IPC_CHANNELS.ONBOARDING_CHECK_COPILOT,
+  IPC_CHANNELS.ONBOARDING_DETECT_TOOLS,
+  IPC_CHANNELS.ONBOARDING_COMPLETE,
+  IPC_CHANNELS.ONBOARDING_STATUS,
+  IPC_CHANNELS.CONNECTOR_LIST,
+  IPC_CHANNELS.CONNECTOR_ADD,
+  IPC_CHANNELS.CONNECTOR_REMOVE,
+  IPC_CHANNELS.CONNECTOR_UPDATE,
+  IPC_CHANNELS.CONNECTOR_TEST,
+  IPC_CHANNELS.CONNECTOR_GET_TOOLS,
+  IPC_CHANNELS.CLI_DETECT_ALL,
+  IPC_CHANNELS.CLI_REFRESH,
+  IPC_CHANNELS.CLI_CREATE_INSTALL_CONVERSATION,
+  IPC_CHANNELS.CLI_GET_PLATFORM_CONTEXT,
+  IPC_CHANNELS.CLI_INSTALL,
+  IPC_CHANNELS.CLI_AUTHENTICATE,
 ];
 
 const ALLOWED_LISTEN_CHANNELS = [
-  'agent:event',
-  'auth:state-changed',
-  'onboarding:gh-login-event',
-  'connector:status-changed',
-  'connector:tools-changed',
+  IPC_CHANNELS.AGENT_EVENT,
+  IPC_CHANNELS.AUTH_STATE_CHANGED,
+  IPC_CHANNELS.ONBOARDING_GH_LOGIN_EVENT,
+  IPC_CHANNELS.CONNECTOR_STATUS_CHANGED,
+  IPC_CHANNELS.CONNECTOR_TOOLS_CHANGED,
 ];
+
+// Map from caller-provided callback to the wrapped ipcRenderer handler,
+// so removeListener can correctly deregister the wrapper (not the raw callback).
+type IPCCallback = (...args: unknown[]) => void;
+type IPCHandler = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => void;
+const _listenerMap = new Map<IPCCallback, IPCHandler>();
 
 contextBridge.exposeInMainWorld('ghoWorkIPC', {
   invoke: (channel: string, ...args: unknown[]) => {
@@ -58,9 +65,14 @@ contextBridge.exposeInMainWorld('ghoWorkIPC', {
       throw new Error(`IPC channel not allowed: ${channel}`);
     }
     const handler = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => callback(...args);
+    _listenerMap.set(callback, handler);
     ipcRenderer.on(channel, handler);
   },
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => {
-    ipcRenderer.removeListener(channel, callback);
+    const handler = _listenerMap.get(callback);
+    if (handler) {
+      ipcRenderer.removeListener(channel, handler);
+      _listenerMap.delete(callback);
+    }
   },
 });

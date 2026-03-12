@@ -288,6 +288,11 @@ export class MockCopilotSDK implements ICopilotSDK {
     ];
   }
 
+  async restart(_options?: { githubToken?: string; useMock?: boolean }): Promise<void> {
+    await this.stop();
+    await this.start();
+  }
+
   async ping(message?: string): Promise<PingResponse> {
     return { message: message ?? 'pong', timestamp: Date.now() };
   }

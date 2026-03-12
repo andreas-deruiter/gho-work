@@ -5,6 +5,17 @@ import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'path';
 import { createMainProcess } from '@gho-work/electron';
 
+// Allow tests to override userData directory for isolation
+if (process.env.GHO_USER_DATA_DIR) {
+  app.setPath('userData', process.env.GHO_USER_DATA_DIR);
+}
+
+// --mock flag enables mock SDK mode (for testing without GitHub auth)
+const useMockSDK = process.argv.includes('--mock');
+if (useMockSDK) {
+  console.log('[main] Mock mode enabled via --mock flag');
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
@@ -25,7 +36,10 @@ function createWindow(): void {
   });
 
   // Set up main process services and IPC handlers
-  createMainProcess(mainWindow);
+  createMainProcess(mainWindow, undefined, undefined, {
+    useMockSDK,
+    userDataPath: app.getPath('userData'),
+  });
 
   // Open external links in browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

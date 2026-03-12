@@ -1,9 +1,15 @@
 import { test, expect, ElectronApplication, Page } from '@playwright/test';
 import { _electron as electron } from 'playwright';
 import { resolve } from 'path';
+import { writeFileSync, mkdirSync } from 'fs';
 
 // Playwright compiles TS to CJS, so __dirname is available
 const appPath = resolve(__dirname, '../../apps/desktop');
+
+// Pre-seed onboarding-complete so the workbench loads directly
+const userDataDir = resolve(__dirname, '../../.e2e-userdata-workbench');
+mkdirSync(userDataDir, { recursive: true });
+writeFileSync(resolve(userDataDir, 'onboarding-complete.json'), '{"complete":true}');
 
 let electronApp: ElectronApplication;
 let page: Page;
@@ -12,6 +18,7 @@ test.beforeAll(async () => {
   electronApp = await electron.launch({
     args: [resolve(appPath, 'out/main/index.js')],
     cwd: appPath,
+    env: { ...process.env, GHO_USER_DATA_DIR: userDataDir },
   });
   page = await electronApp.firstWindow();
 });

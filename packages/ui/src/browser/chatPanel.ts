@@ -172,8 +172,8 @@ export class ChatPanel extends Disposable {
     this._sendBtnEl = document.createElement('button');
     this._sendBtnEl.className = 'chat-send-btn';
     const sendSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    sendSvg.setAttribute('width', '18');
-    sendSvg.setAttribute('height', '18');
+    sendSvg.setAttribute('width', '14');
+    sendSvg.setAttribute('height', '14');
     sendSvg.setAttribute('viewBox', '0 0 24 24');
     sendSvg.setAttribute('fill', 'none');
     sendSvg.setAttribute('stroke', 'currentColor');
@@ -191,10 +191,23 @@ export class ChatPanel extends Disposable {
     this._sendBtnEl.addEventListener('click', () => this._sendMessage());
     inputWrapper.appendChild(this._sendBtnEl);
 
-    // Cancel button (hidden by default)
+    // Cancel button — same position/size as send button, swap via display
     this._cancelBtnEl = document.createElement('button');
     this._cancelBtnEl.className = 'chat-cancel-btn';
-    this._cancelBtnEl.textContent = 'Stop';
+    this._cancelBtnEl.title = 'Stop';
+    const stopSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    stopSvg.setAttribute('width', '14');
+    stopSvg.setAttribute('height', '14');
+    stopSvg.setAttribute('viewBox', '0 0 24 24');
+    stopSvg.setAttribute('fill', 'currentColor');
+    const stopRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    stopRect.setAttribute('x', '6');
+    stopRect.setAttribute('y', '6');
+    stopRect.setAttribute('width', '12');
+    stopRect.setAttribute('height', '12');
+    stopRect.setAttribute('rx', '2');
+    stopSvg.appendChild(stopRect);
+    this._cancelBtnEl.appendChild(stopSvg);
     this._cancelBtnEl.style.display = 'none';
     this._cancelBtnEl.addEventListener('click', () => this._cancelRequest());
     inputWrapper.appendChild(this._cancelBtnEl);

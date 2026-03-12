@@ -51,6 +51,7 @@ import {
   ConnectorRegistryImpl,
   MCPClientManagerImpl,
   CLIDetectionServiceImpl,
+  MockCLIDetectionService,
   PlatformDetectionServiceImpl,
 } from '@gho-work/connectors';
 import { mapConnectorsToSDKConfig } from './connectorMapping.js';
@@ -71,6 +72,8 @@ import type {
 export interface MainProcessOptions {
   /** Force the Copilot SDK to use mock mode (for testing). */
   useMockSDK?: boolean;
+  /** User data directory for SQLite databases (conversations, settings). */
+  userDataPath?: string;
 }
 
 export function createMainProcess(
@@ -81,7 +84,22 @@ export function createMainProcess(
 ): ServiceCollection {
   const services = new ServiceCollection();
 
-  // --- Conversation Service ---
+  // --- Storage & Conversation Service ---
+  // If no storageService was provided but userDataPath is set, create one.
+  // better-sqlite3 may fail to load if the native module was compiled for a different
+  // Node ABI (e.g., system Node vs Electron). Catch and degrade gracefully.
+  if (!storageService && options?.userDataPath) {
+    try {
+      const globalDbPath = path.join(options.userDataPath, 'global.db');
+      const workspaceDbDir = path.join(options.userDataPath, 'workspaces');
+      storageService = new SqliteStorageService(globalDbPath, workspaceDbDir);
+      workspaceId = 'default';
+    } catch (err) {
+      console.warn('[main] SQLite storage unavailable:', (err as Error).message);
+      console.warn('[main] Run "npx @electron/rebuild -w better-sqlite3" to fix.');
+    }
+  }
+
   let conversationService: ConversationServiceImpl | null = null;
   if (storageService && workspaceId) {
     const db = storageService.getWorkspaceDatabase(workspaceId);
@@ -201,15 +219,23 @@ export function createMainProcess(
     }
   })();
 
-  const agentService = new AgentServiceImpl(sdk, conversationService, path.join(app.getAppPath(), 'resources', 'skills'));
+  // In development, app.getAppPath() returns apps/desktop/out/main (the main entry dir).
+  // Skills live at <repo-root>/skills/, which is 4 levels up from out/main.
+  // In packaged builds, they're copied to resources/skills/.
+  const skillsPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'skills')
+    : path.join(app.getAppPath(), '..', '..', '..', '..', 'skills');
+  const agentService = new AgentServiceImpl(sdk, conversationService, skillsPath);
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
   // --- Connector Services ---
   let connectorRegistry: ConnectorRegistryImpl | null = null;
   let mcpClientManager: MCPClientManagerImpl | null = null;
-  // CLI detection doesn't depend on sqlite — always available
-  const cliDetectionService = new CLIDetectionServiceImpl();
+  // CLI detection — use mock in --mock mode so sidebar populates without real tools
+  const cliDetectionService = useMock
+    ? new MockCLIDetectionService()
+    : new CLIDetectionServiceImpl();
   services.set(ICLIDetectionService, cliDetectionService);
 
   const platformDetectionService = new PlatformDetectionServiceImpl(

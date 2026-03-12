@@ -6,4 +6,5 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
+  globalSetup: './tests/e2e/global-setup.ts',
 });

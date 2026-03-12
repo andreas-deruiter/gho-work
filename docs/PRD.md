@@ -333,26 +333,26 @@ First-launch wizard. Target: install to first productive task in under 10 minute
 | 1 | Welcome | Brand intro, value props. Single CTA: "Sign in with GitHub" |
 | 2 | Auth waiting | Spinner while GitHub OAuth (PKCE) completes in system browser. Shows step progress (browser opened / authorize / verify) |
 | 3 | Copilot verification | Shows user profile, Copilot tier badge, and available models by tier |
-| 4 | CLI detection | Scans PATH for `gh`, `mgc`, `pandoc`, `az`, `gcloud`. Shows found (with version) vs missing (with install link). Skippable. |
+| 4 | CLI detection | Scans PATH for `gh`, `mgc`, `pandoc`, `az`, `gcloud`. Shows found (with version) vs missing (with note: "Install later from Settings > Connectors"). Skippable. |
 | 5 | First connector | Grid of popular MCP servers (Google Drive, Slack, Gmail, Calendar, Jira, Notion) with "Add" buttons. Registry browser link. Skippable — CTA is "Start Using GHO Work" regardless. |
 
 If the Copilot subscription check fails, show a clear error with a link to subscribe.
 
 ### 6.3 Workbench Layout
 
-VS Code-inspired layout with four zones:
+VS Code-inspired layout with five zones:
 
 ```
-+-------+----------+-----------------------------------+
-| Act.  | Sidebar  |          Main Panel               |
-| Bar   | (240px)  |   (chat, document preview,        |
-| (48px)|          |    settings)                      |
-|       |          |                                   |
-|       |          |                                   |
-|       |          |                                   |
-+-------+----------+-----------------------------------+
-| Status Bar (full width, 24px)                        |
-+------------------------------------------------------+
++-------+----------+----------------------------+-----------+
+| Act.  | Sidebar  |       Main Panel           | Context   |
+| Bar   | (240px)  |   (chat, document preview, | Panel     |
+| (48px)|          |    settings)               | (280px)   |
+|       |          |                            |           |
+|       |          |                            |           |
+|       |          |                            |           |
++-------+----------+----------------------------+-----------+
+| Status Bar (full width, 24px)                             |
++-----------------------------------------------------------+
 ```
 
 **Activity Bar** (leftmost, 48px wide, dark background):
@@ -367,10 +367,16 @@ VS Code-inspired layout with four zones:
 - **Connectors**: Configured MCP servers and CLIs with status indicators, enable/disable toggles, tool counts, add button.
 - **Documents**: File tree of current workspace. Click to preview in main panel. Export actions (DOCX, PDF).
 
-**Main Panel** (remaining width):
+**Main Panel** (remaining width minus Context Panel):
 - Contains the active view: Chat (default), Document Preview, or Settings
 - Own header with context-specific actions (conversation title, model selector dropdown)
 - Supports split-view: chat on left, document preview on right (when agent creates/edits a document)
+
+**Context Panel** (right side, 280px, collapsible):
+- Shows task-level metadata for the active conversation. Collapsible via `Cmd+Shift+B` or drag handle. Hidden when no task is active. Sections are collapsible individually.
+- **Progress**: Visual step tracker for multi-step tasks. Shows completed (checkmark), active (spinner), and pending steps. Steps are derived from the agent's plan decomposition (if the agent breaks a task into sub-steps, they appear here). For short tasks, this section may be empty/hidden.
+- **Downloads**: Files created or modified during the current task. Each entry shows filename, icon, and size. Click to open/preview in the main panel. External-link icon to reveal in Finder/Explorer. Empty state: "No files created yet."
+- **Context**: Tools and files referenced during the current task. Shows MCP server icons, tool names, and file thumbnails/icons. Gives the user a quick overview of what data the agent has touched. Click a file to preview, click a tool to jump to its call in the chat.
 
 **Status Bar** (full width, 24px):
 - Left: workspace path (clickable — opens workspace picker), connector count with status dot
@@ -442,11 +448,53 @@ Users can submit new tasks while the agent is busy. Tasks queue and execute sequ
 | `Cmd+,` | Open settings |
 | `Cmd+1` through `Cmd+4` | Switch activity bar view (Chat, Tool Activity, Connectors, Documents) |
 | `Cmd+L` | Focus chat input |
+| `Cmd+Shift+B` | Toggle context panel |
 | `Esc` | Cancel current agent task |
 
 ### 6.9 Theming
 
 Three theme modes: Light, Dark, System (follows OS preference). Default: System. CSS custom properties for all theme tokens. Configured in Settings > Appearance.
+
+### 6.10 Task Context Panel
+
+The Context Panel is a right-side panel (280px, resizable, collapsible) that provides at-a-glance metadata about the active task. Inspired by Claude CoWork's task context sidebar. It answers three questions: "How far along is this?", "What did it produce?", and "What is it working with?"
+
+**Visibility behavior:**
+- Hidden when no conversation is active (e.g., fresh launch, settings view)
+- Auto-shows when the agent starts working on a multi-step task
+- Stays visible until the user collapses it or switches to a non-chat view
+- Remembers collapsed/expanded state per session
+
+**Progress section:**
+- Visual stepper: circles connected by lines, left-to-right or vertical depending on count
+- States: completed (checkmark, muted green), active (spinner/pulse), pending (gray circle), failed (red X)
+- Step labels are short summaries from the agent's task decomposition (e.g., "Fetch spreadsheet", "Analyze data", "Draft message")
+- For tasks with no explicit plan, show a single "Working..." step with progress indicator
+- Tooltip on each step shows start time and duration (if completed)
+- Caption: "See task progress for longer tasks."
+
+**Downloads section:**
+- Lists files the agent created, modified, or downloaded during the task
+- Each row: file type icon (doc, spreadsheet, PDF, image, code), filename (truncated with tooltip), file size
+- Click: opens file preview in the main panel
+- External-link icon: opens in Finder/Explorer (via `shell.showItemInFolder`)
+- If the agent produced instructions or a CLAUDE.md, show with a document icon and label "Instructions"
+- Empty state: section hidden or shows "No files yet"
+
+**Context section:**
+- Shows the tools, files, and data sources the agent has referenced
+- Tool entries: MCP server icon + tool name (e.g., "google-sheets / getCellRange")
+- File entries: file icon + filename (local workspace files the agent read)
+- Thumbnails for images when available
+- Click a tool entry: scrolls to the corresponding tool call card in the chat
+- Click a file entry: opens preview in main panel
+- Caption: "Track tools and referenced files used in this task."
+- Collapsible (default expanded)
+
+**Data flow:**
+- The agent service emits events as it plans, creates files, and invokes tools
+- The renderer subscribes to these events via IPC and updates the Context Panel in real-time
+- State is per-conversation (switching conversations updates the panel)
 
 ---
 
@@ -1085,7 +1133,7 @@ The Connector Settings panel uses a **tabbed layout** (not a separate "Add" dial
 | **Installed** | All configured MCP servers (with status dot, tool count, enable/disable toggle, gear icon) and detected CLI tools (with version, auth status). MCP servers and CLI tools shown in separate subsections. |
 | **Registry** | Search and browse the MCP Registry. Filter by category. Shows server name, author, description, tool count, last updated. "Install" button for npm-based servers. "Installed" badge for already-configured servers. |
 | **Remote** | List of Claude-compatible remote MCP server partners (Atlassian, Slack, Zapier, Linear, etc.). "Connect with OAuth" button per server. "Connected" badge for active connections. |
-| **CLI Tools** | Detected CLIs with version and auth status. Install guidance links for missing tools. |
+| **CLI Tools** | Detected CLIs with version and auth status. Missing tools show an **"Install" button** that creates a new agent conversation pre-loaded with the tool's install skill and platform info. The agent handles installation interactively: running commands (with permission prompts), verifying each step, and walking through post-install auth. See [Agent-Assisted CLI Install spec](superpowers/specs/2026-03-12-agent-assisted-cli-install-design.md). |
 | **Custom** | Form for manual MCP server config: name, transport type (stdio or Streamable HTTP), command/args/env (for stdio), URL/headers (for HTTP). Environment variable editor for credentials. |
 
 **Per-connector detail view** (click gear icon on any installed connector):

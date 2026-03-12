@@ -172,15 +172,11 @@ export class CopilotSDKImpl implements ICopilotSDK {
 			this._client = new sdk.CopilotClient(clientOptions);
 			await this._client.start();
 		} catch (error) {
-			// Fall back to mock mode if real SDK fails to start
-			console.warn(
-				'[CopilotSDKImpl] Real SDK failed to start, falling back to mock mode:',
-				error instanceof Error ? error.message : String(error),
-			);
+			// Do NOT silently fall back to mock — surface the error so it can be diagnosed.
 			this._client = null;
-			this._mock = new MockCopilotSDK();
-			await this._mock.start();
-			this._isMockFallback = true;
+			const msg = error instanceof Error ? error.message : String(error);
+			console.error('[CopilotSDKImpl] Real SDK failed to start:', msg);
+			throw new Error(`Copilot SDK failed to start: ${msg}`);
 		}
 	}
 
@@ -268,6 +264,18 @@ export class CopilotSDKImpl implements ICopilotSDK {
 		return models
 			.filter((m) => !m.policy || m.policy.state === 'enabled')
 			.map(mapModelInfo);
+	}
+
+	async restart(options?: { githubToken?: string; useMock?: boolean }): Promise<void> {
+		await this.stop();
+		if (options?.githubToken !== undefined) {
+			this._options.githubToken = options.githubToken;
+		}
+		if (options?.useMock !== undefined) {
+			this._options.useMock = options.useMock;
+		}
+		this._isMockFallback = false;
+		await this.start();
 	}
 
 	async ping(message?: string): Promise<PingResponse> {

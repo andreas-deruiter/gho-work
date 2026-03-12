@@ -28,6 +28,7 @@ GHO Work is an Electron-based desktop app providing agentic AI capabilities for 
 ## Key Docs
 - docs/PRD.md — Product requirements (source of truth)
 - docs/IMPLEMENTATION_PLAN.md — Phased implementation plan (checkbox-tracked)
+- docs/tutorial/index.html — UX tutorial and design spec (source of truth for visual design: icons, colors, layout)
 - docs/tutorial/index.html — UX tutorial and design spec
 
 ## VS Code Reference
@@ -49,6 +50,10 @@ apps/desktop         → App entry point, ties everything together (imports all)
 ```
 
 **Import rule**: packages may only import from packages above them in this list. Never import downward. This is the single most important architectural constraint.
+
+**Entry point rule**: Before modifying a preload, renderer, or main process file, verify you're editing the file that the build actually uses. Check the build config (`electron.vite.config.ts` or equivalent) for the actual entry points. The monorepo has both package-level files (`packages/electron/src/preload/`) and app-level files (`apps/desktop/src/preload/`) — only the app-level files are used by the desktop build.
+
+**Externalization rule**: When a workspace package uses dynamic `import()` for a `node_modules` dependency, electron-vite will try to bundle it (because workspace packages are in the `exclude` list for `externalizeDepsPlugin`). Add such dependencies to `rollupOptions.external` in `electron.vite.config.ts`. The symptom of a missing external is runtime errors like `(void 0) is not a function` that don't reproduce in Vitest (which doesn't bundle).
 
 ### Environment subdirectories
 
@@ -118,7 +123,8 @@ Use these skills at the appropriate points in the development cycle:
 - **before-task** — Self-assess readiness, capture baseline, plan approach
 - **after-edit** — Lint, type check, run affected tests after every code change
 - **verify-task** — Evidence-based verification against acceptance criteria
-- **reflect** — End-of-session failure analysis and instruction improvement
+- **supervisor** — Independent quality gate (spawns Opus sub-agent) that adversarially verifies work before completion. MUST run before claiming any task/phase is done.
+- **`/reflect`** — End-of-session failure analysis and instruction improvement (slash command in `.claude/commands/`)
 - **vscode-patterns** — Reference guide for VS Code patterns (consult before implementing DI, events, disposables, services, widgets, IPC)
 - **electron-hardening** — Security, packaging, signing, native modules, safeStorage, multi-process, crash recovery
 - **mcp-client** — MCP protocol client: transports, tool management, sampling, elicitation, OAuth, health monitoring
@@ -151,7 +157,11 @@ Before modifying existing code: note current test state, capture which files wil
 Never claim "it works" without proof. Show test output, build output, or runtime evidence. The verify-task skill enforces this standard. Automated test pass is necessary but not sufficient — if the tests don't cover the user-facing behavior, they don't count as evidence for that behavior.
 
 ### HARD GATE: Launch the app before declaring completion
-**After completing any phase or feature that touches UI, IPC, or service wiring: you MUST run `npm run desktop:dev`, exercise the primary user flow, and report what you observed BEFORE committing the final commit.** This is not optional. This is not deferrable. Unit tests passing is not a substitute. "I'll add a Playwright test" is not a substitute. You must launch the real app and verify it works the way a user would use it. If you cannot launch the app (e.g., headless environment), you must explicitly tell the user "I was unable to verify this in the running app" — never silently skip this step.
+**After completing any phase or feature that touches UI, IPC, or service wiring: you MUST run `npm run desktop:dev`, exercise the primary user flow, and report what you observed BEFORE committing the final commit.** This is not optional. This is not deferrable. Unit tests passing is not a substitute. "I'll add a Playwright test" is not a substitute. You must launch the real app and verify it works the way a user would use it.
+
+**Self-verification with screenshots:** Write a temp script that uses `_electron.launch()` from `@playwright/test` to launch the built app, exercise user flows, and call `page.screenshot()` at each checkpoint. View the screenshots with the Read tool to self-verify. This is the standard approach — do not ask the user to visually confirm what you can check yourself. Clean up the temp script after verification.
+
+**Never claim "headless environment" on macOS.** Darwin is a desktop OS. Always attempt the app launch.
 
 ### Run every executable artifact in its actual runtime
 A build pass and unit test pass say nothing about whether the app works in its real environment. Different runtimes have different capabilities:
@@ -165,6 +175,28 @@ After writing any executable artifact, run it the way a user would:
 - E2E tests → run `npx playwright test`
 
 A successful `turbo build` is not a proxy for "the app launches." A successful `vitest run` is not a proxy for "the smoke test works under tsx."
+
+### Verify bundled resource paths at runtime
+`app.getAppPath()` returns different values in dev vs packaged builds. In dev it returns the directory of the main entry script (e.g., `apps/desktop/out/main`), not the project root. After adding any path that resolves relative to `app.getAppPath()`, verify it resolves correctly by logging and checking at runtime — don't assume the path is right from reading the code.
+
+### Catch blocks must not silently swallow errors
+Every `catch` block that falls back to an alternative path must log the error (`console.error` or `console.warn`). Silent catch blocks mask the real failure and make debugging impossible. If the fallback is intentional, the log message should explain what failed and why the fallback was chosen.
+
+### Verify DOM elements exist before styling them
+Before adding CSS rules for an element, verify the element is actually created in the render code. CSS for a non-existent element is dead code that gives false confidence. Check both the DOM creation (in `render()` / `h()` calls) and the CSS selectors match.
+
+### Silent fallbacks must be tested in both directions
+When a service has a fallback path (e.g., mock mode), tests must verify:
+1. **The primary path works** — the real implementation loads, constructs, and starts
+2. **The fallback triggers only when expected** — not silently masking a broken primary path
+
+A test that only exercises the fallback proves the fallback works, not that the real thing works. If every test uses `useMock: true`, you have zero coverage of the actual integration.
+
+### HARD GATE must verify the actual feature, not just "app runs"
+Launching the app and seeing it render is necessary but not sufficient. The HARD GATE verification must exercise the specific feature that was implemented. If the feature is "real SDK integration," verify the app is using the real SDK — not silently falling back to mock. Check console output, network activity, or behavioral differences that distinguish real from fake.
+
+### Supervisor gate: before declaring completion, invoke the supervisor skill
+The HARD GATES above are self-checks — the same agent that did the work verifies it. History shows this is insufficient: the agent's completion bias causes it to interpret ambiguous evidence optimistically. **Before declaring ANY task, phase, or feature complete, invoke the supervisor skill.** The supervisor spawns an independent sub-agent (Opus) whose sole job is to find problems. It runs the app, takes screenshots, reads them, checks acceptance criteria against actual behavior, and reports honestly. If the supervisor says NEEDS WORK, fix the issues and re-run the supervisor. Do not skip this step for "small changes" — small changes have caused the biggest surprises.
 
 ## Task execution
 

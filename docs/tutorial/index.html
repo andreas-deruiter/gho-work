@@ -432,7 +432,7 @@
                 <span class="cli-name">az</span>
                 <span class="cli-desc">Azure CLI — Cloud resources</span>
               </div>
-              <a href="#" class="cli-install-link">Install guide</a>
+              <span class="cli-install-later">Install from Settings</span>
             </div>
             <div class="cli-detect-item missing">
               <span class="cli-status-icon missing">&#10005;</span>
@@ -440,7 +440,7 @@
                 <span class="cli-name">gcloud</span>
                 <span class="cli-desc">Google Cloud CLI</span>
               </div>
-              <a href="#" class="cli-install-link">Install guide</a>
+              <span class="cli-install-later">Install from Settings</span>
             </div>
           </div>
           <p class="cli-note">Missing tools are optional. You can install them later from Settings &gt; Connectors.</p>
@@ -562,7 +562,7 @@
     </div>
 
     <div class="prose">
-      <p>The main application window uses a VS Code-inspired layout with a collapsible sidebar, main content area, and status bar. The layout is keyboard-navigable and adapts to window resizing.</p>
+      <p>The main application window uses a VS Code-inspired layout with a collapsible sidebar, main content area, context panel, and status bar. The layout is keyboard-navigable and adapts to window resizing.</p>
     </div>
 
     <h3>Full Workbench</h3>
@@ -712,6 +712,68 @@ Great week team! Revenue hit $142.5K...</div>
           </div>
         </div>
 
+        <!-- Context Panel (right side) -->
+        <div class="wb-context-panel">
+          <div class="ctx-section">
+            <div class="ctx-section-header">
+              <span class="ctx-section-title">Progress</span>
+              <svg class="ctx-collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="ctx-section-body">
+              <div class="ctx-progress-track">
+                <div class="ctx-step completed">
+                  <div class="ctx-step-circle">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                  </div>
+                  <span class="ctx-step-line"></span>
+                </div>
+                <div class="ctx-step completed">
+                  <div class="ctx-step-circle">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                  </div>
+                  <span class="ctx-step-line"></span>
+                </div>
+                <div class="ctx-step active">
+                  <div class="ctx-step-circle pulse"></div>
+                  <span class="ctx-step-line"></span>
+                </div>
+                <div class="ctx-step pending">
+                  <div class="ctx-step-circle"></div>
+                </div>
+              </div>
+              <p class="ctx-caption">See task progress for longer tasks.</p>
+            </div>
+          </div>
+          <div class="ctx-section">
+            <div class="ctx-section-header">
+              <span class="ctx-section-title">Downloads</span>
+              <svg class="ctx-open-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </div>
+            <div class="ctx-section-body">
+              <div class="ctx-download-item">
+                <svg class="ctx-file-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                <span class="ctx-download-name">Sales Summary</span>
+              </div>
+            </div>
+          </div>
+          <div class="ctx-section">
+            <div class="ctx-section-header">
+              <span class="ctx-section-title">Context</span>
+              <svg class="ctx-collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="ctx-section-body">
+              <div class="ctx-context-items">
+                <div class="ctx-context-item">
+                  <div class="ctx-context-thumb"></div>
+                  <div class="ctx-context-thumb"></div>
+                  <div class="ctx-context-thumb add">+</div>
+                </div>
+              </div>
+              <p class="ctx-caption">Track tools and referenced files used in this task.</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Status bar -->
         <div class="wb-statusbar">
           <div class="sb-left">
@@ -751,10 +813,15 @@ Great week team! Revenue hit $142.5K...</div>
       <div class="anatomy-item">
         <div class="anatomy-label">C</div>
         <h4>Main Panel</h4>
-        <p>Takes remaining width. Contains the active view: Chat (default), Document Preview, or Settings. Has its own header with context-specific actions.</p>
+        <p>Takes remaining width (minus Context Panel). Contains the active view: Chat (default), Document Preview, or Settings. Has its own header with context-specific actions.</p>
       </div>
       <div class="anatomy-item">
         <div class="anatomy-label">D</div>
+        <h4>Context Panel</h4>
+        <p>Right-side panel, 280px (resizable, collapsible via Cmd+Shift+B). Shows task progress, files created/downloaded, and tools/files referenced during the active task. Auto-shows during multi-step tasks.</p>
+      </div>
+      <div class="anatomy-item">
+        <div class="anatomy-label">E</div>
         <h4>Status Bar</h4>
         <p>Full-width bottom strip, 24px tall. Shows: workspace path, connector status, active model, agent state, user avatar.</p>
       </div>
