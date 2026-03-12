@@ -33,4 +33,29 @@ export const GLOBAL_MIGRATIONS: string[][] = [
     `CREATE INDEX idx_permission_rules_scope ON permission_rules(scope, resource_pattern)`,
     `CREATE INDEX idx_workspaces_last_opened ON workspaces(last_opened DESC)`,
   ],
+  // v1: Phase 3A -- new connectors table with full schema
+  [
+    `CREATE TABLE connectors (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL DEFAULT 'local_mcp',
+      name TEXT NOT NULL,
+      transport TEXT NOT NULL CHECK(transport IN ('stdio', 'streamable_http')),
+      command TEXT,
+      args TEXT,
+      env TEXT,
+      url TEXT,
+      headers TEXT,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'disconnected',
+      error TEXT,
+      capabilities TEXT,
+      tools_config TEXT,
+      created_at INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL DEFAULT 0
+    )`,
+    `INSERT OR IGNORE INTO connectors (id, type, name, transport, command, args, url, env, headers, enabled, created_at, updated_at)
+      SELECT id, 'local_mcp', name, transport, command, args, url, env, headers, enabled, 0, 0
+      FROM connector_configs`,
+    `DROP TABLE IF EXISTS connector_configs`,
+  ],
 ];

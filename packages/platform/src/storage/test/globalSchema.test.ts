@@ -41,11 +41,12 @@ describe('Global database schema', () => {
     expect(row.decision).toBe('allow');
   });
 
-  it('should CRUD connector_configs', () => {
+  it('should CRUD connectors', () => {
+    const now = Date.now();
     db.prepare(
-      'INSERT INTO connector_configs (id, name, transport, enabled) VALUES (?, ?, ?, ?)',
-    ).run('conn-1', 'filesystem', 'stdio', 1);
-    const row = db.prepare('SELECT * FROM connector_configs WHERE id = ?').get('conn-1') as any;
+      'INSERT INTO connectors (id, type, name, transport, enabled, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run('conn-1', 'local_mcp', 'filesystem', 'stdio', 1, 'disconnected', now, now);
+    const row = db.prepare('SELECT * FROM connectors WHERE id = ?').get('conn-1') as any;
     expect(row.name).toBe('filesystem');
   });
 
@@ -61,5 +62,49 @@ describe('Global database schema', () => {
       fileDb.close();
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('Migration v1: connectors table', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    configurePragmas(db);
+  });
+
+  afterEach(() => { db.close(); });
+
+  it('creates connectors table with all required columns', () => {
+    migrateDatabase(db, GLOBAL_MIGRATIONS);
+    const version = db.pragma('user_version', { simple: true });
+    expect(version).toBe(2);
+
+    db.prepare(`INSERT INTO connectors (id, type, name, transport, enabled, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      'test-1', 'local_mcp', 'Test Server', 'stdio', 1, 'disconnected', Date.now(), Date.now(),
+    );
+
+    const row = db.prepare('SELECT * FROM connectors WHERE id = ?').get('test-1') as Record<string, unknown>;
+    expect(row.name).toBe('Test Server');
+    expect(row.type).toBe('local_mcp');
+    expect(row.status).toBe('disconnected');
+  });
+
+  it('migrates existing connector_configs data to connectors table', () => {
+    migrateDatabase(db, [GLOBAL_MIGRATIONS[0]]);
+    expect(db.pragma('user_version', { simple: true })).toBe(1);
+
+    db.prepare(`INSERT INTO connector_configs (id, name, transport, enabled) VALUES (?, ?, ?, ?)`).run(
+      'old-1', 'Old Server', 'stdio', 1,
+    );
+
+    migrateDatabase(db, GLOBAL_MIGRATIONS);
+    expect(db.pragma('user_version', { simple: true })).toBe(2);
+
+    const row = db.prepare('SELECT * FROM connectors WHERE id = ?').get('old-1') as Record<string, unknown>;
+    expect(row.name).toBe('Old Server');
+    expect(row.type).toBe('local_mcp');
+    expect(row.status).toBe('disconnected');
   });
 });
