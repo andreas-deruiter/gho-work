@@ -7,6 +7,7 @@ import type { IIPCRenderer } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { h } from './dom.js';
 import { ActivityBar } from './activityBar.js';
+import { Sidebar } from './sidebar.js';
 import { StatusBar } from './statusBar.js';
 import { KeyboardShortcuts } from './keyboardShortcuts.js';
 import { ChatPanel } from './chatPanel.js';
@@ -16,10 +17,10 @@ export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
   private readonly _statusBar: StatusBar;
   private readonly _shortcuts: KeyboardShortcuts;
+  private readonly _sidebar: Sidebar;
   private _chatPanel!: ChatPanel;
   private _conversationList!: ConversationListPanel;
   private _sidebarVisible = true;
-  private _sidebarEl!: HTMLElement;
 
   constructor(
     private readonly _container: HTMLElement,
@@ -27,6 +28,7 @@ export class Workbench extends Disposable {
   ) {
     super();
     this._activityBar = this._register(new ActivityBar());
+    this._sidebar = this._register(new Sidebar());
     this._statusBar = this._register(new StatusBar());
     this._shortcuts = this._register(new KeyboardShortcuts());
     this._setupShortcuts();
@@ -45,19 +47,28 @@ export class Workbench extends Disposable {
     ]);
 
     layout.activityBar.appendChild(this._activityBar.getDomNode());
-    this._sidebarEl = layout.sidebar;
 
-    // Conversation list in sidebar
+    // Sidebar with panel switching
+    layout.sidebar.appendChild(this._sidebar.getDomNode());
+
+    // Chat panel in sidebar (default)
     this._conversationList = this._register(new ConversationListPanel(this._ipc));
-    this._conversationList.render(this._sidebarEl);
+    const chatSidebarContainer = document.createElement('div');
+    chatSidebarContainer.className = 'sidebar-panel-chat';
+    this._conversationList.render(chatSidebarContainer);
+    this._sidebar.addPanel('chat', chatSidebarContainer);
 
     this._conversationList.onDidSelectConversation((conversationId) => {
       void this._chatPanel.loadConversation(conversationId);
     });
-
     this._conversationList.onDidRequestNewConversation(() => {
       void this._createNewConversation();
     });
+
+    // Wire activity bar to sidebar panel switching
+    this._register(this._activityBar.onDidSelectItem((item) => {
+      this._sidebar.showPanel(item);
+    }));
 
     // Chat panel in main content
     this._chatPanel = this._register(new ChatPanel(this._ipc));
@@ -108,8 +119,6 @@ export class Workbench extends Disposable {
 
   private _toggleSidebar(): void {
     this._sidebarVisible = !this._sidebarVisible;
-    if (this._sidebarEl) {
-      this._sidebarEl.style.display = this._sidebarVisible ? '' : 'none';
-    }
+    this._sidebar.getDomNode().style.display = this._sidebarVisible ? '' : 'none';
   }
 }
