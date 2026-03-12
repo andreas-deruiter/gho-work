@@ -54,6 +54,13 @@ const CLI_TOOLS: CLIToolDef[] = [
     authCommand: 'gcloud auth login',
   },
   {
+    id: 'git',
+    name: 'git',
+    versionArgs: ['--version'],
+    versionPattern: /git version (\d+\.\d+[\.\d]*)/,
+    installUrl: 'https://git-scm.com',
+  },
+  {
     id: 'pandoc',
     name: 'Pandoc',
     versionArgs: ['--version'],

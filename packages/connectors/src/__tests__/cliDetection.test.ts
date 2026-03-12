@@ -25,13 +25,13 @@ function makeExecFile(responses: Record<string, Record<string, { stdout: string;
 
 describe('CLIDetectionServiceImpl', () => {
   describe('detectAll', () => {
-    it('returns 6 tools with correct ids', async () => {
+    it('returns 7 tools with correct ids', async () => {
       const execFile = makeExecFile({});
       const svc = new CLIDetectionServiceImpl(execFile);
       const results = await svc.detectAll();
-      expect(results).toHaveLength(6);
+      expect(results).toHaveLength(7);
       const ids = results.map(r => r.id);
-      expect(ids).toEqual(['gh', 'mgc', 'az', 'gcloud', 'pandoc', 'workiq']);
+      expect(ids).toEqual(['gh', 'mgc', 'az', 'gcloud', 'git', 'pandoc', 'workiq']);
       svc.dispose();
     });
 
@@ -250,7 +250,7 @@ describe('CLIDetectionServiceImpl', () => {
       svc.onDidChangeTools(tools => fired.push(tools));
       await svc.refresh();
       expect(fired).toHaveLength(1);
-      expect(fired[0]).toHaveLength(6);
+      expect(fired[0]).toHaveLength(7);
       svc.dispose();
     });
 
