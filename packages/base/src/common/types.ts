@@ -95,6 +95,8 @@ export interface ConnectorConfig {
   enabled: boolean;
   capabilities?: ServerCapabilities;
   status: 'connected' | 'disconnected' | 'error' | 'initializing';
+  error?: string;
+  toolsConfig?: Record<string, boolean>;
 }
 
 export interface ServerCapabilities {
