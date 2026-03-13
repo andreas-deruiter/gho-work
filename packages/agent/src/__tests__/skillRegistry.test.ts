@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as path from 'node:path';
 import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
+import type { SkillEntry } from '../common/skillRegistry.js';
 
 const FIXTURES = path.join(__dirname, 'fixtures', 'skills');
 
@@ -73,6 +74,49 @@ describe('SkillRegistryImpl', () => {
       const authSkills = registry.list('auth');
       expect(authSkills.every(e => e.category === 'auth')).toBe(true);
       expect(authSkills.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('priority deduplication', () => {
+    it('higher-priority source overrides lower-priority', async () => {
+      const OVERRIDE = path.join(__dirname, 'fixtures', 'skills-override');
+      const reg = new SkillRegistryImpl([
+        { id: 'bundled', priority: 0, basePath: FIXTURES },
+        { id: 'user', priority: 20, basePath: OVERRIDE },
+      ]);
+      await reg.scan();
+
+      const entry = reg.getEntry('install', 'gh');
+      expect(entry).toBeDefined();
+      expect(entry!.sourceId).toBe('user');
+      expect(entry!.description).toBe('Custom GitHub CLI installer');
+
+      const content = await reg.getSkill('install', 'gh');
+      expect(content).toContain('user override version');
+
+      // auth/gh should still come from bundled (no override exists)
+      const authEntry = reg.getEntry('auth', 'gh');
+      expect(authEntry).toBeDefined();
+      expect(authEntry!.sourceId).toBe('bundled');
+
+      reg.dispose();
+    });
+  });
+
+  describe('refresh', () => {
+    it('re-scans and fires onDidChangeSkills', async () => {
+      const fired: SkillEntry[][] = [];
+      registry.onDidChangeSkills(entries => fired.push(entries));
+
+      await registry.refresh();
+
+      expect(fired.length).toBe(1);
+      expect(fired[0].length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('concurrent refresh calls do not race', async () => {
+      await Promise.all([registry.refresh(), registry.refresh()]);
+      expect(registry.list().length).toBeGreaterThanOrEqual(3);
     });
   });
 });
