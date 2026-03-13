@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { PlatformContext } from '@gho-work/base';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AgentServiceImpl } from '../node/agentServiceImpl.js';
+import * as fsActual from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 function createMockConversationService() {
 	const conversations = new Map<string, { id: string; title: string }>();
@@ -21,101 +23,68 @@ function createMockConversationService() {
 
 function createMockCopilotSDK() {
 	return {
-		lastSessionOptions: null as any,
-		createSession: vi.fn(function (this: any, opts: any) {
-			this.lastSessionOptions = opts;
-			return { id: 'session-1' };
-		}),
+		createSession: vi.fn(() => ({ id: 'session-1' })),
 	};
 }
 
-const MOCK_PLATFORM: PlatformContext = {
-	os: 'darwin',
-	arch: 'arm64',
-	packageManagers: { brew: true, winget: false, chocolatey: false },
-};
+const SETUP_SKILL_CONTENT = '# Setup connector\nHelp the user set up a connector.';
 
 describe('createSetupConversation', () => {
 	let agentService: AgentServiceImpl;
 	let conversationService: ReturnType<typeof createMockConversationService>;
-	let copilotSDK: ReturnType<typeof createMockCopilotSDK>;
 	let tmpSkillsDir: string;
 
 	beforeEach(async () => {
-		const fs = await import('node:fs/promises');
-		const os = await import('node:os');
-		const path = await import('node:path');
-		tmpSkillsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skills-'));
-		await fs.mkdir(path.join(tmpSkillsDir, 'install'), { recursive: true });
-		await fs.mkdir(path.join(tmpSkillsDir, 'connectors'), { recursive: true });
-		await fs.writeFile(
-			path.join(tmpSkillsDir, 'install', 'gh.md'),
-			'# Install gh\nInstall the GitHub CLI.',
-		);
-		await fs.writeFile(
+		tmpSkillsDir = await fsActual.mkdtemp(path.join(os.tmpdir(), 'skills-'));
+		await fsActual.mkdir(path.join(tmpSkillsDir, 'connectors'), { recursive: true });
+		await fsActual.writeFile(
 			path.join(tmpSkillsDir, 'connectors', 'setup.md'),
-			'# Setup connector\nHelp the user set up a connector.',
+			SETUP_SKILL_CONTENT,
 		);
 
 		conversationService = createMockConversationService();
-		copilotSDK = createMockCopilotSDK();
-		// Constructor: (sdk, conversationService, bundledSkillsPath, readContextFiles?)
 		agentService = new AgentServiceImpl(
-			copilotSDK as any,
+			createMockCopilotSDK() as any,
 			conversationService as any,
 			tmpSkillsDir,
 		);
 	});
 
-	it('creates a conversation titled "Set up connector" when no query given', async () => {
+	afterEach(async () => {
+		await fsActual.rm(tmpSkillsDir, { recursive: true, force: true });
+	});
+
+	it('creates a conversation and returns its ID', async () => {
 		const convId = await agentService.createSetupConversation();
+		expect(convId).toBeDefined();
+		expect(typeof convId).toBe('string');
 		expect(conversationService.createConversation).toHaveBeenCalled();
+	});
+
+	it('titles the conversation "Set up connector"', async () => {
+		const convId = await agentService.createSetupConversation();
 		expect(conversationService.renameConversation).toHaveBeenCalledWith(convId, 'Set up connector');
 	});
 
-	it('creates a conversation titled "Set up <query>" when query provided', async () => {
-		const convId = await agentService.createSetupConversation('gh', MOCK_PLATFORM);
-		expect(conversationService.renameConversation).toHaveBeenCalledWith(convId, 'Set up gh');
-	});
-
-	it('includes setup skill content in the system message', async () => {
-		await agentService.createSetupConversation();
-		const context = agentService.getInstallContext('conv-0');
+	it('stores the setup skill content as install context', async () => {
+		const convId = await agentService.createSetupConversation();
+		const context = agentService.getInstallContext(convId);
 		expect(context).toContain('# Setup connector');
 	});
 
-	it('appends install skill when query matches a known tool ID', async () => {
-		await agentService.createSetupConversation('gh', MOCK_PLATFORM);
-		const context = agentService.getInstallContext('conv-0');
-		expect(context).toContain('# Install gh');
-	});
-
-	it('injects platform context when platformContext is provided', async () => {
-		await agentService.createSetupConversation('gh', MOCK_PLATFORM);
-		const context = agentService.getInstallContext('conv-0');
-		expect(context).toContain('darwin');
-		expect(context).toContain('arm64');
-		expect(context).toContain('brew: available');
-	});
-
-	it('does not include platform info when platformContext is not provided', async () => {
-		await agentService.createSetupConversation('gh');
-		const context = agentService.getInstallContext('conv-0');
-		expect(context).not.toContain('## Platform');
-	});
-
-	it('does not throw when query does not match a known tool ID', async () => {
-		await expect(
-			agentService.createSetupConversation('nonexistent', MOCK_PLATFORM),
-		).resolves.toBeDefined();
-	});
-
-	it('supports workiq tool ID', async () => {
-		const fs = await import('node:fs/promises');
-		const path = await import('node:path');
-		await fs.writeFile(path.join(tmpSkillsDir, 'install', 'workiq.md'), '# Install Work IQ CLI');
-		const convId = await agentService.createSetupConversation('workiq', MOCK_PLATFORM);
+	it('uses empty string as context when setup skill file is missing', async () => {
+		await fsActual.rm(path.join(tmpSkillsDir, 'connectors', 'setup.md'));
+		const convId = await agentService.createSetupConversation();
 		const context = agentService.getInstallContext(convId);
-		expect(context).toContain('# Install Work IQ CLI');
+		expect(context).toBe('');
+	});
+
+	it('throws when conversation service is not available', async () => {
+		const noConvService = new AgentServiceImpl(
+			createMockCopilotSDK() as any,
+			null,
+			tmpSkillsDir,
+		);
+		await expect(noConvService.createSetupConversation()).rejects.toThrow('conversation service');
 	});
 });

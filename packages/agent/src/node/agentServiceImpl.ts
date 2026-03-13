@@ -3,7 +3,7 @@
  * Creates SDK sessions, injects context, maps SDK events to AgentEvents via AsyncQueue.
  */
 import { generateUUID } from '@gho-work/base';
-import type { AgentContext, AgentEvent, PlatformContext } from '@gho-work/base';
+import type { AgentContext, AgentEvent } from '@gho-work/base';
 import type { IAgentService } from '../common/agent.js';
 import type { IConversationService } from '../common/conversation.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
@@ -11,14 +11,6 @@ import type { MCPServerConfig, SessionEvent } from '../common/types.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-
-function formatPackageManagers(pm: PlatformContext['packageManagers']): string {
-  const items: string[] = [];
-  items.push(pm.brew ? 'brew: available' : 'brew: not found');
-  items.push(pm.winget ? 'winget: available' : 'winget: not found');
-  items.push(pm.chocolatey ? 'chocolatey: available' : 'chocolatey: not found');
-  return items.join(', ');
-}
 
 export class AgentServiceImpl implements IAgentService {
   private _activeTaskId: string | null = null;
@@ -115,63 +107,14 @@ export class AgentServiceImpl implements IAgentService {
     return this._activeTaskId;
   }
 
-  async createSetupConversation(query?: string, platformContext?: PlatformContext): Promise<string> {
+  async createSetupConversation(): Promise<string> {
     if (!this._conversationService) {
       throw new Error('Setup conversations require conversation service (no workspace)');
     }
-    const knownToolIds = new Set(['gh', 'git', 'pandoc', 'mgc', 'az', 'gcloud', 'workiq']);
-    const parts: string[] = [];
-
     const setupSkill = await this._loadSkill('connectors', 'setup');
-    if (setupSkill) {
-      parts.push(setupSkill);
-    }
-
-    if (query && knownToolIds.has(query)) {
-      const installSkill = await this._loadSkill('install', query);
-      if (installSkill) {
-        parts.push(installSkill);
-      }
-    }
-
-    if (platformContext) {
-      const platformInfo = [
-        `## Platform`,
-        `- OS: ${platformContext.os}`,
-        `- Architecture: ${platformContext.arch}`,
-        `- Package managers: ${formatPackageManagers(platformContext.packageManagers)}`,
-      ].join('\n');
-      parts.push(platformInfo);
-    }
-
-    const systemMessage = parts.join('\n\n');
-    const conversationTitle = query ? `Set up ${query}` : 'Set up connector';
+    const systemMessage = setupSkill ?? '';
     const conversation = this._conversationService.createConversation('default');
-    this._conversationService.renameConversation(conversation.id, conversationTitle);
-    this._installContexts.set(conversation.id, systemMessage);
-    return conversation.id;
-  }
-
-  async createAuthConversation(toolId: string, authInfo: { authUrl?: string; deviceCode?: string }): Promise<string> {
-    if (!this._conversationService) {
-      throw new Error('Auth conversations require conversation service (no workspace)');
-    }
-    const skillContent = await this._loadSkill('auth', toolId);
-    if (!skillContent) {
-      throw new Error(`Auth skill not found for tool: ${toolId}`);
-    }
-    const authContext = [
-      '## Authentication Context',
-      authInfo.deviceCode ? `- **Device code:** ${authInfo.deviceCode}` : '',
-      authInfo.authUrl ? `- **Auth URL:** ${authInfo.authUrl}` : '',
-    ].filter(Boolean).join('\n');
-    const systemMessage = `${skillContent}\n\n${authContext}`;
-    const toolNames: Record<string, string> = {
-      gh: 'GitHub CLI', mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
-      gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
-    };
-    const conversation = this._conversationService.createConversation('default');
-    this._conversationService.renameConversation(conversation.id, `Authenticate ${toolNames[toolId] ?? toolId}`);
+    this._conversationService.renameConversation(conversation.id, 'Set up connector');
     this._installContexts.set(conversation.id, systemMessage);
     return conversation.id;
   }
