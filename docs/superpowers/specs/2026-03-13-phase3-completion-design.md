@@ -156,7 +156,7 @@ The preload whitelist (`apps/desktop/src/preload/index.ts`) must also be updated
   Implementation (`AgentServiceImpl`): loads setup skill from `skills/connectors/setup.md`, injects platform context into system message, optionally pre-fills query as the first user message. If query matches a known CLI tool ID (gh, git, pandoc, mgc, az, gcloud, workiq), also appends that tool's install skill content (`skills/install/<toolId>.md`) to the system message as additional context. Returns the conversation ID.
 - Remove: `createInstallConversation(toolId, platformContext)` — fully replaced by `createSetupConversation()`. The `CLI_CREATE_INSTALL_CONVERSATION` IPC channel is also removed (not deprecated — removed). The workbench wiring in `packages/ui/src/browser/workbench.ts` must be updated to use `CONNECTOR_SETUP_CONVERSATION` instead.
 
-**Error handling:** If `_conversationService` is null (SQLite storage failed to load), `createSetupConversation()` throws a descriptive error. The IPC handler in `mainProcess.ts` catches this and returns `{ conversationId: '', error: 'Storage unavailable' }`. The sidebar UI shows a toast notification with the error instead of navigating to a broken conversation.
+**Error handling:** If `_conversationService` is null (SQLite storage failed to load), `createSetupConversation()` throws a descriptive error. The IPC handler in `mainProcess.ts` catches this and returns `{ conversationId: '', error: 'Storage unavailable' }`. The sidebar UI shows an error message in the chat panel (or prevents navigation) instead of navigating to a broken conversation.
 
 ---
 
