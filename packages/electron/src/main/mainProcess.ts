@@ -708,7 +708,7 @@ export function createMainProcess(
     const servers = configStore.getServers();
     const result = Array.from(servers.entries()).map(([name, config]) => ({
       name,
-      config,
+      type: config.type,
       status: mcpClientManager.getServerStatus(name),
     }));
     return { servers: result };
@@ -762,10 +762,13 @@ export function createMainProcess(
     }
   });
 
-  // TODO: Register agent tools (add_mcp_server, remove_mcp_server, list_mcp_servers)
-  // via SDK session configuration when the Copilot SDK exposes a tool registration API.
-  // Functions available: handleAddMCPServer(configStore, input), handleRemoveMCPServer(configStore, input),
-  // handleListMCPServers(configStore)
+  // Agent tools for MCP server management are implemented in @gho-work/connectors
+  // (handleAddMCPServer, handleRemoveMCPServer, handleListMCPServers) but cannot be
+  // registered with the Copilot SDK yet — the Technical Preview does not expose a
+  // tool registration API (registerTool/onSessionCreated). When the SDK adds this
+  // capability, wire the handlers here. Until then, users manage servers through the
+  // Connectors sidebar UI. Tracked in the spec:
+  // docs/superpowers/specs/2026-03-13-connector-simplification-design.md
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {
     // Write onboarding-complete flag

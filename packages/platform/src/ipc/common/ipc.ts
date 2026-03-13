@@ -199,7 +199,7 @@ export const MCPServerStateSchema = z.object({
 export type MCPServerStateIPC = z.infer<typeof MCPServerStateSchema>;
 
 export const ConnectorListResponseSchema = z.object({
-  connectors: z.array(MCPServerStateSchema),
+  servers: z.array(MCPServerStateSchema),
 });
 export type ConnectorListResponse = z.infer<typeof ConnectorListResponseSchema>;
 

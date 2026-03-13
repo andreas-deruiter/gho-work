@@ -27,6 +27,10 @@ export class MCPConnection extends Disposable {
     return this._status;
   }
 
+  get config(): MCPServerConfig {
+    return this._config;
+  }
+
   async connect(): Promise<void> {
     this._setStatus('initializing');
 

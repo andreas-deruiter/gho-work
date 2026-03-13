@@ -83,8 +83,7 @@ export class MCPClientManagerImpl extends Disposable implements IMCPClientManage
         await this.connectServer(name, config);
       } else {
         const conn = this._connections.get(name)!;
-        const currentConfig = (conn as any)._config as MCPServerConfig;
-        if (JSON.stringify(currentConfig) !== JSON.stringify(config)) {
+        if (JSON.stringify(conn.config) !== JSON.stringify(config)) {
           await this.connectServer(name, config);
         }
       }

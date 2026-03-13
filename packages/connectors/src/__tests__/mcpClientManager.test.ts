@@ -21,6 +21,7 @@ interface MockMCPConnectionInstance {
   _fireStatus: (s: MCPServerStatus) => void;
   _fireTools: (t: ToolInfo[]) => void;
   _config: MCPServerConfig;
+  config: MCPServerConfig;
 }
 
 function createMockConnection(
@@ -30,6 +31,7 @@ function createMockConnection(
   const instance: MockMCPConnectionInstance = {
     status: 'disconnected' as MCPServerStatus,
     _config: config,
+    config,
     connect: vi.fn().mockImplementation(connectImpl ?? (() => Promise.resolve())),
     disconnect: vi.fn().mockResolvedValue(undefined),
     listTools: vi.fn().mockReturnValue([]),
