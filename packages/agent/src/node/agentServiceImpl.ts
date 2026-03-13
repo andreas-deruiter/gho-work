@@ -115,28 +115,39 @@ export class AgentServiceImpl implements IAgentService {
     return this._activeTaskId;
   }
 
-  async createInstallConversation(toolId: string, platformContext: PlatformContext): Promise<string> {
+  async createSetupConversation(query?: string, platformContext?: PlatformContext): Promise<string> {
     if (!this._conversationService) {
-      throw new Error('Install conversations require conversation service (no workspace)');
+      throw new Error('Setup conversations require conversation service (no workspace)');
     }
-    const skillContent = await this._loadInstallSkill(toolId);
-    if (!skillContent) {
-      throw new Error(`Install skill not found for tool: ${toolId}`);
+    const knownToolIds = new Set(['gh', 'git', 'pandoc', 'mgc', 'az', 'gcloud', 'workiq']);
+    const parts: string[] = [];
+
+    const setupSkill = await this._loadSkill('connectors', 'setup');
+    if (setupSkill) {
+      parts.push(setupSkill);
     }
-    const platformInfo = [
-      `## Platform`,
-      `- OS: ${platformContext.os}`,
-      `- Architecture: ${platformContext.arch}`,
-      `- Package managers: ${formatPackageManagers(platformContext.packageManagers)}`,
-    ].join('\n');
-    const systemMessage = `${skillContent}\n\n${platformInfo}`;
-    const toolNames: Record<string, string> = {
-      gh: 'GitHub CLI', pandoc: 'pandoc', git: 'git',
-      mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
-      gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
-    };
+
+    if (query && knownToolIds.has(query)) {
+      const installSkill = await this._loadSkill('install', query);
+      if (installSkill) {
+        parts.push(installSkill);
+      }
+    }
+
+    if (platformContext) {
+      const platformInfo = [
+        `## Platform`,
+        `- OS: ${platformContext.os}`,
+        `- Architecture: ${platformContext.arch}`,
+        `- Package managers: ${formatPackageManagers(platformContext.packageManagers)}`,
+      ].join('\n');
+      parts.push(platformInfo);
+    }
+
+    const systemMessage = parts.join('\n\n');
+    const conversationTitle = query ? `Set up ${query}` : 'Set up connector';
     const conversation = this._conversationService.createConversation('default');
-    this._conversationService.renameConversation(conversation.id, `Install ${toolNames[toolId] ?? toolId}`);
+    this._conversationService.renameConversation(conversation.id, conversationTitle);
     this._installContexts.set(conversation.id, systemMessage);
     return conversation.id;
   }
@@ -176,10 +187,6 @@ export class AgentServiceImpl implements IAgentService {
     } catch {
       return undefined;
     }
-  }
-
-  private async _loadInstallSkill(toolId: string): Promise<string | undefined> {
-    return this._loadSkill('install', toolId);
   }
 
   private _mapEvent(event: SessionEvent): AgentEvent | null {
