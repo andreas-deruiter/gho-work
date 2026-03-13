@@ -51,6 +51,11 @@ export class ConnectorSidebarWidget extends Widget {
       this._items.get(data.id)?.updateStatus(data.status);
     });
 
+    // Listen for connector list changes (e.g., after programmatic add/remove)
+    this._ipc.on(IPC_CHANNELS.CONNECTOR_LIST_CHANGED, () => {
+      void this.refreshConnectors();
+    });
+
     // Listen for CLI tool changes (e.g., after background auth completes)
     this._ipc.on(IPC_CHANNELS.CLI_TOOLS_CHANGED, () => {
       void this.refreshCLITools();

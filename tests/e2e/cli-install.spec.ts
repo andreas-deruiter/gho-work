@@ -61,10 +61,10 @@ test.describe('CLI tool install button flow', () => {
     await expect(page.locator('.chat-panel')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('.chat-messages')).toBeVisible();
 
-    // The conversation header should contain "Install" (e.g., "Install Pandoc")
+    // The conversation header should contain "Set up" (e.g., "Set up pandoc")
     const header = page.locator('.chat-header');
     await expect(header).toBeVisible({ timeout: 5000 });
-    await expect(header).toContainText('Install', { timeout: 3000 });
+    await expect(header).toContainText('Set up', { timeout: 3000 });
   });
 
   test('install conversation appears in sidebar conversation list', async () => {

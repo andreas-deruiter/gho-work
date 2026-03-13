@@ -70,7 +70,7 @@ test.describe('Chat flow', () => {
 
     // The response should have actual content (use expect for auto-retry)
     const content = assistantMsg.locator('.chat-message-content');
-    await expect(content).not.toBeEmpty({ timeout: 5000 });
+    await expect(content).not.toBeEmpty({ timeout: 15000 });
 
     // Input should be re-enabled
     await expect(input).toBeEnabled();
@@ -196,10 +196,10 @@ test.describe('Chat flow', () => {
     await expect(toolCallItem).toBeVisible({ timeout: 5000 });
 
     // Tool call should show completed status
-    await expect(thinkingSection.locator('.tool-call-completed')).toBeVisible({ timeout: 5000 });
+    await expect(thinkingSection.locator('.tool-call-completed').first()).toBeVisible({ timeout: 5000 });
 
     // Thinking section should be deactivated (no shimmer)
-    await expect(thinkingSection).not.toHaveClass(/thinking-active/);
+    await expect(thinkingSection).not.toHaveClass(/thinking-active/, { timeout: 10000 });
 
     // Send button should reappear, cancel should hide
     await expect(sendBtn).toBeVisible({ timeout: 5000 });

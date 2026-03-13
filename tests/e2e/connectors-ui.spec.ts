@@ -42,18 +42,17 @@ test.describe('Connector UI', () => {
     await expect(page.locator('.connector-add-btn')).toBeVisible();
   });
 
-  test('Add Connector opens drawer with form', async () => {
+  test('Add Connector opens setup conversation in chat panel', async () => {
     await page.click('.connector-add-btn');
-    await expect(page.locator('.connector-drawer-container.drawer-open')).toBeVisible({ timeout: 3000 });
-    await expect(page.locator('.config-name-input')).toBeVisible();
-  });
-
-  test('drawer closes on Escape', async () => {
-    await page.keyboard.press('Escape');
-    await expect(page.locator('.connector-drawer-container.drawer-open')).not.toBeVisible({ timeout: 3000 });
+    // Should switch to chat panel with the setup conversation
+    await expect(page.locator('.chat-panel')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.chat-messages')).toBeVisible();
   });
 
   test('switching back to chat shows conversation list', async () => {
+    // Previous test switched to chat via setup conversation; switch to connectors first
+    await page.click('.activity-bar-item[data-item="connectors"]');
+    await expect(page.locator('.connector-sidebar')).toBeVisible({ timeout: 3000 });
     await page.click('.activity-bar-item[data-item="chat"]');
     // The conversation list panel should become visible (ConversationListPanel overwrites
     // the sidebar-panel-chat class with conversation-list-panel during render)

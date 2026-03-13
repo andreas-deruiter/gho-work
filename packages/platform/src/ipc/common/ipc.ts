@@ -37,6 +37,7 @@ export const IPC_CHANNELS = {
   CONNECTOR_GET_TOOLS: 'connector:get-tools',
   CONNECTOR_STATUS_CHANGED: 'connector:status-changed',
   CONNECTOR_TOOLS_CHANGED: 'connector:tools-changed',
+  CONNECTOR_LIST_CHANGED: 'connector:list-changed',
   CLI_DETECT_ALL: 'cli:detect-all',
   CLI_REFRESH: 'cli:refresh',
   CLI_GET_PLATFORM_CONTEXT: 'cli:get-platform-context',

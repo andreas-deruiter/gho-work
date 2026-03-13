@@ -67,6 +67,7 @@ export class MCPClientManagerImpl extends Disposable implements IMCPClientManage
     conn.dispose();
     this._connections.delete(connectorId);
     await this._registry.updateStatus(connectorId, 'disconnected');
+    this._onDidChangeStatus.fire({ connectorId, status: 'disconnected' });
   }
 
   async disconnectAll(): Promise<void> {

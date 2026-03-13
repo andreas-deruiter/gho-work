@@ -86,23 +86,12 @@ test.describe('Manual connector add / verify / disconnect / remove', () => {
       { id, fixturePath },
     );
 
-    // The add IPC returns the saved connector config
+    // The add IPC returns success
     expect(result).toBeTruthy();
 
-    // Refresh the connector sidebar so the new item renders
-    // (the workbench refreshes after onDidSaveConnector — replicate that here)
-    await page.evaluate(() =>
-      (window as unknown as { ghoWorkIPC: { invoke: (ch: string, ...a: unknown[]) => Promise<unknown> } })
-        .ghoWorkIPC.invoke('connector:list'),
-    );
-
-    // Navigate away and back to force the sidebar to reload
-    await page.click('.activity-bar-item[data-item="chat"]');
-    await page.click('.activity-bar-item[data-item="connectors"]');
-
-    // The connector should appear in the list
+    // The main process sends CONNECTOR_LIST_CHANGED which auto-refreshes the sidebar
     const item = page.locator('.connector-list-item').filter({ hasText: 'Test Echo Server' });
-    await expect(item).toBeVisible({ timeout: 5000 });
+    await expect(item).toBeVisible({ timeout: 10000 });
   });
 
   // ------------------------------------------------------------------ step 3

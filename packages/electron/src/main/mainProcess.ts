@@ -776,6 +776,8 @@ export function createMainProcess(
     if (config.enabled && mcpClientManager) {
       await mcpClientManager.connectServer(config.id);
     }
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CONNECTOR_LIST_CHANGED);
+    return { success: true };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_REMOVE, async (...args: unknown[]) => {
@@ -787,6 +789,7 @@ export function createMainProcess(
       await mcpClientManager.disconnectServer(request.id);
     }
     await connectorRegistry.removeConnector(request.id);
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CONNECTOR_LIST_CHANGED);
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_UPDATE, async (...args: unknown[]) => {
@@ -795,6 +798,14 @@ export function createMainProcess(
     }
     const request = args[0] as ConnectorUpdateRequest;
     await connectorRegistry.updateConnector(request.id, request.updates);
+    // Handle connect/disconnect when enabled flag changes
+    if (mcpClientManager && request.updates.enabled !== undefined) {
+      if (request.updates.enabled) {
+        await mcpClientManager.connectServer(request.id);
+      } else {
+        await mcpClientManager.disconnectServer(request.id);
+      }
+    }
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_TEST, async (...args: unknown[]) => {

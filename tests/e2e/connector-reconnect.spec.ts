@@ -77,13 +77,9 @@ test.describe('Connector disconnect and reconnect', () => {
     );
     connectorAdded = true;
 
-    // Navigate away and back to force sidebar to reload
-    await page.click('.activity-bar-item[data-item="chat"]');
-    await page.click('.activity-bar-item[data-item="connectors"]');
-
-    // The connector should appear in the list
+    // The main process sends CONNECTOR_LIST_CHANGED which auto-refreshes the sidebar
     const item = page.locator('.connector-list-item').filter({ hasText: 'Reconnect Test' });
-    await expect(item).toBeVisible({ timeout: 5000 });
+    await expect(item).toBeVisible({ timeout: 10000 });
   });
 
   // ------------------------------------------------------------------ step 3
@@ -126,8 +122,8 @@ test.describe('Connector disconnect and reconnect', () => {
     // Drawer should open again
     await expect(page.locator('.connector-drawer-container.drawer-open')).toBeVisible({ timeout: 3000 });
 
-    // Click Connect
-    const connectBtn = page.locator('.drawer-status-btn').filter({ hasText: 'Connect' });
+    // Click Connect (use exact text match to avoid matching "Test Connection")
+    const connectBtn = page.locator('.drawer-status-btn', { hasText: /^Connect$/ });
     await expect(connectBtn).toBeVisible({ timeout: 5000 });
     await connectBtn.click();
   });
