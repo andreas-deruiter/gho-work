@@ -1,4 +1,4 @@
-import { execFile as nodeExecFile } from 'node:child_process';
+import { execFile as nodeExecFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { Disposable, Emitter } from '@gho-work/base';
 import type { Event } from '@gho-work/base';
@@ -12,6 +12,8 @@ interface CLIToolDef {
   versionArgs: string[];
   versionPattern: RegExp;
   authArgs?: string[];
+  /** If set, stdout must match this pattern for auth to be considered successful (some CLIs exit 0 even when not authenticated) */
+  authSuccessPattern?: RegExp;
   installUrl: string;
   authCommand?: string;
 }
@@ -31,9 +33,9 @@ const CLI_TOOLS: CLIToolDef[] = [
     name: 'Microsoft Graph CLI',
     versionArgs: ['--version'],
     versionPattern: /(\d+\.\d+\.\d+)/,
-    authArgs: ['me', 'show'],
+    authArgs: ['me', 'get'],
     installUrl: 'https://learn.microsoft.com/en-us/graph/cli/installation',
-    authCommand: 'mgc login',
+    authCommand: 'mgc login --strategy DeviceCode',
   },
   {
     id: 'az',
@@ -42,8 +44,11 @@ const CLI_TOOLS: CLIToolDef[] = [
     versionPattern: /azure-cli\s+(\d+\.\d+\.\d+)/,
     authArgs: ['account', 'show'],
     installUrl: 'https://learn.microsoft.com/en-us/cli/azure/install-azure-cli',
-    authCommand: 'az login',
+    authCommand: 'az login --use-device-code',
   },
+  // m365 (CLI for Microsoft 365) removed: v11 requires custom Entra app registration
+  // and has a broken device code flow. Use mgc (Microsoft Graph CLI) instead —
+  // it covers the same Microsoft 365 APIs without requiring app registration.
   {
     id: 'gcloud',
     name: 'Google Cloud CLI',
@@ -51,7 +56,7 @@ const CLI_TOOLS: CLIToolDef[] = [
     versionPattern: /Google Cloud SDK (\d+\.\d+\.\d+)/,
     authArgs: ['auth', 'print-identity-token'],
     installUrl: 'https://cloud.google.com/sdk/docs/install',
-    authCommand: 'gcloud auth login',
+    authCommand: 'gcloud auth login --no-browser',
   },
   {
     id: 'git',
@@ -118,7 +123,7 @@ export class CLIDetectionServiceImpl extends Disposable implements ICLIDetection
     return { success: true, installUrl: def.installUrl };
   }
 
-  async authenticateTool(toolId: string): Promise<{ success: boolean; error?: string }> {
+  async authenticateTool(toolId: string): Promise<{ success: boolean; error?: string; authUrl?: string; deviceCode?: string }> {
     const def = CLI_TOOLS.find(t => t.id === toolId);
     if (!def) {
       return { success: false, error: `Unknown tool: ${toolId}` };
@@ -128,9 +133,51 @@ export class CLIDetectionServiceImpl extends Disposable implements ICLIDetection
     }
     const parts = def.authCommand.split(' ');
     try {
-      await this._execFile(parts[0], parts.slice(1));
-      this._cache = null;
-      return { success: true };
+      // Auth commands use device code flow: they print a URL and code to stdout,
+      // then block waiting for the user to complete browser auth. We start the
+      // process, wait just long enough to capture the URL/code, then return
+      // immediately. The process continues in the background; when it exits,
+      // we refresh tool status so the UI updates.
+      const child = spawn(parts[0], parts.slice(1), { shell: true, stdio: 'pipe' });
+      let authUrl: string | undefined;
+      let deviceCode: string | undefined;
+
+      const handleOutput = (data: Buffer) => {
+        const text = data.toString();
+        const urlMatch = text.match(/(https?:\/\/\S+)/);
+        if (urlMatch && !authUrl) {
+          authUrl = urlMatch[1];
+        }
+        const codeMatch = text.match(/code\s+([A-Z0-9]{6,})/i);
+        if (codeMatch && !deviceCode) {
+          deviceCode = codeMatch[1];
+        }
+      };
+
+      child.stdout?.on('data', handleOutput);
+      child.stderr?.on('data', handleOutput);
+
+      // Wait up to 5 seconds for the URL/code to appear in stdout
+      await new Promise<void>((resolve) => {
+        const check = setInterval(() => {
+          if (authUrl) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 200);
+        setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+      });
+
+      // Let the auth process run in the background — refresh when it completes
+      child.on('close', () => {
+        this._cache = null;
+        void this.refresh();
+      });
+
+      // Timeout: kill after 3 minutes if user never completes auth
+      setTimeout(() => { child.kill(); }, 180_000);
+
+      return { success: true, authUrl, deviceCode };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
@@ -160,8 +207,14 @@ export class CLIDetectionServiceImpl extends Disposable implements ICLIDetection
 
     if (status.installed && def.authArgs !== undefined) {
       try {
-        await this._execFile(def.id, def.authArgs);
-        status.authenticated = true;
+        const { stdout, stderr } = await this._execFile(def.id, def.authArgs);
+        if (def.authSuccessPattern) {
+          // Some CLIs exit 0 even when not authenticated — check stdout
+          const output = stdout + stderr;
+          status.authenticated = def.authSuccessPattern.test(output);
+        } else {
+          status.authenticated = true;
+        }
       } catch {
         status.authenticated = false;
       }

@@ -60,9 +60,14 @@ function createIcon(id: ActivityBarItem): SVGElement {
       break;
     }
     case 'connectors': {
-      // Crosshair hub (circle + cross lines)
-      svg.appendChild(makeCircle('12', '12', '3'));
-      svg.appendChild(makePath('M12 1v6m0 6v6m11-7h-6m-6 0H1'));
+      // Cable connector (Lucide: cable)
+      svg.appendChild(makePath('M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1z'));
+      svg.appendChild(makePath('M17 21v-2'));
+      svg.appendChild(makePath('M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10'));
+      svg.appendChild(makePath('M21 21v-2'));
+      svg.appendChild(makePath('M3 5V3'));
+      svg.appendChild(makePath('M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2z'));
+      svg.appendChild(makePath('M7 5V3'));
       break;
     }
     case 'documents': {

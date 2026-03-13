@@ -6,45 +6,39 @@ description: Install Pandoc document converter on the user's machine
 # Install Pandoc
 
 ## What this tool does
-Pandoc enables GHO Work to convert documents between formats: DOCX, PDF, HTML, Markdown, EPUB, and more. It is used for document export, report generation, and format translation tasks initiated by the agent.
+Pandoc enables GHO Work to convert documents between formats: DOCX, PDF, HTML, Markdown, EPUB, and more.
 
-## Platform detection
-- macOS: check for Homebrew (`brew --version`)
-- Windows: check for winget (`winget --version`)
+## Important: You are the installer
 
-## Installation steps
+The user clicked "Install" because they want YOU to handle this. Do not tell the user to run commands — run them yourself using your bash tool.
+
+## Step 1: Check current state
+
+Run `pandoc --version`. If it succeeds, it's already installed — tell the user and stop.
+
+## Step 2: Install
 
 ### macOS
-1. `brew install pandoc`
-2. If Homebrew is not available, download the `.pkg` installer from https://github.com/jgm/pandoc/releases and run it.
+1. Check for Homebrew: `brew --version`
+2. If brew available: run `brew install pandoc`
+3. If not: tell the user to download from https://github.com/jgm/pandoc/releases
 
 ### Windows
-1. `winget install --id JohnMacFarlane.Pandoc`
-2. If winget is not available, download the `.msi` installer from https://github.com/jgm/pandoc/releases and run it.
+1. Check for winget: `winget --version`
+2. If winget available: run `winget install --id JohnMacFarlane.Pandoc`
+3. If not: tell the user to download from https://github.com/jgm/pandoc/releases
 
 ### Linux
-- Debian/Ubuntu: `sudo apt install pandoc`
-- Fedora/RHEL: `sudo dnf install pandoc`
-- Arch: `sudo pacman -S pandoc`
+- Debian/Ubuntu: run `sudo apt install pandoc`
+- Fedora/RHEL: run `sudo dnf install pandoc`
+- Arch: run `sudo pacman -S pandoc`
 
-## Post-install setup
-Pandoc requires no authentication. No additional configuration is needed for basic use.
+## Step 3: Verify
 
-For PDF output, a LaTeX distribution must also be installed (see Common pitfalls below).
+Run `pandoc --version` to confirm installation. Tell the user the result.
 
-## Verification
-- `pandoc --version` — should print the installed version (e.g., `pandoc 3.1.9`)
+Pandoc requires no authentication or additional configuration for basic use.
 
 ## Common pitfalls
-- **PDF output fails** → LaTeX is required for PDF conversion. Install a minimal LaTeX distribution:
-  - macOS: `brew install --cask basictex` (smaller) or `mactex` (full)
-  - macOS alternative: install TinyTeX via R: `tinytex::install_tinytex()`
-  - Windows: install MiKTeX from https://miktex.org or TinyTeX from https://yihui.org/tinytex/
-- **PATH not updated after install on Windows** → open a new terminal window; the installer should update PATH automatically
-- **Older system pandoc** → system package managers sometimes ship outdated versions; prefer the official installer for features like Lua filters and newer output formats
-
-## Resume
-Check current state before continuing:
-1. `pandoc --version` → is it installed?
-
-If the command succeeds, installation is complete.
+- PDF output needs LaTeX: suggest `brew install --cask basictex` (macOS) or MiKTeX (Windows) if they need PDF conversion
+- Old system version → prefer official installer for latest features

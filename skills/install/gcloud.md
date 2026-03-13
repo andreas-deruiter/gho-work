@@ -8,52 +8,70 @@ description: Install and configure Google Cloud CLI on the user's machine
 ## What this tool does
 Enables GHO Work to integrate with Google Workspace (Gmail, Google Drive, Google Calendar, Google Meet) and Google Cloud resources. Provides authenticated access to Google APIs and cloud services.
 
-## Platform detection
-- macOS: check for Homebrew (`brew --version`), fall back to manual installer
-- Windows: check for winget (`winget --version`), fall back to interactive installer
+## Important: You are the installer
 
-## Installation steps
+The user clicked "Install" because they want YOU to handle this. Do not tell the user to run commands — run them yourself using your bash tool. The user should only need to do things that require their browser (like signing in to Google).
+
+## Step 1: Check current state
+
+Run these commands to see what's already done:
+- `gcloud --version` — is it installed?
+- `gcloud auth list` — is there an active account?
+
+Skip to the first step that fails.
+
+## Step 2: Install
 
 ### macOS
-1. `brew install --cask google-cloud-sdk`
+1. Check for Homebrew: `brew --version`
+2. If brew available: run `brew install --cask google-cloud-sdk`
    - Note: use `--cask`, not `--formula` — the cask installs the full SDK with shell integration
-2. If brew not available: download the tar.gz from https://cloud.google.com/sdk/docs/install and run `./google-cloud-sdk/install.sh`
+3. If brew not available: tell the user to install Homebrew first, or download from https://cloud.google.com/sdk/docs/install
 
 ### Windows
-1. `winget install Google.CloudSDK`
-2. If winget not available: download the interactive installer from https://cloud.google.com/sdk/docs/install-sdk#windows
+1. Check for winget: `winget --version`
+2. If winget available: run `winget install Google.CloudSDK`
+3. If not: tell the user to download from https://cloud.google.com/sdk/docs/install-sdk#windows
 
-## Post-install setup
+## Step 3: PATH setup (macOS cask install)
 
-### PATH setup (macOS cask install)
-After the cask install, add gcloud to your shell PATH:
+After brew cask install, gcloud may not be on PATH yet. Run:
 ```bash
 source "$(brew --prefix)/share/google-cloud-sdk/path.zsh.inc"
 source "$(brew --prefix)/share/google-cloud-sdk/completion.zsh.inc"
 ```
-Add these lines to `~/.zshrc` (or `~/.bashrc` for bash) to persist across sessions.
 
-### Initialize and authenticate
-1. Run `gcloud init`
-2. Follow the interactive prompts:
-   - A browser window will open for Google OAuth
-   - Sign in with your Google/Workspace account
-   - Approve the requested permissions
-   - Select or create a Google Cloud project when prompted
-   - Optionally set a default compute region/zone
+Also add these lines to `~/.zshrc` (or `~/.bashrc`) so it persists:
+```bash
+echo 'source "$(brew --prefix)/share/google-cloud-sdk/path.zsh.inc"' >> ~/.zshrc
+echo 'source "$(brew --prefix)/share/google-cloud-sdk/completion.zsh.inc"' >> ~/.zshrc
+```
 
-## Verification
-- `gcloud --version` — should print SDK version and component versions
-- `gcloud auth list` — should show your active account with an asterisk
+Verify with `gcloud --version`.
+
+## Step 4: Authenticate
+
+**CRITICAL: You MUST use `--no-browser` flag.** Browser-based OAuth does NOT work from a subprocess — the redirect callback loops forever.
+
+Run: `gcloud auth login --no-browser`
+
+Do NOT run `gcloud auth login` without `--no-browser`. The default browser flow will fail.
+
+This prints a URL and a command the user needs to run in their browser:
+- **Show the URL and any code/command to the user FIRST, prominently and clearly**
+- Then tell them to open the browser and complete the sign-in
+- Wait for the command to finish (it will return when auth succeeds)
+
+## Step 5: Verify
+
+Run:
+- `gcloud --version` — confirms installation
+- `gcloud auth list` — confirms active account
+
+Tell the user the result: installed, authenticated, ready to use.
 
 ## Common pitfalls
-- PATH not set after cask install → run the `source` commands above, then restart terminal
-- Multiple Google accounts → switch with `gcloud config set account <email>` or run `gcloud auth login` for a new account
-- Multiple Google Cloud projects → switch with `gcloud config set project <PROJECT_ID>`
-- Browser auth fails → try `gcloud auth login --no-browser` for a device-code-style flow
-- Workspace account vs personal Google account → ensure you sign in with the account that has Workspace access
-- Python version conflict on macOS → gcloud bundles its own Python, but PATH ordering matters; check `which python3`
-
-## Resume
-1. `gcloud --version` → is it installed and on PATH?
-2. `gcloud auth list` → is there an active authenticated account?
+- PATH not set after cask install → run the `source` commands above, then verify
+- Multiple Google accounts → switch with `gcloud config set account <email>`
+- Browser auth fails → use `gcloud auth login --no-browser` for device-code flow
+- Workspace vs personal account → ensure correct account

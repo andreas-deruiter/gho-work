@@ -43,6 +43,8 @@ export const IPC_CHANNELS = {
   CLI_GET_PLATFORM_CONTEXT: 'cli:get-platform-context',
   CLI_INSTALL: 'cli:install',
   CLI_AUTHENTICATE: 'cli:authenticate',
+  CLI_CREATE_AUTH_CONVERSATION: 'cli:create-auth-conversation',
+  CLI_TOOLS_CHANGED: 'cli:tools-changed',
 } as const;
 
 export const SendMessageRequestSchema = z.object({
@@ -164,6 +166,7 @@ export const CopilotCheckResponseSchema = z.object({
     id: z.string(),
     name: z.string(),
   })).optional(),
+  error: z.string().optional(),
 });
 export type CopilotCheckResponse = z.infer<typeof CopilotCheckResponseSchema>;
 

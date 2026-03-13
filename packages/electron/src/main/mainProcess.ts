@@ -95,8 +95,19 @@ export function createMainProcess(
       storageService = new SqliteStorageService(globalDbPath, workspaceDbDir);
       workspaceId = 'default';
     } catch (err) {
-      console.warn('[main] SQLite storage unavailable:', (err as Error).message);
-      console.warn('[main] Run "npx @electron/rebuild -w better-sqlite3" to fix.');
+      console.error('[main] CRITICAL: SQLite storage unavailable:', (err as Error).message);
+      console.error('[main] Conversations, settings, and install/auth flows will not work.');
+      console.error('[main] Fix: npx @electron/rebuild -w better-sqlite3 --module-dir apps/desktop');
+      // Show error dialog so the user knows the app is degraded — never silently continue
+      void import('electron').then(({ dialog }) => {
+        dialog.showErrorBox(
+          'GHO Work — Storage Unavailable',
+          'The database module failed to load. Conversations and settings will not work.\n\n'
+          + 'To fix, quit the app and run:\n'
+          + 'npx @electron/rebuild -w better-sqlite3 --module-dir apps/desktop\n\n'
+          + `Error: ${(err as Error).message}`,
+        );
+      });
     }
   }
 
@@ -189,14 +200,18 @@ export function createMainProcess(
   const useMock = options?.useMockSDK === true;
   const sdk = new CopilotSDKImpl({ cwd: process.cwd(), useMock });
 
-  // Start SDK async:
+  // Start SDK async — store promise so IPC handlers can await readiness.
   // - If --mock flag: start in mock mode immediately
   // - If onboarding complete: start with real gh token
   // - If onboarding incomplete: defer start until ONBOARDING_COMPLETE handler
+  let _sdkReadyResolve: () => void;
+  const sdkReady = new Promise<void>((resolve) => { _sdkReadyResolve = resolve; });
+
   void (async () => {
     if (useMock) {
       await sdk.start();
       console.log('[main] Agent started in Mock mode (--mock flag)');
+      _sdkReadyResolve();
       return;
     }
 
@@ -206,25 +221,38 @@ export function createMainProcess(
         if (token.trim()) {
           (sdk as any)._options.githubToken = token.trim();
         }
-      } catch { /* will use useLoggedInUser default */ }
+      } catch (err) {
+        console.warn('[main] Could not get gh auth token, SDK will use default auth:', err instanceof Error ? err.message : String(err));
+      }
 
       try {
         await sdk.start();
         console.log('[main] Agent started in Copilot SDK mode');
       } catch (err) {
-        console.error('[main] Copilot SDK failed to start:', err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[main] CRITICAL: Copilot SDK failed to start:', msg);
+        // Show error to user — never silently degrade to a broken state
+        const { dialog } = await import('electron');
+        dialog.showErrorBox(
+          'GHO Work — Agent Unavailable',
+          'The Copilot SDK failed to start. The AI agent will not work.\n\n'
+          + 'This usually means GitHub authentication is missing or expired.\n'
+          + 'Try: gh auth login\n\n'
+          + `Error: ${msg}`,
+        );
       }
     } else {
       console.log('[main] SDK start deferred — waiting for onboarding to complete');
     }
+    _sdkReadyResolve();
   })();
 
-  // In development, app.getAppPath() returns apps/desktop/out/main (the main entry dir).
-  // Skills live at <repo-root>/skills/, which is 4 levels up from out/main.
+  // In development, app.getAppPath() returns apps/desktop (the package directory).
+  // Skills live at <repo-root>/skills/, which is 2 levels up.
   // In packaged builds, they're copied to resources/skills/.
   const skillsPath = app.isPackaged
     ? path.join(process.resourcesPath, 'skills')
-    : path.join(app.getAppPath(), '..', '..', '..', '..', 'skills');
+    : path.join(app.getAppPath(), '..', '..', 'skills');
   const agentService = new AgentServiceImpl(sdk, conversationService, skillsPath);
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
@@ -283,10 +311,28 @@ export function createMainProcess(
 
   ipcMainAdapter.handle(IPC_CHANNELS.AGENT_SEND_MESSAGE, async (...args: unknown[]) => {
     const request = args[0] as SendMessageRequest;
+
+    // Build system prompt with CLI tool context so the agent knows what's available
+    let systemPrompt = '';
+    try {
+      const tools = await cliDetectionService.detectAll();
+      const installed = tools.filter(t => t.installed);
+      if (installed.length > 0) {
+        const lines = installed.map(t => {
+          const auth = t.authenticated === true ? ' (authenticated)' : t.authenticated === false ? ' (not authenticated)' : '';
+          return `- ${t.name} (${t.id}) v${t.version ?? 'unknown'}${auth}`;
+        });
+        systemPrompt = `## Available CLI Tools\nThe following CLI tools are installed on the user's machine and available for you to use via bash:\n${lines.join('\n')}`;
+      }
+    } catch (err) {
+      console.warn('[main] Could not get CLI tool status for agent context:', err instanceof Error ? err.message : String(err));
+    }
+
     const context: AgentContext = {
       conversationId: request.conversationId,
       workspaceId: workspaceId ?? 'default',
       model: request.model,
+      systemPrompt: systemPrompt || undefined,
     };
 
     // Persist user message
@@ -296,7 +342,7 @@ export function createMainProcess(
           role: 'user',
           content: request.content,
         });
-      } catch { /* non-critical */ }
+      } catch (err) { console.warn('[main] Non-critical error:', err instanceof Error ? err.message : String(err)); }
     }
 
     // Stream events to renderer in background
@@ -312,7 +358,7 @@ export function createMainProcess(
             if (connected.length > 0) {
               mcpServers = mapConnectorsToSDKConfig(connected);
             }
-          } catch { /* non-critical */ }
+          } catch (err) { console.warn('[main] Non-critical error:', err instanceof Error ? err.message : String(err)); }
         }
 
         for await (const event of agentService.executeTask(request.content, context, mcpServers)) {
@@ -337,7 +383,7 @@ export function createMainProcess(
             role: 'assistant',
             content: assistantContent,
           });
-        } catch { /* non-critical */ }
+        } catch (err) { console.warn('[main] Non-critical error:', err instanceof Error ? err.message : String(err)); }
       }
 
       // Auto-title: on first message, use prompt as title (truncated to 60 chars)
@@ -350,7 +396,7 @@ export function createMainProcess(
               : request.content;
             conversationService.renameConversation(request.conversationId, title);
           }
-        } catch { /* non-critical */ }
+        } catch (err) { console.warn('[main] Non-critical error:', err instanceof Error ? err.message : String(err)); }
       }
     })();
 
@@ -419,6 +465,8 @@ export function createMainProcess(
   // Model handlers
   ipcMainAdapter.handle(IPC_CHANNELS.MODEL_LIST, async () => {
     try {
+      // Wait for SDK to finish starting before listing models
+      await sdkReady;
       const models = await sdk.listModels();
       return {
         models: models.map((m) => ({
@@ -427,13 +475,11 @@ export function createMainProcess(
           provider: m.id.startsWith('claude') ? 'anthropic' : 'openai',
         })),
       };
-    } catch {
+    } catch (err) {
+      console.error('[MODEL_LIST] Failed to list models from SDK:', err);
       return {
-        models: [
-          { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
-          { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
-          { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'anthropic' },
-        ],
+        models: [],
+        error: 'Failed to load models from SDK. Check your GitHub authentication.',
       };
     }
   });
@@ -469,6 +515,7 @@ export function createMainProcess(
     try {
       await execFileAsync('which', ['gh']);
     } catch {
+      // gh not found on PATH — expected if not installed
       return { installed: false, authenticated: false, hasCopilotScope: false };
     }
     const installed = true;
@@ -480,7 +527,9 @@ export function createMainProcess(
       if (match) {
         version = match[1];
       }
-    } catch { /* non-critical */ }
+    } catch (err) {
+      console.warn('[ONBOARDING_CHECK_GH] Failed to get gh version:', err instanceof Error ? err.message : String(err));
+    }
 
     // Check auth status
     let authenticated = false;
@@ -524,7 +573,9 @@ export function createMainProcess(
           req.setTimeout(5000, () => { req.destroy(); reject(new Error('timeout')); });
         });
         hasCopilotScope = scopeCheck.split(',').map((s) => s.trim()).includes('copilot');
-      } catch { /* non-critical, assume scope missing */ }
+      } catch (err) {
+        console.warn('[ONBOARDING_CHECK_GH] Failed to check copilot scope:', err instanceof Error ? err.message : String(err));
+      }
     }
 
     return { installed, version, authenticated, login, hasCopilotScope };
@@ -615,7 +666,10 @@ export function createMainProcess(
                   if (typeof v === 'string') { headers[k] = v; }
                 }
                 resolve({ status: res.statusCode ?? 0, headers, body: JSON.parse(data) });
-              } catch { resolve({ status: res.statusCode ?? 0, headers: {}, body: {} as T }); }
+              } catch (err) {
+                console.warn('[ghApiRequest] Failed to parse JSON response:', err instanceof Error ? err.message : String(err));
+                resolve({ status: res.statusCode ?? 0, headers: {}, body: {} as T });
+              }
             });
           });
           req.on('error', reject);
@@ -664,8 +718,9 @@ export function createMainProcess(
         },
         models,
       };
-    } catch {
-      return { hasSubscription: false };
+    } catch (err) {
+      console.error('[COPILOT_CHECK] Failed to check Copilot subscription:', err);
+      return { hasSubscription: false, error: 'Failed to check Copilot subscription.' };
     }
   });
 
@@ -688,9 +743,12 @@ export function createMainProcess(
           if (match) {
             version = match[0];
           }
-        } catch { /* version check non-critical */ }
+        } catch (err) {
+          console.warn(`[ONBOARDING_DETECT_TOOLS] Failed to get version for ${def.name}:`, err instanceof Error ? err.message : String(err));
+        }
         return { ...def, found: true, version };
       } catch {
+        // Tool not found on PATH — expected if not installed
         return { ...def, found: false };
       }
     }));
@@ -765,6 +823,11 @@ export function createMainProcess(
     await cliDetectionService.refresh();
   });
 
+  // Push CLI tool status changes to renderer (e.g., after background auth completes)
+  cliDetectionService.onDidChangeTools((tools) => {
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CLI_TOOLS_CHANGED, { tools });
+  });
+
   ipcMainAdapter.handle(IPC_CHANNELS.CLI_GET_PLATFORM_CONTEXT, async () => {
     return platformDetectionService.detect();
   });
@@ -788,10 +851,24 @@ export function createMainProcess(
   ipcMainAdapter.handle(IPC_CHANNELS.CLI_AUTHENTICATE, async (...args: unknown[]) => {
     const request = args[0] as { toolId: string };
     const result = await cliDetectionService.authenticateTool(request.toolId);
-    if (result.success) {
-      await cliDetectionService.refresh();
-    }
     return result;
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CLI_CREATE_AUTH_CONVERSATION, async (...args: unknown[]) => {
+    const { toolId } = args[0] as { toolId: string };
+    // Start auth in background to capture device code/URL
+    const authResult = await cliDetectionService.authenticateTool(toolId);
+    // Create conversation with auth context (device code, URL)
+    const conversationId = await agentService.createAuthConversation(toolId, {
+      authUrl: authResult.authUrl,
+      deviceCode: authResult.deviceCode,
+    });
+    // Open the auth URL in browser after a delay — gives the agent time
+    // to show the device code to the user first
+    if (authResult.authUrl) {
+      setTimeout(() => { void shell.openExternal(authResult.authUrl!); }, 3000);
+    }
+    return { conversationId, authUrl: authResult.authUrl, deviceCode: authResult.deviceCode };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {

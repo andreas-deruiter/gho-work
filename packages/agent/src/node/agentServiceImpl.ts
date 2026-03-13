@@ -24,6 +24,8 @@ export class AgentServiceImpl implements IAgentService {
   private _activeTaskId: string | null = null;
   private _activeSession: ISDKSession | null = null;
   private readonly _installContexts = new Map<string, string>();
+  /** Cached sessions keyed by conversationId — enables multi-turn conversations. */
+  private readonly _sessions = new Map<string, ISDKSession>();
 
   constructor(
     private readonly _sdk: ICopilotSDK,
@@ -39,32 +41,37 @@ export class AgentServiceImpl implements IAgentService {
     const queue = new AsyncQueue<AgentEvent>();
 
     try {
-      // Build system message from context files
-      let systemContent = '';
-      if (this._readContextFiles) {
-        systemContent = await this._readContextFiles();
-      }
-      if (context.systemPrompt) {
-        systemContent += (systemContent ? '\n\n' : '') + context.systemPrompt;
-      }
+      // Reuse existing session for this conversation, or create a new one
+      let session = this._sessions.get(context.conversationId);
+      if (!session) {
+        // Build system message from context files
+        let systemContent = '';
+        if (this._readContextFiles) {
+          systemContent = await this._readContextFiles();
+        }
+        if (context.systemPrompt) {
+          systemContent += (systemContent ? '\n\n' : '') + context.systemPrompt;
+        }
 
-      // Prepend install context if available for this conversation
-      const installContext = this._installContexts.get(context.conversationId);
-      if (installContext) {
-        systemContent = installContext + (systemContent ? '\n\n' + systemContent : '');
-      }
+        // Prepend install context if available for this conversation
+        const installContext = this._installContexts.get(context.conversationId);
+        if (installContext) {
+          systemContent = installContext + (systemContent ? '\n\n' + systemContent : '');
+        }
 
-      const session = await this._sdk.createSession({
-        model: context.model ?? 'gpt-4o',
-        sessionId: context.conversationId,
-        systemMessage: systemContent ? { mode: 'append', content: systemContent } : undefined,
-        streaming: true,
-        mcpServers,
-      });
+        session = await this._sdk.createSession({
+          model: context.model ?? 'gpt-4o',
+          sessionId: context.conversationId,
+          systemMessage: systemContent ? { mode: 'append', content: systemContent } : undefined,
+          streaming: true,
+          mcpServers,
+        });
+        this._sessions.set(context.conversationId, session);
+      }
       this._activeSession = session;
 
-      // Map SDK events to AgentEvents
-      session.on((event: SessionEvent) => {
+      // Map SDK events to AgentEvents (re-register each turn since queue is new)
+      const unsubscribe = session.on((event: SessionEvent) => {
         const mapped = this._mapEvent(event);
         if (mapped) {
           queue.push(mapped);
@@ -83,6 +90,7 @@ export class AgentServiceImpl implements IAgentService {
 
       await session.send({ prompt });
       yield* queue;
+      unsubscribe();
     } catch (err) {
       queue.push({
         type: 'error',
@@ -133,17 +141,45 @@ export class AgentServiceImpl implements IAgentService {
     return conversation.id;
   }
 
+  async createAuthConversation(toolId: string, authInfo: { authUrl?: string; deviceCode?: string }): Promise<string> {
+    if (!this._conversationService) {
+      throw new Error('Auth conversations require conversation service (no workspace)');
+    }
+    const skillContent = await this._loadSkill('auth', toolId);
+    if (!skillContent) {
+      throw new Error(`Auth skill not found for tool: ${toolId}`);
+    }
+    const authContext = [
+      '## Authentication Context',
+      authInfo.deviceCode ? `- **Device code:** ${authInfo.deviceCode}` : '',
+      authInfo.authUrl ? `- **Auth URL:** ${authInfo.authUrl}` : '',
+    ].filter(Boolean).join('\n');
+    const systemMessage = `${skillContent}\n\n${authContext}`;
+    const toolNames: Record<string, string> = {
+      gh: 'GitHub CLI', mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
+      gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
+    };
+    const conversation = this._conversationService.createConversation('default');
+    this._conversationService.renameConversation(conversation.id, `Authenticate ${toolNames[toolId] ?? toolId}`);
+    this._installContexts.set(conversation.id, systemMessage);
+    return conversation.id;
+  }
+
   getInstallContext(conversationId: string): string | undefined {
     return this._installContexts.get(conversationId);
   }
 
-  private async _loadInstallSkill(toolId: string): Promise<string | undefined> {
-    const skillPath = path.join(this._bundledSkillsPath, 'install', `${toolId}.md`);
+  private async _loadSkill(category: string, toolId: string): Promise<string | undefined> {
+    const skillPath = path.join(this._bundledSkillsPath, category, `${toolId}.md`);
     try {
       return await fs.readFile(skillPath, 'utf-8');
     } catch {
       return undefined;
     }
+  }
+
+  private async _loadInstallSkill(toolId: string): Promise<string | undefined> {
+    return this._loadSkill('install', toolId);
   }
 
   private _mapEvent(event: SessionEvent): AgentEvent | null {

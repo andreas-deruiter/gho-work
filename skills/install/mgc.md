@@ -8,42 +8,65 @@ description: Install and configure Microsoft Graph CLI on the user's machine
 ## What this tool does
 Enables GHO Work to access Microsoft 365 services: Outlook email, OneDrive files, Teams messages, Calendar events, SharePoint documents.
 
-## Platform detection
-- macOS: check for Homebrew, fall back to dotnet global tool
-- Windows: check for winget, fall back to dotnet global tool
+## Important: You are the installer
 
-## Installation steps
+The user clicked "Install" because they want YOU to handle this. Do not tell the user to run commands — run them yourself using your bash tool. The user should only need to do things that require their browser (like signing in to Microsoft).
+
+## CRITICAL: Install `mgc`, not `m365`
+
+These are different tools:
+- `mgc` = Microsoft Graph CLI (Microsoft's official tool) — THIS is what you're installing
+- `m365` = CLI for Microsoft 365 (PnP community tool) — NOT this one
+
+Do not install `m365` or any other tool. Install `mgc` only.
+
+## Step 1: Check current state
+
+Run these commands to see what's already done:
+- `mgc --version` — is it installed?
+- `mgc me get` — is it authenticated?
+
+Skip to the first step that fails.
+
+## Step 2: Install
 
 ### macOS
-1. `brew install microsoft/msgraph/msgraph-cli`
-2. If brew not available: `dotnet tool install Microsoft.Graph.Cli -g` (requires .NET runtime)
+1. Check for Homebrew: `brew --version`
+2. If brew available: run `brew install microsoft/msgraph/msgraph-cli`
+3. If brew not available: run `dotnet tool install Microsoft.Graph.Cli -g` (requires .NET runtime)
 
 ### Windows
-1. `winget install Microsoft.GraphCLI`
-2. If winget not available: `dotnet tool install Microsoft.Graph.Cli -g`
+1. Check for winget: `winget --version`
+2. If winget available: run `winget install Microsoft.GraphCLI`
+3. If not: run `dotnet tool install Microsoft.Graph.Cli -g`
 
-## Post-install setup
-Auth uses device code flow:
-1. Run `mgc login --scopes "User.Read Mail.Read Files.Read Calendars.Read"`
-2. A device code will be displayed — copy it
-3. Open https://microsoft.com/devicelogin in a browser
-4. Enter the device code
-5. Sign in with your Microsoft account
-6. Approve the requested permissions
+## Step 3: Authenticate
+
+**CRITICAL: You MUST use device code flow.** Browser-based OAuth does NOT work from a subprocess — the redirect callback loops forever.
+
+Run: `mgc login --strategy DeviceCode --scopes "User.Read Mail.Read Files.Read Calendars.Read"`
+
+Do NOT run `mgc login` without `--strategy DeviceCode`. The default browser flow will fail.
+
+This will print a URL and a device code to the terminal:
+- **Show the device code to the user FIRST, prominently and clearly**
+- Then tell them to open https://microsoft.com/devicelogin in their browser
+- Tell them to enter the code and sign in with their Microsoft account
+- Wait for the command to complete (it returns when auth succeeds)
 
 Minimum scopes for GHO Work: User.Read, Mail.Read, Files.Read, Calendars.Read
 
-## Verification
-- `mgc --version` — should print version
-- `mgc me get` — should return user profile JSON
+## Step 4: Verify
+
+Run:
+- `mgc --version` — confirms installation
+- `mgc me get` — confirms authentication (should return user profile JSON)
+
+Tell the user the result: installed, authenticated, ready to use.
 
 ## Common pitfalls
-- .NET runtime needed for dotnet tool install → install .NET from https://dot.net
+- **Auth loop in browser** → you used browser flow instead of device code. Always use `--strategy DeviceCode`
+- .NET runtime needed for dotnet tool install → install from https://dot.net
 - Tenant restrictions → admin may need to consent to the app
-- Conditional access policies blocking device code → contact IT admin
-- Multiple Microsoft accounts → sign out first with `mgc logout`, then sign in with correct account
-- Firewall blocking → ensure access to login.microsoftonline.com and graph.microsoft.com
-
-## Resume
-1. `mgc --version` → is it installed?
-2. `mgc me get` → is it authenticated and authorized?
+- Conditional access policies → contact IT admin
+- Multiple accounts → sign out first with `mgc logout`, then sign in with correct account

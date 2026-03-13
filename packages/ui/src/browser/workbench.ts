@@ -131,29 +131,57 @@ export class Workbench extends Disposable {
 
     // Handle CLI install from sidebar — create an install conversation
     this._connectorSidebar.onDidRequestInstallCLI(async (toolId) => {
-      this._connectorSidebar.setCLIToolLoading(toolId, 'Installing...');
+      this._connectorSidebar.setCLIToolLoading(toolId, 'Starting...');
       try {
         const result = await this._ipc.invoke<{ conversationId: string }>(
           IPC_CHANNELS.CLI_CREATE_INSTALL_CONVERSATION,
           { toolId },
         );
-        await this._openInstallConversation(result.conversationId);
-      } catch (err) {
-        console.error('[workbench] Install conversation failed, falling back:', err);
-        // Fallback to direct install if conversation creation fails
-        const result = await this._ipc.invoke<{ success: boolean; installUrl?: string }>(IPC_CHANNELS.CLI_INSTALL, { toolId });
+        const toolNames: Record<string, string> = {
+          gh: 'GitHub CLI', pandoc: 'pandoc', git: 'git',
+          mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
+          gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
+        };
+        // Refresh sidebar to clear loading spinner — conversation handles UX now
         await this._connectorSidebar.refreshCLITools();
-        if (result.success && !this._connectorSidebar.isCLIToolInstalled(toolId)) {
-          this._connectorSidebar.showCLIToolCheckAgain(toolId);
-        }
+        await this._openInstallConversation(result.conversationId, toolNames[toolId] ?? toolId);
+      } catch (err) {
+        console.error('[workbench] Install conversation failed:', err);
+        await this._connectorSidebar.refreshCLITools();
+        // Show error — do NOT silently fall back to opening a URL
+        const toolNames: Record<string, string> = {
+          gh: 'GitHub CLI', pandoc: 'pandoc', git: 'git',
+          mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
+          gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
+        };
+        const name = toolNames[toolId] ?? toolId;
+        this._chatPanel.showError(`Failed to start ${name} installation. Check that the agent service is running.`);
       }
     });
 
-    // Handle CLI auth from sidebar with loading states
+    // Handle CLI auth from sidebar — create auth conversation with device code
     this._connectorSidebar.onDidRequestAuthCLI(async (toolId) => {
-      this._connectorSidebar.setCLIToolLoading(toolId, 'Authenticating...');
-      await this._ipc.invoke(IPC_CHANNELS.CLI_AUTHENTICATE, { toolId });
-      await this._connectorSidebar.refreshCLITools();
+      this._connectorSidebar.setCLIToolLoading(toolId, 'Starting...');
+      try {
+        const result = await this._ipc.invoke<{
+          conversationId: string; authUrl?: string; deviceCode?: string;
+        }>(IPC_CHANNELS.CLI_CREATE_AUTH_CONVERSATION, { toolId });
+        const toolNames: Record<string, string> = {
+          gh: 'GitHub CLI', mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
+          gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
+        };
+        // Refresh sidebar to clear loading spinner — conversation handles UX now
+        await this._connectorSidebar.refreshCLITools();
+        await this._openAuthConversation(
+          result.conversationId,
+          toolNames[toolId] ?? toolId,
+          result.authUrl,
+          result.deviceCode,
+        );
+      } catch (err) {
+        console.error(`[workbench] Auth conversation failed for ${toolId}:`, err);
+        await this._connectorSidebar.refreshCLITools();
+      }
     });
 
     // Handle save/delete from drawer
@@ -183,7 +211,7 @@ export class Workbench extends Disposable {
     this._statusBar.addRightItem('Copilot SDK');
   }
 
-  private async _openInstallConversation(conversationId: string): Promise<void> {
+  private async _openInstallConversation(conversationId: string, toolName?: string): Promise<void> {
     try {
       // Switch activity bar and panels to chat view
       this._activityBar.setActiveItem('chat');
@@ -191,8 +219,39 @@ export class Workbench extends Disposable {
 
       await this._chatPanel.loadConversation(conversationId);
       await this._conversationList.refresh();
+
+      // Auto-send kickoff message to trigger the install skill
+      const name = toolName ?? 'this tool';
+      await this._chatPanel.sendMessage(`Help me install ${name} on my machine.`);
     } catch (err) {
       console.error('Failed to open install conversation:', err);
+    }
+  }
+
+  private async _openAuthConversation(
+    conversationId: string,
+    toolName: string,
+    authUrl?: string,
+    deviceCode?: string,
+  ): Promise<void> {
+    try {
+      this._activityBar.setActiveItem('chat');
+      this._sidebar.showPanel('chat');
+
+      await this._chatPanel.loadConversation(conversationId);
+      await this._conversationList.refresh();
+
+      // Send kickoff message — agent will show device code BEFORE user opens browser
+      let kickoff = `Help me authenticate ${toolName}.`;
+      if (deviceCode) {
+        kickoff += ` The device code is: ${deviceCode}.`;
+      }
+      if (authUrl) {
+        kickoff += ` The auth URL is: ${authUrl}.`;
+      }
+      await this._chatPanel.sendMessage(kickoff);
+    } catch (err) {
+      console.error('Failed to open auth conversation:', err);
     }
   }
 

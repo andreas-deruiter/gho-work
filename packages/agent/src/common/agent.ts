@@ -7,6 +7,7 @@ export interface IAgentService {
   cancelTask(taskId: string): void;
   getActiveTaskId(): string | null;
   createInstallConversation(toolId: string, platformContext: PlatformContext): Promise<string>;
+  createAuthConversation(toolId: string, authInfo: { authUrl?: string; deviceCode?: string }): Promise<string>;
   getInstallContext(conversationId: string): string | undefined;
 }
 

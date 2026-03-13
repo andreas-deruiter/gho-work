@@ -50,6 +50,11 @@ export class ConnectorSidebarWidget extends Widget {
       const data = args[0] as { id: string; status: ConnectorConfig['status'] };
       this._items.get(data.id)?.updateStatus(data.status);
     });
+
+    // Listen for CLI tool changes (e.g., after background auth completes)
+    this._ipc.on(IPC_CHANNELS.CLI_TOOLS_CHANGED, () => {
+      void this.refreshCLITools();
+    });
   }
 
   async activate(): Promise<void> {

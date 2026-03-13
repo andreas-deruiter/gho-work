@@ -6,51 +6,62 @@ description: Install and configure GitHub CLI on the user's machine
 # Install GitHub CLI (gh)
 
 ## What this tool does
-`gh` enables GHO Work to manage GitHub issues, pull requests, repositories, and Actions workflows directly from conversations. It is the primary bridge between the agent and GitHub-hosted projects.
+`gh` enables GHO Work to manage GitHub issues, pull requests, repositories, and Actions workflows directly from conversations.
 
-## Platform detection
-- macOS: check for Homebrew (`brew --version`), fall back to `.pkg` from GitHub releases
-- Windows: check for winget (`winget --version`), fall back to Chocolatey (`choco --version`), fall back to `.msi` from GitHub releases
+## Important: You are the installer
 
-## Installation steps
+The user clicked "Install" because they want YOU to handle this. Do not tell the user to run commands — run them yourself using your bash tool. The user should only need to do things that require their browser (like signing in to GitHub).
+
+## Step 1: Check current state
+
+Run these commands to see what's already done:
+- `gh --version` — is it installed?
+- `gh auth status` — is it authenticated?
+
+Skip to the first step that fails.
+
+## Step 2: Install
 
 ### macOS
-1. `brew install gh`
-2. If Homebrew is not available, download the `.pkg` from https://github.com/cli/cli/releases and run the installer.
+1. Check for Homebrew: `brew --version`
+2. If brew available: run `brew install gh`
+3. If brew not available: tell the user to download from https://github.com/cli/cli/releases
 
 ### Windows
-1. `winget install --id GitHub.cli`
-2. If winget is not available: `choco install gh`
-3. If neither is available: download the `.msi` from https://github.com/cli/cli/releases and run the installer.
+1. Check for winget: `winget --version`
+2. If winget available: run `winget install --id GitHub.cli`
+3. If not, check chocolatey: `choco --version`, then `choco install gh`
+4. If neither: tell the user to download from https://github.com/cli/cli/releases
 
 ### Linux
-- Debian/Ubuntu: `sudo apt install gh` (after adding the GitHub apt repo per https://cli.github.com/manual/installation)
-- Fedora/RHEL: `sudo dnf install gh`
-- Arch: `sudo pacman -S github-cli`
+- Debian/Ubuntu: run `sudo apt install gh` (after adding GitHub apt repo)
+- Fedora/RHEL: run `sudo dnf install gh`
+- Arch: run `sudo pacman -S github-cli`
 
-## Post-install setup
-Auth flow: `gh auth login`
-1. Select **GitHub.com** (or your enterprise hostname)
-2. Select **HTTPS** protocol
-3. Authenticate via **browser OAuth** (preferred) or paste a personal access token
-4. Scopes needed: `repo`, `read:org`
+## Step 3: Authenticate
 
-## Verification
-- `gh --version` — should print the installed version (e.g., `gh version 2.45.0`)
-- `gh auth status` — should show the logged-in user and active scopes
+Run `gh auth login --web` to start browser-based OAuth.
+
+This will:
+- Print a one-time code
+- **Show the code to the user FIRST, prominently and clearly**
+- Then tell them the browser will open where they can enter the code and sign in
+- Wait for the command to complete
+
+If `--web` doesn't work, try `gh auth login` with protocol HTTPS and browser auth.
+
+Scopes needed: `repo`, `read:org`
+
+## Step 4: Verify
+
+Run:
+- `gh --version` — confirms installation
+- `gh auth status` — confirms authentication with user and scopes
+
+Tell the user the result: installed, authenticated, ready to use.
 
 ## Common pitfalls
-- **Homebrew not installed** → install Homebrew first:
-  `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
-- **Corporate SSO** → authenticate against the enterprise hostname:
-  `gh auth login --hostname enterprise.github.com`
-- **Multiple GitHub accounts** → switch between them with `gh auth switch`
-- **PATH not updated after install** → restart the shell or run `source ~/.zshrc` (macOS/Linux) or open a new terminal (Windows)
-- **`winget` not available on older Windows** → update Windows or use the `.msi` installer directly
-
-## Resume
-Check current state before continuing:
-1. `gh --version` → is it installed?
-2. `gh auth status` → is it authenticated?
-
-If both pass, installation is complete. Skip to whichever step failed.
+- **Homebrew not installed** → install Homebrew first
+- **Corporate SSO** → use `gh auth login --hostname enterprise.github.com`
+- **Multiple accounts** → switch with `gh auth switch`
+- **PATH not updated** → restart shell or `source ~/.zshrc`

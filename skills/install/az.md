@@ -6,42 +6,56 @@ description: Install and configure Azure CLI on the user's machine
 # Install Azure CLI (az)
 
 ## What this tool does
-Enables GHO Work to manage Azure resources and integrate with Microsoft 365 via Azure Active Directory. Provides access to Azure subscriptions, resource groups, and services, as well as AAD-based identity and app registration management.
+Enables GHO Work to manage Azure resources and integrate with Microsoft 365 via Azure Active Directory.
 
-## Platform detection
-- macOS: check for Homebrew (`brew --version`), fall back to manual installer
-- Windows: check for winget (`winget --version`), fall back to MSI installer
+## Important: You are the installer
 
-## Installation steps
+The user clicked "Install" because they want YOU to handle this. Do not tell the user to run commands — run them yourself using your bash tool. The user should only need to do things that require their browser (like signing in to Azure).
+
+## Step 1: Check current state
+
+Run these commands to see what's already done:
+- `az --version` — is it installed?
+- `az account show` — is it authenticated?
+
+Skip to the first step that fails.
+
+## Step 2: Install
 
 ### macOS
-1. `brew install azure-cli`
-2. If brew not available: download the pkg installer from https://aka.ms/installazureclimacos
+1. Check for Homebrew: `brew --version`
+2. If brew available: run `brew install azure-cli`
+3. If brew not available: tell the user to download from https://aka.ms/installazureclimacos
 
 ### Windows
-1. `winget install -e --id Microsoft.AzureCLI`
-2. If winget not available: download the MSI installer from https://aka.ms/installazurecliwindows
+1. Check for winget: `winget --version`
+2. If winget available: run `winget install -e --id Microsoft.AzureCLI`
+3. If not: tell the user to download from https://aka.ms/installazurecliwindows
 
-## Post-install setup
-Auth uses browser-based OAuth:
-1. Run `az login`
-2. A browser window will open automatically
-3. Sign in with your Microsoft/Azure account
-4. Close the browser tab once authentication completes
-5. The CLI will display your active subscription
+## Step 3: Authenticate
 
-## Verification
-- `az --version` — should print version info
-- `az account show` — should return subscription info with name, ID, and tenantId
+**CRITICAL: You MUST use device code flow.** Browser-based OAuth does NOT work from a subprocess — the redirect callback loops forever.
+
+Run: `az login --use-device-code`
+
+Do NOT run `az login` without `--use-device-code`. The default browser flow will fail.
+
+This will print a URL and a code:
+- **Show the code to the user FIRST, prominently and clearly**
+- Then tell them to open the URL in their browser
+- Tell them to enter the code and sign in with their Microsoft/Azure account
+- Wait for the command to complete (it returns the active subscription on success)
+
+## Step 4: Verify
+
+Run:
+- `az --version` — confirms installation
+- `az account show` — confirms authentication with subscription info
+
+Tell the user the result: installed, authenticated, ready to use.
 
 ## Common pitfalls
-- Python dependency issues on some macOS versions → use the brew install path which bundles its own Python, or use the pkg installer
-- Proxy configuration needed → run `az configure` and set `http_proxy`/`https_proxy` environment variables
-- Multiple subscriptions → switch with `az account set --subscription "<subscription-name-or-id>"`
-- Login loop (browser doesn't close) → try `az login --use-device-code` as a fallback
-- AAD Conditional Access blocking → contact IT admin; may need to use `az login --tenant <tenant-id>` to target the correct tenant
-- Command not found after install → restart terminal or run `source ~/.zshrc` / `source ~/.bashrc`
-
-## Resume
-1. `az --version` → is it installed?
-2. `az account show` → is it authenticated and pointing to the correct subscription?
+- Python dependency issues on macOS → use brew install path
+- Multiple subscriptions → switch with `az account set --subscription "<name>"`
+- Login loop → try `az login --use-device-code` as fallback
+- AAD Conditional Access → contact IT admin

@@ -53,8 +53,9 @@ export class ModelSelector extends Disposable {
 
     if (this._models.length === 0) {
       const opt = document.createElement('option');
-      opt.value = this._selectedModel;
-      opt.textContent = this._selectedModel;
+      opt.value = '';
+      opt.textContent = 'Loading models…';
+      opt.disabled = true;
       select.appendChild(opt);
     }
 

@@ -73,6 +73,8 @@ Browser code (`packages/ui/src/browser/`, renderer entry points) must import fro
 
 **Native modules and bundling:** Before instantiating a class that uses a native module (like `better-sqlite3`), trace the bundling chain: is the module externalized in `electron.vite.config.ts`? Is the `require()` at the top level or lazy (inside a function)? Will tree-shaking remove it if the class is only used as a type? Adding a single `new Foo()` call can force the bundler to include a previously tree-shaken native module import, crashing the app in a different runtime (e.g., Electron vs Node.js ABI mismatch). Native modules used in Electron must be lazy-loaded (`const load = () => require('mod')`) so the `require` only executes when the code path is actually reached.
 
+**Never restore Node.js ABI for better-sqlite3.** Keep it compiled for Electron at all times. `npm rebuild better-sqlite3` compiles for Node.js (ABI 141), crashing Electron (ABI 133). Vitest tests don't need the Node.js ABI because the native module is lazy-loaded. E2E test teardown must NOT restore the Node.js build. After any `npm install` or `npm rebuild`, re-run: `cd node_modules/better-sqlite3 && npx node-gyp rebuild --target=35.7.5 --arch=arm64 --dist-url=https://electronjs.org/headers --runtime=electron`.
+
 ### Dependency decisions
 
 Follow VS Code's framework for deciding build vs buy:
@@ -136,6 +138,11 @@ Use these skills at the appropriate points in the development cycle:
 - **playwright-testing** — Playwright e2e patterns for Electron: app exploration, test generation, locator strategy, debugging
 - **context-map** — Pre-edit checklist: map affected files, dependencies, tests, and risks before multi-file changes
 
+### Bundled skills (in skills/)
+Agent-facing skills (e.g., `skills/install/`, `skills/auth/`) are loaded as system prompts for the Copilot SDK agent. They must be written as **agent directives**, not user-facing documentation. The agent has bash tool access — tell it to run commands itself. The user should never need to open a terminal. All CLI tool workflows (install, authenticate) use the conversational approach: create a conversation, auto-send a kickoff message, let the agent guide the user.
+
+**CLI auth must use device code flow.** Browser-based OAuth (localhost redirect) does not work from a subprocess — the redirect loops forever. Every `authCommand` in `cliDetectionImpl.ts` and every auth step in skills must include the device-code flag (e.g., `--authType deviceCode`, `--use-device-code`, `--strategy DeviceCode`, `--no-browser`). Never fall back to browser-based OAuth.
+
 ### Quality gates
 Every code change must pass before moving on:
 1. `npx turbo lint` — 0 errors (suppress false positives inline, log in `.claude/skills/lint-suppressions.md`)
@@ -151,6 +158,9 @@ Every code change must pass before moving on:
 
 ### E2E tests must exercise real user flows
 Automated tests that only check "element exists" or "module exports" give false confidence. Every e2e test must exercise the actual interaction: type input, trigger the action, wait for the result, verify the final state (including absence of transient UI like loading indicators). A test that doesn't interact like a user would is a structural check, not a behavior check — label and treat it accordingly.
+
+### Programmatic conversations must include the complete UX flow
+When creating a conversation programmatically (e.g., install flows), verify the complete flow: conversation creation → navigation → initial message → agent response. An empty conversation that requires manual user input to start is not a complete flow — auto-send a kickoff message so the user sees immediate value.
 
 ### Baseline-before-change (Anvil-inspired)
 Before modifying existing code: note current test state, capture which files will change. After the change, compare to baseline to verify no regressions. The before-task and verify-task skills enforce this.
@@ -179,7 +189,7 @@ After writing any executable artifact, run it the way a user would:
 A successful `turbo build` is not a proxy for "the app launches." A successful `vitest run` is not a proxy for "the smoke test works under tsx."
 
 ### Verify bundled resource paths at runtime
-`app.getAppPath()` returns different values in dev vs packaged builds. In dev it returns the directory of the main entry script (e.g., `apps/desktop/out/main`), not the project root. After adding any path that resolves relative to `app.getAppPath()`, verify it resolves correctly by logging and checking at runtime — don't assume the path is right from reading the code.
+`app.getAppPath()` returns different values in dev vs packaged builds. In electron-vite dev mode it returns the **package directory** (e.g., `apps/desktop`), not the output directory (`apps/desktop/out/main`). After adding any path that resolves relative to `app.getAppPath()`, add a `console.log` and verify the resolved path at runtime — don't assume it's correct from reading the code.
 
 ### Verify tool output, not just exit code
 When a build or rebuild tool reports success, verify the artifact was actually modified (check file timestamp, size, or content hash). Tools can report success while producing no change — e.g., `@electron/rebuild` may skip rebuilding if it thinks the binary is current, even when it's compiled for the wrong ABI.

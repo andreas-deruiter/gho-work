@@ -6,55 +6,58 @@ description: Install and configure Work IQ CLI on the user's machine
 # Install Work IQ CLI (workiq)
 
 ## What this tool does
-Enables GHO Work to access Work IQ productivity features, including intelligent work item tracking, cross-service task aggregation, and AI-assisted prioritization. Work IQ builds on top of Microsoft Graph, so mgc must be installed and authenticated first.
+Enables GHO Work to access Work IQ productivity features, including intelligent work item tracking, cross-service task aggregation, and AI-assisted prioritization.
+
+## Important: You are the installer
+
+The user clicked "Install" because they want YOU to handle this. Do not tell the user to run commands — run them yourself using your bash tool. The user should only need to do things that require their browser (like signing in).
 
 ## Prerequisites
-Work IQ CLI depends on Microsoft Graph CLI (mgc) being installed and authenticated.
 
-Before proceeding, verify mgc is ready:
-```bash
-mgc --version     # must succeed
-mgc me get        # must return your user profile JSON
-```
+Work IQ CLI depends on Microsoft Graph CLI (mgc). Check first:
+- Run `mgc --version` — if this fails, tell the user they need to install Microsoft Graph CLI first (they can click "Install" on it in the sidebar)
+- Run `mgc me get` — if this fails, tell the user they need to authenticate mgc first
 
-If either command fails, complete the mgc install skill first. See `skills/install/mgc.md`.
+## Step 1: Check current state
 
-## Platform detection
-- macOS: check for Homebrew (`brew --version`), fall back to dotnet global tool
-- Windows: check for winget (`winget --version`), fall back to dotnet global tool
+Run these commands:
+- `workiq --version` — is it installed?
+- `workiq status` — is it connected?
 
-## Installation steps
+Skip to the first step that fails.
 
-> **Note:** Work IQ CLI distribution method is TBD. The steps below are placeholders and will be updated once the CLI is publicly distributed.
+## Step 2: Install
 
-### macOS (placeholder)
-1. *(TBD — Homebrew tap or direct download)*
-2. Fallback: `dotnet tool install WorkIQ.Cli -g` *(if distributed as a dotnet global tool)*
+> **Note:** Work IQ CLI distribution method is TBD. Try these approaches:
 
-### Windows (placeholder)
-1. *(TBD — winget package or MSI installer)*
-2. Fallback: `dotnet tool install WorkIQ.Cli -g` *(if distributed as a dotnet global tool)*
+### macOS
+1. Check for Homebrew: `brew --version`
+2. If brew available: try `brew install workiq` or the appropriate tap
+3. Fallback: try `dotnet tool install WorkIQ.Cli -g`
 
-## Post-install setup
-Work IQ typically shares authentication with mgc — no separate login step should be required if mgc is already authenticated.
+### Windows
+1. Check for winget: `winget --version`
+2. If winget available: try `winget install WorkIQ.CLI`
+3. Fallback: try `dotnet tool install WorkIQ.Cli -g`
 
-If a separate auth step is needed:
-1. Run `workiq auth login`
-2. Follow the prompts (likely device code flow, same as mgc)
+## Step 3: Authenticate
 
-Minimum permissions required: same as mgc scopes (User.Read, Mail.Read, Files.Read, Calendars.Read) plus any Work IQ-specific scopes documented at distribution time.
+Work IQ typically shares authentication with mgc. Run `workiq status` to check.
 
-## Verification
-- `workiq --version` — should print version
-- `workiq status` — should confirm connection to Work IQ services and show authenticated user
+If separate auth is needed, run `workiq auth login`. This likely uses device code flow:
+- **Show the device code to the user FIRST, prominently and clearly**
+- Then tell them to open the URL in their browser
+- Wait for the command to complete
+
+## Step 4: Verify
+
+Run:
+- `workiq --version` — confirms installation
+- `workiq status` — confirms connection
+
+Tell the user the result.
 
 ## Common pitfalls
-- mgc not authenticated → complete mgc setup first; workiq cannot function without a valid mgc session
-- Insufficient Microsoft 365 permissions → ensure mgc was authenticated with the minimum required scopes
-- Work IQ tenant not provisioned → contact your organization's IT admin to provision Work IQ access
-- CLI not on PATH → restart terminal after install, or add the install location to PATH manually
-
-## Resume
-1. `mgc --version` and `mgc me get` → is mgc installed and authenticated?
-2. `workiq --version` → is workiq installed?
-3. `workiq status` → is workiq connected and authorized?
+- mgc not authenticated → complete mgc setup first
+- Insufficient permissions → ensure mgc has required scopes
+- Tenant not provisioned → contact IT admin

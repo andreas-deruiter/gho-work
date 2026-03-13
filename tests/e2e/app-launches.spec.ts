@@ -117,6 +117,31 @@ test.describe('Chat flow', () => {
     expect(optionCount).toBeGreaterThan(0);
   });
 
+  test('model list comes from real SDK, not mock fallback', async () => {
+    // The mock fallback returns exactly 3 hardcoded models: GPT-4o, GPT-4o Mini, Claude Sonnet 4.
+    // If the SDK is working, we should see more than 3 models.
+    // If the SDK fails, the fix returns an empty list (not mock data).
+    const modelSelector = page.locator('.model-selector-dropdown');
+    await expect(modelSelector).toBeVisible({ timeout: 5000 });
+
+    const options = modelSelector.locator('option');
+    const optionCount = await options.count();
+
+    // Collect model names for debugging
+    const modelNames: string[] = [];
+    for (let i = 0; i < optionCount; i++) {
+      modelNames.push(await options.nth(i).textContent() ?? '');
+    }
+
+    // The old mock fallback returned exactly these 3 models.
+    // If we see exactly these 3 and nothing else, mock fallback is active.
+    const mockModels = ['GPT-4o', 'GPT-4o Mini', 'Claude Sonnet 4'];
+    const isMockFallback = optionCount === 3
+      && modelNames.every(name => mockModels.includes(name));
+
+    expect(isMockFallback, `Model list appears to be mock fallback: [${modelNames.join(', ')}]`).toBe(false);
+  });
+
   test('conversation list appears in sidebar', async () => {
     // The conversation list panel renders into the sidebar container,
     // replacing .workbench-sidebar class with .conversation-list-panel
