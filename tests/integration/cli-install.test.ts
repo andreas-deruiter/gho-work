@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { SkillRegistryImpl } from '@gho-work/agent';
 
 describe('CLI setup conversation lifecycle', () => {
 	let tmpSkillsDir: string;
+	let registry: SkillRegistryImpl;
 
 	beforeEach(async () => {
 		tmpSkillsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skills-'));
@@ -18,9 +20,14 @@ describe('CLI setup conversation lifecycle', () => {
 			path.join(tmpSkillsDir, 'connectors', 'setup.md'),
 			'# Connector Setup\nHelp set up MCP servers and CLI tools.',
 		);
+		registry = new SkillRegistryImpl([
+			{ id: 'test', priority: 0, basePath: tmpSkillsDir },
+		]);
+		await registry.scan();
 	});
 
 	afterEach(async () => {
+		registry.dispose();
 		await fs.rm(tmpSkillsDir, { recursive: true, force: true });
 	});
 
@@ -56,7 +63,7 @@ describe('CLI setup conversation lifecycle', () => {
 		const agentService = new AgentServiceImpl(
 			mockSDK as any,
 			mockConvService as any,
-			tmpSkillsDir,
+			registry,
 		);
 
 		const convId = await agentService.createSetupConversation('gh', platformContext);
@@ -82,7 +89,7 @@ describe('CLI setup conversation lifecycle', () => {
 		const agentService = new AgentServiceImpl(
 			mockSDK as any,
 			mockConvService as any,
-			tmpSkillsDir,
+			registry,
 		);
 
 		// Unknown tool IDs still create a setup conversation — just without the install skill

@@ -3,7 +3,7 @@
  * Hosts the CopilotSDK + AgentService. Communicates with renderer via MessagePort.
  */
 import { MessagePortProtocol } from '@gho-work/platform';
-import { MockCopilotSDK, AgentServiceImpl } from '@gho-work/agent';
+import { MockCopilotSDK, AgentServiceImpl, SkillRegistryImpl } from '@gho-work/agent';
 import type { AgentContext } from '@gho-work/base';
 
 let protocol: MessagePortProtocol | null = null;
@@ -17,7 +17,9 @@ let protocol: MessagePortProtocol | null = null;
     const sdk = new MockCopilotSDK();
     await sdk.start();
 
-    const agentService = new AgentServiceImpl(sdk, null, '');
+    const registry = new SkillRegistryImpl([]);
+    void registry.scan();
+    const agentService = new AgentServiceImpl(sdk, null, registry);
 
     protocol.onRequest('agent:send-message', async (args) => {
       const { conversationId, content, model } = args as {
