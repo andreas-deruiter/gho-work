@@ -16,6 +16,10 @@ if (useMockSDK) {
   console.log('[main] Mock mode enabled via --mock flag');
 }
 
+// Parse --skills-path for test isolation
+const skillsPathIdx = process.argv.indexOf('--skills-path');
+const skillsPath = skillsPathIdx !== -1 ? process.argv[skillsPathIdx + 1] : undefined;
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
@@ -39,6 +43,7 @@ function createWindow(): void {
   createMainProcess(mainWindow, undefined, undefined, {
     useMockSDK,
     userDataPath: app.getPath('userData'),
+    skillsPath,
   });
 
   // Open external links in browser
