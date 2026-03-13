@@ -13,7 +13,6 @@ import { KeyboardShortcuts } from './keyboardShortcuts.js';
 import { ChatPanel } from './chatPanel.js';
 import { ConversationListPanel } from './conversationList.js';
 import { ConnectorSidebarWidget } from './connectors/connectorSidebar.js';
-import { ConnectorDrawerWidget } from './connectors/connectorDrawer.js';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
@@ -23,7 +22,6 @@ export class Workbench extends Disposable {
   private _chatPanel!: ChatPanel;
   private _conversationList!: ConversationListPanel;
   private _connectorSidebar!: ConnectorSidebarWidget;
-  private _connectorDrawer!: ConnectorDrawerWidget;
   private _sidebarVisible = true;
 
   constructor(
@@ -110,18 +108,8 @@ export class Workbench extends Disposable {
     this._container.appendChild(titleBar.root);
     this._container.appendChild(wrapper.root);
 
-    // Connector drawer (overlays main content)
-    this._connectorDrawer = this._register(new ConnectorDrawerWidget(this._ipc));
-    wrapper.root.appendChild(this._connectorDrawer.getDomNode());
-
-    // Wire sidebar events to drawer
-    this._connectorSidebar.onDidSelectConnector(async (id) => {
-      this._connectorSidebar.highlightConnector(id);
-      await this._connectorDrawer.openForConnector(id);
-    });
-
+    // Wire connector sidebar events
     this._connectorSidebar.onDidRequestAddConnector(async () => {
-      this._connectorSidebar.highlightConnector(null);
       try {
         const result = await this._ipc.invoke<{ conversationId: string; error?: string }>(
           IPC_CHANNELS.CONNECTOR_SETUP_CONVERSATION,
@@ -133,89 +121,32 @@ export class Workbench extends Disposable {
         await this._openSetupConversation(result.conversationId);
       } catch (err) {
         console.error('[workbench] Setup conversation failed:', err);
-        this._chatPanel.showError('Failed to start connector setup. Check that the agent service is running.');
+        this._chatPanel.showError('Failed to start connector setup.');
       }
     });
 
-    this._connectorDrawer.onDidClose(() => {
-      this._connectorSidebar.highlightConnector(null);
-    });
-
-    // Handle CLI install from sidebar — create an install conversation
-    this._connectorSidebar.onDidRequestInstallCLI(async (toolId) => {
-      this._connectorSidebar.setCLIToolLoading(toolId, 'Starting...');
+    this._connectorSidebar.onDidRequestConnect(async (name) => {
       try {
-        const result = await this._ipc.invoke<{ conversationId: string; error?: string }>(
-          IPC_CHANNELS.CONNECTOR_SETUP_CONVERSATION,
-          { query: toolId },
-        );
-        const toolNames: Record<string, string> = {
-          gh: 'GitHub CLI', pandoc: 'pandoc', git: 'git',
-          mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
-          gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
-        };
-        // Refresh sidebar to clear loading spinner — conversation handles UX now
-        await this._connectorSidebar.refreshCLITools();
-        await this._openSetupConversation(result.conversationId, toolNames[toolId] ?? toolId);
+        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_CONNECT, { name });
       } catch (err) {
-        console.error('[workbench] Install conversation failed:', err);
-        await this._connectorSidebar.refreshCLITools();
-        // Show error — do NOT silently fall back to opening a URL
-        const toolNames: Record<string, string> = {
-          gh: 'GitHub CLI', pandoc: 'pandoc', git: 'git',
-          mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
-          gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
-        };
-        const name = toolNames[toolId] ?? toolId;
-        this._chatPanel.showError(`Failed to start ${name} installation. Check that the agent service is running.`);
+        console.error('[workbench] Connect failed:', err);
       }
     });
 
-    // Handle CLI auth from sidebar — create auth conversation with device code
-    this._connectorSidebar.onDidRequestAuthCLI(async (toolId) => {
-      this._connectorSidebar.setCLIToolLoading(toolId, 'Starting...');
+    this._connectorSidebar.onDidRequestDisconnect(async (name) => {
       try {
-        const result = await this._ipc.invoke<{
-          conversationId: string; authUrl?: string; deviceCode?: string;
-        }>(IPC_CHANNELS.CLI_CREATE_AUTH_CONVERSATION, { toolId });
-        const toolNames: Record<string, string> = {
-          gh: 'GitHub CLI', mgc: 'Microsoft Graph CLI', az: 'Azure CLI',
-          gcloud: 'Google Cloud CLI', workiq: 'Work IQ CLI',
-        };
-        // Refresh sidebar to clear loading spinner — conversation handles UX now
-        await this._connectorSidebar.refreshCLITools();
-        await this._openAuthConversation(
-          result.conversationId,
-          toolNames[toolId] ?? toolId,
-          result.authUrl,
-          result.deviceCode,
-        );
+        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_DISCONNECT, { name });
       } catch (err) {
-        console.error(`[workbench] Auth conversation failed for ${toolId}:`, err);
-        await this._connectorSidebar.refreshCLITools();
+        console.error('[workbench] Disconnect failed:', err);
       }
     });
 
-    // Handle save/delete from drawer
-    this._connectorDrawer.onDidSaveConnector(async (data) => {
-      const existing = await this._ipc.invoke<{ connectors: Array<{ id: string }> }>(IPC_CHANNELS.CONNECTOR_LIST);
-      const isNew = !existing.connectors.some(c => c.id === data.id);
-      if (isNew) {
-        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_ADD, {
-          id: data.id, type: 'local_mcp', name: data.name, transport: data.transport,
-          command: data.command, args: data.args, url: data.url, env: data.env, headers: data.headers,
-          enabled: true, status: 'disconnected',
-        });
-      } else {
-        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_UPDATE, { id: data.id, updates: data });
+    this._connectorSidebar.onDidRequestRemove(async (name) => {
+      try {
+        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_REMOVE, { name });
+      } catch (err) {
+        console.error('[workbench] Remove failed:', err);
       }
-      await this._connectorSidebar.refreshConnectors();
-    });
-
-    this._connectorDrawer.onDidDeleteConnector(async (id) => {
-      await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_REMOVE, { id });
-      this._connectorDrawer.close();
-      await this._connectorSidebar.refreshConnectors();
     });
 
     // Status bar items
@@ -237,33 +168,6 @@ export class Workbench extends Disposable {
       await this._chatPanel.sendMessage(`Help me set up ${name}.`);
     } catch (err) {
       console.error('Failed to open setup conversation:', err);
-    }
-  }
-
-  private async _openAuthConversation(
-    conversationId: string,
-    toolName: string,
-    authUrl?: string,
-    deviceCode?: string,
-  ): Promise<void> {
-    try {
-      this._activityBar.setActiveItem('chat');
-      this._sidebar.showPanel('chat');
-
-      await this._chatPanel.loadConversation(conversationId);
-      await this._conversationList.refresh();
-
-      // Send kickoff message — agent will show device code BEFORE user opens browser
-      let kickoff = `Help me authenticate ${toolName}.`;
-      if (deviceCode) {
-        kickoff += ` The device code is: ${deviceCode}.`;
-      }
-      if (authUrl) {
-        kickoff += ` The auth URL is: ${authUrl}.`;
-      }
-      await this._chatPanel.sendMessage(kickoff);
-    } catch (err) {
-      console.error('Failed to open auth conversation:', err);
     }
   }
 
