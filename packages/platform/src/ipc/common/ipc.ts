@@ -25,29 +25,16 @@ export const IPC_CHANNELS = {
   ONBOARDING_GH_LOGIN: 'onboarding:gh-login',
   ONBOARDING_GH_LOGIN_EVENT: 'onboarding:gh-login-event',
   ONBOARDING_CHECK_COPILOT: 'onboarding:check-copilot',
-  ONBOARDING_DETECT_TOOLS: 'onboarding:detect-tools',
   ONBOARDING_COMPLETE: 'onboarding:complete',
   ONBOARDING_STATUS: 'onboarding:status',
   // Connector channels
   CONNECTOR_LIST: 'connector:list',
-  CONNECTOR_ADD: 'connector:add',
   CONNECTOR_REMOVE: 'connector:remove',
-  CONNECTOR_UPDATE: 'connector:update',
-  CONNECTOR_TEST: 'connector:test',
-  CONNECTOR_GET_TOOLS: 'connector:get-tools',
   CONNECTOR_CONNECT: 'connector:connect',
   CONNECTOR_DISCONNECT: 'connector:disconnect',
   CONNECTOR_STATUS_CHANGED: 'connector:status-changed',
-  CONNECTOR_TOOLS_CHANGED: 'connector:tools-changed',
   CONNECTOR_LIST_CHANGED: 'connector:list-changed',
-  CLI_DETECT_ALL: 'cli:detect-all',
-  CLI_REFRESH: 'cli:refresh',
-  CLI_GET_PLATFORM_CONTEXT: 'cli:get-platform-context',
-  CLI_INSTALL: 'cli:install',
-  CLI_AUTHENTICATE: 'cli:authenticate',
-  CLI_CREATE_AUTH_CONVERSATION: 'cli:create-auth-conversation',
   CONNECTOR_SETUP_CONVERSATION: 'connector:setup-conversation',
-  CLI_TOOLS_CHANGED: 'cli:tools-changed',
 } as const;
 
 export const SendMessageRequestSchema = z.object({
@@ -173,16 +160,6 @@ export const CopilotCheckResponseSchema = z.object({
 });
 export type CopilotCheckResponse = z.infer<typeof CopilotCheckResponseSchema>;
 
-export const ToolDetectResponseSchema = z.object({
-  tools: z.array(z.object({
-    name: z.string(),
-    description: z.string(),
-    found: z.boolean(),
-    version: z.string().optional(),
-  })),
-});
-export type ToolDetectResponse = z.infer<typeof ToolDetectResponseSchema>;
-
 export const OnboardingStatusResponseSchema = z.object({
   complete: z.boolean(),
 });
@@ -200,90 +177,47 @@ export const AuthStateSchema = z.object({
 export type AuthState = z.infer<typeof AuthStateSchema>;
 
 // --- Connector schemas ---
-export const ConnectorConfigSchema = z.object({
-  id: z.string(),
-  type: z.enum(['builtin', 'local_mcp', 'remote_mcp', 'agent_skill']),
-  name: z.string(),
-  transport: z.enum(['stdio', 'streamable_http']),
+
+/** Mirrors MCPServerConfig from @gho-work/base for IPC transport. */
+const MCPServerConfigSchema = z.object({
+  type: z.enum(['stdio', 'http']),
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
   env: z.record(z.string(), z.string()).optional(),
+  cwd: z.string().optional(),
   url: z.string().optional(),
   headers: z.record(z.string(), z.string()).optional(),
-  enabled: z.boolean(),
-  capabilities: z.object({
-    tools: z.boolean().optional(),
-    resources: z.boolean().optional(),
-    prompts: z.boolean().optional(),
-  }).optional(),
+});
+
+/** Mirrors MCPServerState from @gho-work/base for IPC transport. */
+export const MCPServerStateSchema = z.object({
+  name: z.string(),
+  config: MCPServerConfigSchema,
   status: z.enum(['connected', 'disconnected', 'error', 'initializing']),
   error: z.string().optional(),
-  toolsConfig: z.record(z.string(), z.boolean()).optional(),
 });
-export type ConnectorConfigIPC = z.infer<typeof ConnectorConfigSchema>;
+export type MCPServerStateIPC = z.infer<typeof MCPServerStateSchema>;
 
 export const ConnectorListResponseSchema = z.object({
-  connectors: z.array(ConnectorConfigSchema),
+  connectors: z.array(MCPServerStateSchema),
 });
 export type ConnectorListResponse = z.infer<typeof ConnectorListResponseSchema>;
 
-export const ConnectorRemoveRequestSchema = z.object({ id: z.string() });
+export const ConnectorRemoveRequestSchema = z.object({ name: z.string() });
 export type ConnectorRemoveRequest = z.infer<typeof ConnectorRemoveRequestSchema>;
 
-export const ConnectorUpdateRequestSchema = z.object({
-  id: z.string(),
-  updates: ConnectorConfigSchema.partial(),
-});
-export type ConnectorUpdateRequest = z.infer<typeof ConnectorUpdateRequestSchema>;
+export const ConnectorConnectRequestSchema = z.object({ name: z.string() });
+export type ConnectorConnectRequest = z.infer<typeof ConnectorConnectRequestSchema>;
 
-export const ConnectorTestResponseSchema = z.object({
-  success: z.boolean(),
-  error: z.string().optional(),
-});
-export type ConnectorTestResponse = z.infer<typeof ConnectorTestResponseSchema>;
-
-export const ConnectorGetToolsRequestSchema = z.object({ id: z.string() });
-export type ConnectorGetToolsRequest = z.infer<typeof ConnectorGetToolsRequestSchema>;
-
-export const ToolInfoSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  inputSchema: z.record(z.string(), z.unknown()).optional(),
-  enabled: z.boolean(),
-});
-
-export const ConnectorGetToolsResponseSchema = z.object({
-  tools: z.array(ToolInfoSchema),
-});
-export type ConnectorGetToolsResponse = z.infer<typeof ConnectorGetToolsResponseSchema>;
+export const ConnectorDisconnectRequestSchema = z.object({ name: z.string() });
+export type ConnectorDisconnectRequest = z.infer<typeof ConnectorDisconnectRequestSchema>;
 
 export const ConnectorStatusChangedSchema = z.object({
-  id: z.string(),
+  name: z.string(),
   status: z.enum(['connected', 'disconnected', 'error', 'initializing']),
   error: z.string().optional(),
 });
 export type ConnectorStatusChanged = z.infer<typeof ConnectorStatusChangedSchema>;
-
-export const ConnectorToolsChangedSchema = z.object({
-  connectorId: z.string(),
-  tools: z.array(ToolInfoSchema),
-});
-export type ConnectorToolsChanged = z.infer<typeof ConnectorToolsChangedSchema>;
-
-export const CLIToolStatusSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  installed: z.boolean(),
-  version: z.string().optional(),
-  authenticated: z.boolean().optional(),
-  installUrl: z.string(),
-  authCommand: z.string().optional(),
-});
-
-export const CLIDetectResponseSchema = z.object({
-  tools: z.array(CLIToolStatusSchema),
-});
-export type CLIDetectResponse = z.infer<typeof CLIDetectResponseSchema>;
 
 export const ConnectorSetupRequestSchema = z.object({
   query: z.string().optional(),
@@ -295,38 +229,3 @@ export const ConnectorSetupResponseSchema = z.object({
   error: z.string().optional(),
 });
 export type ConnectorSetupResponse = z.infer<typeof ConnectorSetupResponseSchema>;
-
-export const PlatformContextSchema = z.object({
-  os: z.enum(['darwin', 'win32', 'linux']),
-  arch: z.enum(['arm64', 'x64', 'ia32']),
-  packageManagers: z.object({
-    brew: z.boolean(),
-    winget: z.boolean(),
-    chocolatey: z.boolean(),
-  }),
-});
-export type PlatformContextIPC = z.infer<typeof PlatformContextSchema>;
-
-export const CLIInstallRequestSchema = z.object({
-  toolId: z.string(),
-});
-export type CLIInstallRequest = z.infer<typeof CLIInstallRequestSchema>;
-
-export const CLIInstallResponseSchema = z.object({
-  success: z.boolean(),
-  error: z.string().optional(),
-  version: z.string().optional(),
-  installUrl: z.string().optional(),
-});
-export type CLIInstallResponse = z.infer<typeof CLIInstallResponseSchema>;
-
-export const CLIAuthenticateRequestSchema = z.object({
-  toolId: z.string(),
-});
-export type CLIAuthenticateRequest = z.infer<typeof CLIAuthenticateRequestSchema>;
-
-export const CLIAuthenticateResponseSchema = z.object({
-  success: z.boolean(),
-  error: z.string().optional(),
-});
-export type CLIAuthenticateResponse = z.infer<typeof CLIAuthenticateResponseSchema>;
