@@ -7,7 +7,7 @@ const SKILLS_ROOT = path.resolve(__dirname, '../../skills');
 
 describe('Connector Setup Skills', () => {
   describe('setup skill content', () => {
-    it.skip('setup skill file exists and contains required content', async () => {
+    it('setup skill file exists and contains required content', async () => {
       const skillPath = path.join(SKILLS_ROOT, 'connectors', 'setup.md');
       const content = await fs.readFile(skillPath, 'utf-8');
 
@@ -25,7 +25,7 @@ describe('Connector Setup Skills', () => {
       expect(content).toContain('streamable_http');
     });
 
-    it.skip('includes error handling guidance', async () => {
+    it('includes error handling guidance', async () => {
       const skillPath = path.join(SKILLS_ROOT, 'connectors', 'setup.md');
       const content = await fs.readFile(skillPath, 'utf-8');
 
@@ -33,7 +33,7 @@ describe('Connector Setup Skills', () => {
       expect(content).toMatch(/fallback|web search/i);
     });
 
-    it.skip('includes environment variable handling', async () => {
+    it('includes environment variable handling', async () => {
       const skillPath = path.join(SKILLS_ROOT, 'connectors', 'setup.md');
       const content = await fs.readFile(skillPath, 'utf-8');
 
