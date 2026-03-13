@@ -149,6 +149,9 @@ Three tools registered with the Copilot SDK session:
 - CLI Tools section entirely
 - All `CLIToolListItemWidget` instances
 
+**Kept but refactored**:
+- `ConnectorListItemWidget` — updated to use `MCPServerState` instead of `ConnectorConfig`, adds transport badge
+
 **Removed from UI entirely**:
 - `ConnectorDrawerWidget` (config form, tool list, tool toggles, status banner)
 - `ConnectorConfigFormWidget`
@@ -181,8 +184,21 @@ Three tools registered with the Copilot SDK session:
 - `CLI_CREATE_AUTH_CONVERSATION` → CLI detection removed
 - `CLI_GET_PLATFORM_CONTEXT` → CLI detection removed
 - `CLI_TOOLS_CHANGED` → CLI detection removed
+- `ONBOARDING_DETECT_TOOLS` → CLI detection removed from onboarding
 
 **Preload whitelist**: updated to match — remove all deleted channels, add `CONNECTOR_CONNECT` and `CONNECTOR_DISCONNECT`.
+
+### Transport type mapping
+
+VS Code uses `type: 'http'` which auto-negotiates between Streamable HTTP and SSE. Our existing `MCPConnection` uses `transport: 'streamable_http'`. The new `MCPServerConfig.type` field uses `'http'` (VS Code-compatible). `MCPConnection` is updated to accept `MCPServerConfig` directly and map `'http'` → Streamable HTTP transport internally.
+
+### Startup behavior
+
+On app startup, `MCPClientManagerImpl` reads the initial server list from `ConnectorConfigStore.getServers()` and calls `reconcile()` to auto-connect all configured servers. This is the same code path as file-watcher-driven changes — no special startup logic needed.
+
+### Error recovery
+
+When reconciliation auto-connects a server and it fails (status = `'error'`), there is no automatic retry. The user can manually click "Connect" in the panel to retry. Future: file watcher will detect if the user fixes a config issue and re-reconciles.
 
 ## What gets removed
 
@@ -209,35 +225,51 @@ Three tools registered with the Copilot SDK session:
 **SQLite connector registry**:
 - `packages/connectors/src/node/connectorRegistryImpl.ts`
 
-**Tests**:
+**Connector mapping** (no longer needed — JSON config is already close to SDK format):
+- `packages/electron/src/main/connectorMapping.ts`
+
+**Tests** (all tests for deleted files):
 - `packages/connectors/src/__tests__/cliDetection.test.ts`
 - `packages/connectors/src/node/__tests__/cliDetectionImpl.test.ts`
-- `packages/ui/src/browser/connectors/cliToolListItem.test.ts`
+- `packages/connectors/src/__tests__/platformDetection.test.ts`
 - `packages/connectors/src/__tests__/connectorRegistry.test.ts`
+- `packages/ui/src/browser/connectors/cliToolListItem.test.ts`
+- `packages/ui/src/browser/connectors/connectorDrawer.test.ts`
+- `packages/ui/src/browser/connectors/connectorConfigForm.test.ts`
+- `packages/ui/src/browser/connectors/connectorStatusBanner.test.ts`
+- `packages/electron/src/__tests__/connectorMapping.test.ts`
 - `tests/integration/cli-install.test.ts`
 - `tests/e2e/cli-install.spec.ts`
 - `tests/e2e/cli-tool-install.spec.ts`
 
 ### Files to modify
 
-- `packages/base/src/common/types.ts` — replace `ConnectorConfig` with `MCPServerConfig` + `MCPServerState`
+- `packages/base/src/common/types.ts` — replace `ConnectorConfig` with `MCPServerConfig` + `MCPServerState`, remove `Workspace.connectorOverrides`
+- `packages/base/src/__tests__/types.test.ts` — update for new types
 - `packages/connectors/src/index.ts` — update exports
-- `packages/connectors/src/common/connectorRegistry.ts` — replace `IConnectorRegistry` with `IConnectorConfigStore`
+- `packages/connectors/src/common/connectorRegistry.ts` — rename to `connectorConfigStore.ts`, define `IConnectorConfigStore` interface
 - `packages/connectors/src/node/mcpClientManagerImpl.ts` — depend on config store, add reconciliation
 - `packages/connectors/src/common/mcpClientManager.ts` — update interface
-- `packages/platform/src/ipc/common/ipc.ts` — remove CLI channels, add CONNECT/DISCONNECT
-- `packages/platform/src/storage/node/globalSchema.ts` — remove `connectors` table migration
+- `packages/connectors/src/__tests__/mcpClientManager.test.ts` — update for reconciliation, new constructor dependency
+- `packages/connectors/src/node/mcpConnection.ts` — accept `MCPServerConfig` + server name instead of `ConnectorConfig`, map `'http'` to streamable HTTP transport
+- `packages/connectors/src/__tests__/mcpConnection.test.ts` — update for new constructor signature
+- `packages/platform/src/ipc/common/ipc.ts` — remove CLI channels and schemas, add CONNECT/DISCONNECT channels and schemas, update CONNECTOR_LIST response schema
+- `packages/platform/src/storage/node/globalSchema.ts` — keep `connectors` migration (harmless, avoids upgrade issues) but stop using it
 - `packages/electron/src/main/mainProcess.ts` — rewire services, remove CLI handlers, add new IPC handlers, register agent tools
 - `apps/desktop/src/preload/index.ts` — update whitelist
 - `packages/ui/src/browser/connectors/connectorSidebar.ts` — remove CLI section, simplify to server list
+- `packages/ui/src/browser/connectors/connectorListItem.ts` — update to use `MCPServerState`
+- `packages/ui/src/browser/connectors/connectorListItem.test.ts` — update for new type
 - `packages/ui/src/browser/workbench.ts` — remove drawer wiring, CLI install/auth handlers
+- `packages/ui/src/browser/onboarding/onboardingFlow.ts` — remove CLI detection step reference
 - `packages/ui/src/index.ts` — remove CLI/drawer exports
 - `skills/connectors/setup.md` — reference agent tools instead of IPC
 
 ### Files to create
 
-- `packages/connectors/src/node/connectorConfigStore.ts` — JSON config store
-- `packages/connectors/src/node/agentTools.ts` — agent tool handler functions
+- `packages/connectors/src/common/connectorConfigStore.ts` — `IConnectorConfigStore` interface + `createServiceIdentifier`
+- `packages/connectors/src/node/connectorConfigStore.ts` — JSON config store implementation
+- `packages/connectors/src/node/agentTools.ts` — agent tool handler functions (pure, testable)
 - `packages/connectors/src/__tests__/connectorConfigStore.test.ts` — unit tests
 - `packages/connectors/src/__tests__/agentTools.test.ts` — unit tests
 
@@ -245,28 +277,25 @@ Three tools registered with the Copilot SDK session:
 
 - `skills/install/*.md` (8 files) — agent knowledge for CLI tool installation
 - `skills/auth/*.md` (6 files) — agent knowledge for CLI tool authentication
-- `skills/connectors/setup.md` — setup conversation skill (content updated, file stays)
-- `packages/connectors/src/node/mcpConnection.ts` — MCP protocol connection
-- `packages/connectors/src/__tests__/mcpConnection.test.ts` — connection tests
-- `tests/fixtures/test-mcp-server.mjs` — test fixture
-- `tests/fixtures/test-mcp-server.ts` — test fixture
+- `tests/fixtures/test-mcp-server.mjs` — E2E test fixture
+- `tests/fixtures/test-mcp-server.ts` — integration test fixture
 - SQLite for conversations, settings, workspaces, permissions
 
 ## Testing strategy
 
 ### Unit tests
 
-- `ConnectorConfigStore` — read/write `mcp.json`, atomic writes, file watcher picks up external edits, malformed JSON keeps last-known-good, missing file creates default, `onDidChangeServers` fires correctly
-- Agent tools — `add_mcp_server`/`remove_mcp_server`/`list_mcp_servers` with mock config store and mock client manager
+- `ConnectorConfigStore` — read/write `mcp.json`, atomic writes, file watcher picks up external edits, malformed JSON keeps last-known-good, missing file creates default, `onDidChangeServers` fires correctly, watcher suppression during programmatic writes, concurrent rapid writes don't corrupt
+- Agent tools — `add_mcp_server`/`remove_mcp_server`/`list_mcp_servers` with mock config store and mock client manager. Negative cases: empty name, duplicate name, non-existent server removal, invalid transport fields.
 - `MCPClientManagerImpl.reconcile()` — added/removed/changed/unchanged servers handled correctly
 
 ### Integration test (blocking deliverable)
 
 Full lifecycle with real MCP fixture server:
-1. Write server entry to `mcp.json` via `ConnectorConfigStore`
-2. Reconciliation connects automatically
-3. Verify tools available via `MCPClientManagerImpl.getTools()`
-4. Remove from config → auto-disconnects
+1. Add server via `add_mcp_server` agent tool handler → writes to config store → reconciliation auto-connects
+2. Verify tools available via `MCPClientManagerImpl.getTools()`
+3. `list_mcp_servers` returns correct status
+4. `remove_mcp_server` → auto-disconnects
 5. Add server with bad command → error status, no crash
 6. External edit to `mcp.json` → file watcher picks up, reconciliation runs
 7. Write invalid JSON → app doesn't crash, last-known-good preserved
