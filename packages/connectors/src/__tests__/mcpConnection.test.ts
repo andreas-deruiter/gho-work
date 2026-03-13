@@ -309,4 +309,101 @@ describe('MCPConnection', () => {
       conn.dispose();
     });
   });
+
+  describe('heartbeat timeout → error status', () => {
+    it('sets status to error after 3 consecutive ping failures', async () => {
+      vi.useFakeTimers();
+      mockClient.ping.mockRejectedValue(new Error('ping failed'));
+
+      const conn = new MCPConnection(stdioConfig);
+      await conn.connect();
+
+      expect(conn.status).toBe('connected');
+
+      // Advance 3 × 30s = 90s to trigger 3 missed pings
+      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(conn.status).toBe('error');
+
+      conn.dispose();
+      vi.useRealTimers();
+    });
+
+    it('fires onDidChangeStatus with error after 3 ping failures', async () => {
+      vi.useFakeTimers();
+      mockClient.ping.mockRejectedValue(new Error('ping failed'));
+
+      const conn = new MCPConnection(stdioConfig);
+      const statusEvents: ConnectorConfig['status'][] = [];
+      conn.onDidChangeStatus(s => statusEvents.push(s));
+
+      await conn.connect();
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(statusEvents).toContain('error');
+
+      conn.dispose();
+      vi.useRealTimers();
+    });
+  });
+
+  describe('tool list refresh on notification', () => {
+    it('calls listTools again when ToolListChanged notification is received', async () => {
+      const conn = new MCPConnection(stdioConfig);
+      await conn.connect();
+
+      // listTools was called once during connect
+      expect(mockClient.listTools).toHaveBeenCalledTimes(1);
+
+      // Capture the notification handler registered with the client
+      const setNotificationHandlerCall = mockClient.setNotificationHandler.mock.calls[0];
+      expect(setNotificationHandlerCall).toBeDefined();
+      const notificationHandler = setNotificationHandlerCall[1] as () => Promise<void>;
+
+      // Update the mock to return new tools
+      mockClient.listTools.mockResolvedValue({
+        tools: [
+          { name: 'read-file', description: 'Read a file' },
+          { name: 'write-file', description: 'Write a file', inputSchema: { type: 'object' } },
+          { name: 'delete-file', description: 'Delete a file' },
+        ],
+      });
+
+      // Fire the notification
+      await notificationHandler();
+
+      expect(mockClient.listTools).toHaveBeenCalledTimes(2);
+      expect(conn.listTools()).toHaveLength(3);
+
+      conn.dispose();
+    });
+
+    it('fires onDidChangeTools after notification-triggered refresh', async () => {
+      const conn = new MCPConnection(stdioConfig);
+      const toolEvents: unknown[][] = [];
+      conn.onDidChangeTools(tools => toolEvents.push(tools as unknown[]));
+
+      await conn.connect();
+      expect(toolEvents).toHaveLength(1);
+
+      const notificationHandler = mockClient.setNotificationHandler.mock.calls[0][1] as () => Promise<void>;
+
+      mockClient.listTools.mockResolvedValue({
+        tools: [{ name: 'new-tool', description: 'A new tool' }],
+      });
+
+      await notificationHandler();
+
+      expect(toolEvents).toHaveLength(2);
+      const lastTools = toolEvents[1] as Array<{ name: string }>;
+      expect(lastTools[0].name).toBe('new-tool');
+
+      conn.dispose();
+    });
+  });
 });

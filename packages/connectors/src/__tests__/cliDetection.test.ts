@@ -107,6 +107,34 @@ describe('CLIDetectionServiceImpl', () => {
       expect(result?.authenticated).toBeUndefined();
       svc.dispose();
     });
+
+    it('git: detects version', async () => {
+      const execFile = makeExecFile({
+        git: {
+          '--version': { stdout: 'git version 2.43.0\n', stderr: '' },
+        },
+      });
+      const svc = new CLIDetectionServiceImpl(execFile);
+      const result = await svc.detect('git');
+      expect(result?.installed).toBe(true);
+      expect(result?.version).toBe('2.43.0');
+      expect(result?.authenticated).toBeUndefined();
+      svc.dispose();
+    });
+
+    it('workiq: detects version', async () => {
+      const execFile = makeExecFile({
+        workiq: {
+          '--version': { stdout: '1.2.3\n', stderr: '' },
+          'auth status': { stdout: 'Logged in as user@example.com', stderr: '' },
+        },
+      });
+      const svc = new CLIDetectionServiceImpl(execFile);
+      const result = await svc.detect('workiq');
+      expect(result?.installed).toBe(true);
+      expect(result?.version).toBe('1.2.3');
+      svc.dispose();
+    });
   });
 
   describe('missing CLI tool', () => {

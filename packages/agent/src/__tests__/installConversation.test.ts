@@ -35,7 +35,7 @@ const MOCK_PLATFORM: PlatformContext = {
 	packageManagers: { brew: true, winget: false, chocolatey: false },
 };
 
-describe('createInstallConversation', () => {
+describe('createSetupConversation', () => {
 	let agentService: AgentServiceImpl;
 	let conversationService: ReturnType<typeof createMockConversationService>;
 	let copilotSDK: ReturnType<typeof createMockCopilotSDK>;
@@ -47,9 +47,14 @@ describe('createInstallConversation', () => {
 		const path = await import('node:path');
 		tmpSkillsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skills-'));
 		await fs.mkdir(path.join(tmpSkillsDir, 'install'), { recursive: true });
+		await fs.mkdir(path.join(tmpSkillsDir, 'connectors'), { recursive: true });
 		await fs.writeFile(
 			path.join(tmpSkillsDir, 'install', 'gh.md'),
 			'# Install gh\nInstall the GitHub CLI.',
+		);
+		await fs.writeFile(
+			path.join(tmpSkillsDir, 'connectors', 'setup.md'),
+			'# Setup connector\nHelp the user set up a connector.',
 		);
 
 		conversationService = createMockConversationService();
@@ -62,37 +67,55 @@ describe('createInstallConversation', () => {
 		);
 	});
 
-	it('creates a conversation titled with the tool name', async () => {
-		const convId = await agentService.createInstallConversation('gh', MOCK_PLATFORM);
+	it('creates a conversation titled "Set up connector" when no query given', async () => {
+		const convId = await agentService.createSetupConversation();
 		expect(conversationService.createConversation).toHaveBeenCalled();
-		expect(conversationService.renameConversation).toHaveBeenCalledWith(convId, 'Install GitHub CLI');
+		expect(conversationService.renameConversation).toHaveBeenCalledWith(convId, 'Set up connector');
 	});
 
-	it('reads skill content from bundled skills directory', async () => {
-		await agentService.createInstallConversation('gh', MOCK_PLATFORM);
+	it('creates a conversation titled "Set up <query>" when query provided', async () => {
+		const convId = await agentService.createSetupConversation('gh', MOCK_PLATFORM);
+		expect(conversationService.renameConversation).toHaveBeenCalledWith(convId, 'Set up gh');
+	});
+
+	it('includes setup skill content in the system message', async () => {
+		await agentService.createSetupConversation();
+		const context = agentService.getInstallContext('conv-0');
+		expect(context).toContain('# Setup connector');
+	});
+
+	it('appends install skill when query matches a known tool ID', async () => {
+		await agentService.createSetupConversation('gh', MOCK_PLATFORM);
 		const context = agentService.getInstallContext('conv-0');
 		expect(context).toContain('# Install gh');
 	});
 
-	it('injects platform context into install context', async () => {
-		await agentService.createInstallConversation('gh', MOCK_PLATFORM);
+	it('injects platform context when platformContext is provided', async () => {
+		await agentService.createSetupConversation('gh', MOCK_PLATFORM);
 		const context = agentService.getInstallContext('conv-0');
 		expect(context).toContain('darwin');
 		expect(context).toContain('arm64');
 		expect(context).toContain('brew: available');
 	});
 
-	it('throws if skill file not found for toolId', async () => {
-		await expect(
-			agentService.createInstallConversation('nonexistent', MOCK_PLATFORM),
-		).rejects.toThrow(/skill not found/i);
+	it('does not include platform info when platformContext is not provided', async () => {
+		await agentService.createSetupConversation('gh');
+		const context = agentService.getInstallContext('conv-0');
+		expect(context).not.toContain('## Platform');
 	});
 
-	it('uses workiq tool ID for Work IQ CLI', async () => {
+	it('does not throw when query does not match a known tool ID', async () => {
+		await expect(
+			agentService.createSetupConversation('nonexistent', MOCK_PLATFORM),
+		).resolves.toBeDefined();
+	});
+
+	it('supports workiq tool ID', async () => {
 		const fs = await import('node:fs/promises');
 		const path = await import('node:path');
 		await fs.writeFile(path.join(tmpSkillsDir, 'install', 'workiq.md'), '# Install Work IQ CLI');
-		const convId = await agentService.createInstallConversation('workiq', MOCK_PLATFORM);
-		expect(conversationService.renameConversation).toHaveBeenCalledWith(convId, 'Install Work IQ CLI');
+		const convId = await agentService.createSetupConversation('workiq', MOCK_PLATFORM);
+		const context = agentService.getInstallContext(convId);
+		expect(context).toContain('# Install Work IQ CLI');
 	});
 });

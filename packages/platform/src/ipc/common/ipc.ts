@@ -39,11 +39,11 @@ export const IPC_CHANNELS = {
   CONNECTOR_TOOLS_CHANGED: 'connector:tools-changed',
   CLI_DETECT_ALL: 'cli:detect-all',
   CLI_REFRESH: 'cli:refresh',
-  CLI_CREATE_INSTALL_CONVERSATION: 'cli:create-install-conversation',
   CLI_GET_PLATFORM_CONTEXT: 'cli:get-platform-context',
   CLI_INSTALL: 'cli:install',
   CLI_AUTHENTICATE: 'cli:authenticate',
   CLI_CREATE_AUTH_CONVERSATION: 'cli:create-auth-conversation',
+  CONNECTOR_SETUP_CONVERSATION: 'connector:setup-conversation',
   CLI_TOOLS_CHANGED: 'cli:tools-changed',
 } as const;
 
@@ -282,15 +282,16 @@ export const CLIDetectResponseSchema = z.object({
 });
 export type CLIDetectResponse = z.infer<typeof CLIDetectResponseSchema>;
 
-export const CLICreateInstallRequestSchema = z.object({
-  toolId: z.string(),
+export const ConnectorSetupRequestSchema = z.object({
+  query: z.string().optional(),
 });
-export type CLICreateInstallRequest = z.infer<typeof CLICreateInstallRequestSchema>;
+export type ConnectorSetupRequest = z.infer<typeof ConnectorSetupRequestSchema>;
 
-export const CLICreateInstallResponseSchema = z.object({
+export const ConnectorSetupResponseSchema = z.object({
   conversationId: z.string(),
+  error: z.string().optional(),
 });
-export type CLICreateInstallResponse = z.infer<typeof CLICreateInstallResponseSchema>;
+export type ConnectorSetupResponse = z.infer<typeof ConnectorSetupResponseSchema>;
 
 export const PlatformContextSchema = z.object({
   os: z.enum(['darwin', 'win32', 'linux']),
