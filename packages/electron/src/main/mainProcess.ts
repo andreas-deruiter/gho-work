@@ -40,7 +40,10 @@ import {
   AgentServiceImpl,
   ICopilotSDK,
   IAgentService,
+  SkillRegistryImpl,
+  buildSkillSources,
 } from '@gho-work/agent';
+import * as os from 'node:os';
 import type { AgentContext } from '@gho-work/base';
 import {
   IMCPClientManager,
@@ -70,6 +73,8 @@ export interface MainProcessOptions {
   useMockSDK?: boolean;
   /** User data directory for SQLite databases (conversations, settings). */
   userDataPath?: string;
+  /** Override skill loading path — only this path is scanned (for testing). */
+  skillsPath?: string;
 }
 
 export function createMainProcess(
@@ -243,15 +248,31 @@ export function createMainProcess(
     _sdkReadyResolve?.();
   })();
 
+  // Skill registry: multi-source skill discovery with priority-based deduplication.
   // In development, app.getAppPath() returns apps/desktop (the package directory).
-  // Skills live at <repo-root>/skills/, which is 2 levels up.
+  // Bundled skills live at <repo-root>/skills/, which is 2 levels up.
   // In packaged builds, they're copied to resources/skills/.
-  const skillsPath = app.isPackaged
+  const bundledSkillsPath = app.isPackaged
     ? path.join(process.resourcesPath, 'skills')
     : path.join(app.getAppPath(), '..', '..', 'skills');
-  const agentService = new AgentServiceImpl(sdk, conversationService, skillsPath);
+  const skillSources = buildSkillSources({
+    bundledPath: bundledSkillsPath,
+    userPath: path.join(os.homedir(), '.gho-work', 'skills'),
+    overridePath: options?.skillsPath,
+  });
+  const skillRegistry = new SkillRegistryImpl(skillSources);
+  // Fire scan as non-blocking — skills load in background; agent works immediately.
+  void skillRegistry.scan().catch((err) => {
+    console.error('[main] Skill registry scan failed:', err instanceof Error ? err.message : String(err));
+  });
+  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry);
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
+
+  // Dispose skill registry on app quit
+  app.on('will-quit', () => {
+    skillRegistry.dispose();
+  });
 
   // --- Connector Services ---
   const mcpJsonPath = path.join(

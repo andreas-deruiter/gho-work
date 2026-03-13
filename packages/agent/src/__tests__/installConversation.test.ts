@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AgentServiceImpl } from '../node/agentServiceImpl.js';
-import * as fsActual from 'node:fs/promises';
-import * as os from 'node:os';
-import * as path from 'node:path';
+import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
 
 function createMockConversationService() {
 	const conversations = new Map<string, { id: string; title: string }>();
@@ -27,31 +25,38 @@ function createMockCopilotSDK() {
 	};
 }
 
-const SETUP_SKILL_CONTENT = '# Setup connector\nHelp the user set up a connector.';
-
 describe('createSetupConversation', () => {
 	let agentService: AgentServiceImpl;
 	let conversationService: ReturnType<typeof createMockConversationService>;
 	let tmpSkillsDir: string;
+	let registry: SkillRegistryImpl;
 
 	beforeEach(async () => {
-		tmpSkillsDir = await fsActual.mkdtemp(path.join(os.tmpdir(), 'skills-'));
-		await fsActual.mkdir(path.join(tmpSkillsDir, 'connectors'), { recursive: true });
-		await fsActual.writeFile(
+		const fs = await import('node:fs/promises');
+		const os = await import('node:os');
+		const path = await import('node:path');
+		tmpSkillsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skills-'));
+		await fs.mkdir(path.join(tmpSkillsDir, 'connectors'), { recursive: true });
+		await fs.writeFile(
 			path.join(tmpSkillsDir, 'connectors', 'setup.md'),
-			SETUP_SKILL_CONTENT,
+			'# Setup connector\nHelp the user set up a connector.',
 		);
+
+		registry = new SkillRegistryImpl([
+			{ id: 'test', priority: 0, basePath: tmpSkillsDir },
+		]);
+		await registry.scan();
 
 		conversationService = createMockConversationService();
 		agentService = new AgentServiceImpl(
 			createMockCopilotSDK() as any,
 			conversationService as any,
-			tmpSkillsDir,
+			registry,
 		);
 	});
 
-	afterEach(async () => {
-		await fsActual.rm(tmpSkillsDir, { recursive: true, force: true });
+	afterEach(() => {
+		registry.dispose();
 	});
 
 	it('creates a conversation and returns its ID', async () => {
@@ -73,7 +78,10 @@ describe('createSetupConversation', () => {
 	});
 
 	it('uses empty string as context when setup skill file is missing', async () => {
-		await fsActual.rm(path.join(tmpSkillsDir, 'connectors', 'setup.md'));
+		const fs = await import('node:fs/promises');
+		const path = await import('node:path');
+		await fs.rm(path.join(tmpSkillsDir, 'connectors', 'setup.md'));
+		await registry.refresh();
 		const convId = await agentService.createSetupConversation();
 		const context = agentService.getInstallContext(convId);
 		expect(context).toBe('');
@@ -83,7 +91,7 @@ describe('createSetupConversation', () => {
 		const noConvService = new AgentServiceImpl(
 			createMockCopilotSDK() as any,
 			null,
-			tmpSkillsDir,
+			registry,
 		);
 		await expect(noConvService.createSetupConversation()).rejects.toThrow('conversation service');
 	});

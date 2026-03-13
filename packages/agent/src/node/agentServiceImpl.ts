@@ -9,8 +9,7 @@ import type { IConversationService } from '../common/conversation.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
 import type { MCPServerConfig, SessionEvent } from '../common/types.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
+import type { ISkillRegistry } from '../common/skillRegistry.js';
 
 export class AgentServiceImpl implements IAgentService {
   private _activeTaskId: string | null = null;
@@ -22,7 +21,7 @@ export class AgentServiceImpl implements IAgentService {
   constructor(
     private readonly _sdk: ICopilotSDK,
     private readonly _conversationService: IConversationService | null,
-    private readonly _bundledSkillsPath: string,
+    private readonly _skillRegistry: ISkillRegistry,
     private readonly _readContextFiles?: () => Promise<string>,
   ) {}
 
@@ -124,12 +123,7 @@ export class AgentServiceImpl implements IAgentService {
   }
 
   private async _loadSkill(category: string, toolId: string): Promise<string | undefined> {
-    const skillPath = path.join(this._bundledSkillsPath, category, `${toolId}.md`);
-    try {
-      return await fs.readFile(skillPath, 'utf-8');
-    } catch {
-      return undefined;
-    }
+    return this._skillRegistry.getSkill(category, toolId);
   }
 
   private _mapEvent(event: SessionEvent): AgentEvent | null {
