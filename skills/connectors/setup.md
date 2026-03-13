@@ -1,114 +1,62 @@
 ---
 name: connector-setup
-description: Unified setup skill for MCP servers and CLI tools
+description: Setup skill for adding MCP servers using agent tools
 ---
 
 # Connector Setup
 
 ## What this skill does
 
-You help users add MCP servers and CLI tools as connectors in GHO Work. You handle the full setup flow: discovery, configuration, environment variable collection, and connection testing. The user should never need to open a terminal.
+You help users add MCP servers to GHO Work. Use the `add_mcp_server`, `remove_mcp_server`, and `list_mcp_servers` agent tools — the user should never need to open a terminal or interact with IPC channels directly.
 
-## Step 1: Understand what the user wants
+## Step 1: Ask what the user wants
 
-Ask the user what they want to connect to (e.g., "a Slack MCP server", "GitHub CLI", "a database tool"). If they are vague, ask a clarifying question before proceeding.
+Ask the user what MCP server they want to add. If they are vague, ask a clarifying question:
+- What service or tool do they want to connect to?
+- Do they have a specific server in mind, or do they need help finding one?
 
-## Step 2: Search the MCP Registry
+## Step 2: Determine the transport type
 
-Run a registry search to find matching servers:
+Based on the user's answer, determine the server type:
 
-```bash
-curl -s "https://registry.modelcontextprotocol.io/v2025-07-09/servers?search=<query>&limit=5&version=latest"
+| Type    | When to use |
+|---------|-------------|
+| `stdio` | Local commands — the server runs as a subprocess (e.g., `npx`, `uvx`, `docker run`) |
+| `http`  | Remote servers — the server is hosted at a URL |
+
+If unsure, ask the user whether the server runs locally or is hosted remotely.
+
+## Step 3: Gather required parameters
+
+**For stdio servers**, collect:
+- `command` — the executable to run (e.g., `npx`, `uvx`, `docker`)
+- `args` — the arguments array (e.g., `["-y", "some-mcp-package"]`)
+- Any environment variables the server needs (API keys, tokens, etc.) — ask the user for each value; never guess credentials
+
+**For http servers**, collect:
+- `url` — the full URL of the MCP server endpoint
+- Any required auth headers or tokens — ask the user
+
+## Step 4: Add the server
+
+Call `add_mcp_server` with the gathered parameters. Example shapes:
+
+```
+# stdio
+add_mcp_server({ name: "my-server", transport: "stdio", command: "npx", args: ["-y", "some-mcp-package"], env: { MY_KEY: "value" } })
+
+# http
+add_mcp_server({ name: "my-server", transport: "http", url: "https://example.com/mcp" })
 ```
 
-Replace `<query>` with the user's request (URL-encode spaces as `+` or `%20`).
+## Step 5: Verify the connection
 
-The response has this shape:
-```json
-{
-  "servers": [
-    {
-      "name": "...",
-      "description": "...",
-      "packages": [
-        {
-          "registryType": "npm" | "pypi" | "docker-hub",
-          "identifier": "...",
-          "environmentVariables": [
-            { "name": "MY_VAR", "description": "...", "required": true }
-          ]
-        }
-      ],
-      "remotes": [
-        { "transportType": "streamable-http", "url": "https://..." }
-      ]
-    }
-  ],
-  "metadata": { "count": 5, "nextCursor": "..." }
-}
-```
+Call `list_mcp_servers` and find the entry for the newly added server. Check its status:
 
-### If curl fails (timeout, DNS error, rate limit)
+- **connected** — tell the user the server is ready to use
+- **error** — show the error message; offer to troubleshoot (check credentials, verify the command exists, check network access)
+- **connecting** — wait a moment and call `list_mcp_servers` again
 
-Fall back to a web search for `<query> MCP server site:modelcontextprotocol.io OR site:npmjs.com OR site:pypi.org`. Report what you found and ask the user to confirm before proceeding.
+## Removing a server
 
-## Step 3: Present results and confirm
-
-Show the user the top matches with name and description. Ask which one they want to install. If there is only one obvious match, confirm it before proceeding.
-
-If the registry returns no results, use a web search to find the right package (npm, PyPI, Docker Hub, or a hosted endpoint URL). Ask the user to confirm what you found before configuring it.
-
-## Step 4: Map the package to a ConnectorConfig
-
-Based on the chosen server's package entry, construct the connector config:
-
-| registryType   | ConnectorConfig shape |
-|----------------|-----------------------|
-| `npm`          | `{ transport: 'stdio', command: 'npx', args: ['-y', identifier] }` |
-| `pypi`         | `{ transport: 'stdio', command: 'uvx', args: [identifier] }` |
-| `docker-hub`   | `{ transport: 'stdio', command: 'docker', args: ['run', '-i', '--rm', identifier] }` |
-| streamable-http remote | `{ transport: 'streamable_http', url: remote.url }` |
-
-If the server has both packages and remotes, prefer the `streamable-http` remote (no local install needed). Otherwise use the first available package.
-
-## Step 5: Collect environment variables
-
-If the chosen package has `environmentVariables` with any entries, ask the user for each value before configuring:
-
-- For each variable: show the variable name and description. Ask for the value.
-- If a variable is not required, tell the user it is optional and they can skip it.
-- Never guess or invent values for API keys, tokens, or credentials.
-- Store the collected values as env entries in the connector config.
-
-Example:
-```
-I need a few details before I can add this connector:
-
-1. **SLACK_BOT_TOKEN** — Your Slack bot token (starts with xoxb-). Required.
-2. **SLACK_TEAM_ID** — Your Slack workspace ID. Optional.
-```
-
-## Step 6: Add the connector
-
-Send a `CONNECTOR_ADD` IPC call with the constructed ConnectorConfig (including any env vars). This registers the connector in GHO Work's connector store.
-
-## Step 7: Test the connection
-
-After adding, send a `CONNECTOR_TEST` IPC call with the connector ID returned from step 6.
-
-- If the test succeeds: tell the user the connector is ready to use.
-- If the test fails: show the error message. Offer to help troubleshoot (e.g., check credentials, verify the package is installed, check network access).
-
-## CLI tools
-
-For CLI tools (gh, git, mgc, gcloud, az, etc.), the install and auth skills are already loaded into your system message. Follow those skills directly — do not search the registry for CLI tools.
-
-If you are unsure whether something is a CLI tool or an MCP server, ask the user.
-
-## Common pitfalls
-
-- **npm not found**: check `npm --version`. If missing, tell the user to install Node.js from https://nodejs.org.
-- **uvx not found**: check `uvx --version`. If missing, run `pip install uv` or `curl -LsSf https://astral.sh/uv/install.sh | sh`.
-- **docker not found**: tell the user to install Docker Desktop from https://docker.com.
-- **streamable-http behind auth**: the server may require an API key passed as a header or query param. Check the server's documentation (linked in the registry) and ask the user for the credential.
-- **Rate-limited registry**: if the registry returns 429, wait 5 seconds and retry once. If it fails again, fall back to web search.
+If the user asks to remove an MCP server, call `list_mcp_servers` to show them the current servers, confirm which one to remove, then call `remove_mcp_server` with the server name or ID.
