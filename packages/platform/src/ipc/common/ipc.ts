@@ -35,6 +35,8 @@ export const IPC_CHANNELS = {
   CONNECTOR_UPDATE: 'connector:update',
   CONNECTOR_TEST: 'connector:test',
   CONNECTOR_GET_TOOLS: 'connector:get-tools',
+  CONNECTOR_CONNECT: 'connector:connect',
+  CONNECTOR_DISCONNECT: 'connector:disconnect',
   CONNECTOR_STATUS_CHANGED: 'connector:status-changed',
   CONNECTOR_TOOLS_CHANGED: 'connector:tools-changed',
   CONNECTOR_LIST_CHANGED: 'connector:list-changed',
