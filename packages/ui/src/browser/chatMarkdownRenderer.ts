@@ -5,7 +5,7 @@
  * and DOMPurify for XSS prevention. Includes streaming support via
  * fillInIncompleteTokens (ported from VS Code, MIT license).
  */
-import { marked, Marked, Renderer } from 'marked';
+import { marked, Marked, Renderer, type Token, type TokensList, type Tokens } from 'marked';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js/lib/core';
 
@@ -56,7 +56,7 @@ hljs.registerLanguage('txt', plaintext);
 
 const renderer = new Renderer();
 
-renderer.code = function ({ text, lang }: marked.Tokens.Code): string {
+renderer.code = function ({ text, lang }: Tokens.Code): string {
   const language = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
   let highlighted: string;
   try {
@@ -149,7 +149,7 @@ function escapeHtml(str: string): string {
 
 const MAX_FIX_ROUNDS = 3;
 
-export function fillInIncompleteTokens(tokens: marked.TokensList): marked.TokensList {
+export function fillInIncompleteTokens(tokens: TokensList): TokensList {
   for (let i = 0; i < MAX_FIX_ROUNDS; i++) {
     const newTokens = fillInIncompleteTokensOnce(tokens);
     if (newTokens) {
@@ -161,13 +161,13 @@ export function fillInIncompleteTokens(tokens: marked.TokensList): marked.Tokens
   return tokens;
 }
 
-function mergeRawTokenText(tokens: marked.Token[]): string {
+function mergeRawTokenText(tokens: Token[]): string {
   return tokens.map(t => t.raw).join('');
 }
 
-function fillInIncompleteTokensOnce(tokens: marked.TokensList): marked.TokensList | null {
+function fillInIncompleteTokensOnce(tokens: TokensList): TokensList | null {
   let i: number;
-  let newTokens: marked.Token[] | undefined;
+  let newTokens: Token[] | undefined;
 
   for (i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -180,7 +180,7 @@ function fillInIncompleteTokensOnce(tokens: marked.TokensList): marked.TokensLis
   const lastToken = tokens.at(-1);
 
   if (!newTokens && lastToken?.type === 'list') {
-    const newListToken = completeListItemPattern(lastToken as marked.Tokens.List);
+    const newListToken = completeListItemPattern(lastToken as Tokens.List);
     if (newListToken) {
       newTokens = [newListToken];
       i = tokens.length - 1;
@@ -188,7 +188,7 @@ function fillInIncompleteTokensOnce(tokens: marked.TokensList): marked.TokensLis
   }
 
   if (!newTokens && lastToken?.type === 'paragraph') {
-    const newToken = completeSingleLinePattern(lastToken as marked.Tokens.Paragraph);
+    const newToken = completeSingleLinePattern(lastToken as Tokens.Paragraph);
     if (newToken) {
       newTokens = [newToken];
       i = tokens.length - 1;
@@ -197,16 +197,16 @@ function fillInIncompleteTokensOnce(tokens: marked.TokensList): marked.TokensLis
 
   if (newTokens) {
     const result = [...tokens.slice(0, i), ...newTokens];
-    (result as marked.TokensList).links = tokens.links;
-    return result as marked.TokensList;
+    (result as TokensList).links = tokens.links;
+    return result as TokensList;
   }
 
   return null;
 }
 
 function completeSingleLinePattern(
-  token: marked.Tokens.Text | marked.Tokens.Paragraph,
-): marked.Token | undefined {
+  token: Tokens.Text | Tokens.Paragraph,
+): Token | undefined {
   if (!token.tokens) {
     return undefined;
   }
@@ -240,12 +240,12 @@ function completeSingleLinePattern(
   return undefined;
 }
 
-function completeListItemPattern(list: marked.Tokens.List): marked.Tokens.List | undefined {
+function completeListItemPattern(list: Tokens.List): Tokens.List | undefined {
   const lastItem = list.items[list.items.length - 1];
   const lastSubToken = lastItem.tokens?.[lastItem.tokens.length - 1];
 
   if (lastSubToken?.type === 'text' && !('inRawBlock' in lastItem)) {
-    const newToken = completeSingleLinePattern(lastSubToken as marked.Tokens.Text);
+    const newToken = completeSingleLinePattern(lastSubToken as Tokens.Text);
     if (newToken && newToken.type === 'paragraph') {
       const previousText = mergeRawTokenText(list.items.slice(0, -1));
       const lead = lastItem.raw.match(/^(\s*(-|\d+\.|\*) +)/)?.[0];
@@ -254,7 +254,7 @@ function completeListItemPattern(list: marked.Tokens.List): marked.Tokens.List |
       }
       const newItemText =
         lead + mergeRawTokenText(lastItem.tokens.slice(0, -1)) + newToken.raw;
-      const newList = marked.lexer(previousText + newItemText)[0] as marked.Tokens.List;
+      const newList = marked.lexer(previousText + newItemText)[0] as Tokens.List;
       return newList.type === 'list' ? newList : undefined;
     }
   }
@@ -262,16 +262,16 @@ function completeListItemPattern(list: marked.Tokens.List): marked.Tokens.List |
 }
 
 function completeWithString(
-  token: marked.Token,
+  token: Token,
   closing: string,
   shouldTrim = true,
-): marked.Token {
+): Token {
   const raw = mergeRawTokenText([token]);
   const text = shouldTrim ? raw.trimEnd() : raw;
   return marked.lexer(text + closing)[0];
 }
 
-function completeTable(tokens: marked.Token[]): marked.Token[] | undefined {
+function completeTable(tokens: Token[]): Token[] | undefined {
   const raw = mergeRawTokenText(tokens);
   const lines = raw.split('\n');
 

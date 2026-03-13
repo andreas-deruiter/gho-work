@@ -99,7 +99,6 @@ describe('electron main process', () => {
     expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_CHECK_GH)).toBe(true);
     expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_GH_LOGIN)).toBe(true);
     expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_CHECK_COPILOT)).toBe(true);
-    expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_DETECT_TOOLS)).toBe(true);
     expect(ipcHandlers.has(IPC_CHANNELS.ONBOARDING_COMPLETE)).toBe(true);
   });
 

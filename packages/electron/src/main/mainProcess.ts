@@ -200,14 +200,14 @@ export function createMainProcess(
   // - If --mock flag: start in mock mode immediately
   // - If onboarding complete: start with real gh token
   // - If onboarding incomplete: defer start until ONBOARDING_COMPLETE handler
-  let _sdkReadyResolve: () => void;
+  let _sdkReadyResolve: (() => void) | undefined;
   const sdkReady = new Promise<void>((resolve) => { _sdkReadyResolve = resolve; });
 
   void (async () => {
     if (useMock) {
       await sdk.start();
       console.log('[main] Agent started in Mock mode (--mock flag)');
-      _sdkReadyResolve();
+      _sdkReadyResolve?.();
       return;
     }
 
@@ -240,7 +240,7 @@ export function createMainProcess(
     } else {
       console.log('[main] SDK start deferred — waiting for onboarding to complete');
     }
-    _sdkReadyResolve();
+    _sdkReadyResolve?.();
   })();
 
   // In development, app.getAppPath() returns apps/desktop (the package directory).
@@ -305,8 +305,11 @@ export function createMainProcess(
     if (conversationService) {
       try {
         conversationService.addMessage(request.conversationId, {
+          conversationId: request.conversationId,
           role: 'user',
           content: request.content,
+          toolCalls: [],
+          timestamp: Date.now(),
         });
       } catch (err) { console.warn('[main] Non-critical error:', err instanceof Error ? err.message : String(err)); }
     }
@@ -352,8 +355,11 @@ export function createMainProcess(
       if (conversationService && assistantContent) {
         try {
           conversationService.addMessage(request.conversationId, {
+            conversationId: request.conversationId,
             role: 'assistant',
             content: assistantContent,
+            toolCalls: [],
+            timestamp: Date.now(),
           });
         } catch (err) { console.warn('[main] Non-critical error:', err instanceof Error ? err.message : String(err)); }
       }

@@ -8,9 +8,7 @@ import { AuthStep } from '../authStep.js';
 
 function createMockIPC(responses: Record<string, unknown> = {}): IIPCRenderer {
   return {
-    invoke: vi.fn(async (channel: string) => {
-      return responses[channel] ?? {};
-    }),
+    invoke: vi.fn(async (channel: string) => responses[channel] ?? {}) as unknown as IIPCRenderer['invoke'],
     on: vi.fn(),
     removeListener: vi.fn(),
   };
@@ -114,7 +112,7 @@ describe('AuthStep', () => {
       return {};
     });
 
-    const ipc: IIPCRenderer = { invoke: invokeMock, on: vi.fn(), removeListener: vi.fn() };
+    const ipc: IIPCRenderer = { invoke: invokeMock as unknown as IIPCRenderer['invoke'], on: vi.fn(), removeListener: vi.fn() };
     const step = new AuthStep(container, ipc);
 
     await vi.waitFor(() => {

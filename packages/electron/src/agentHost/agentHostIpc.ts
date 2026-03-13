@@ -13,7 +13,8 @@ export class AgentHostIpc implements IDisposable {
   private _protocol: MessagePortProtocol | undefined;
   private _disposed = false;
 
-  connect(port: MessagePort): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  connect(port: any): void {
     this._protocol = new MessagePortProtocol(port);
 
     this._protocol.onRequest('agent:send-message', async (data) => {

@@ -8,9 +8,7 @@ import { OnboardingFlow } from '../onboardingFlow.js';
 
 function createMockIPC(responses: Record<string, unknown> = {}): IIPCRenderer {
   return {
-    invoke: vi.fn(async (channel: string) => {
-      return responses[channel] ?? {};
-    }),
+    invoke: vi.fn(async (channel: string) => responses[channel] ?? {}) as unknown as IIPCRenderer['invoke'],
     on: vi.fn(),
     removeListener: vi.fn(),
   };

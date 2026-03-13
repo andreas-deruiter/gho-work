@@ -41,7 +41,7 @@ describe('ActivityBar', () => {
   it('should have ARIA attributes for accessibility', () => {
     const bar = new ActivityBar();
     const buttons = bar.getDomNode().querySelectorAll('.activity-bar-item');
-    for (const btn of buttons) {
+    for (const btn of Array.from(buttons)) {
       expect(btn.getAttribute('role')).toBe('tab');
       expect(btn.getAttribute('aria-label')).toBeTruthy();
     }

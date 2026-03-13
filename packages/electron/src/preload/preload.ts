@@ -22,7 +22,6 @@ const ALLOWED_INVOKE_CHANNELS = [
   IPC_CHANNELS.ONBOARDING_CHECK_GH,
   IPC_CHANNELS.ONBOARDING_GH_LOGIN,
   IPC_CHANNELS.ONBOARDING_CHECK_COPILOT,
-  IPC_CHANNELS.ONBOARDING_DETECT_TOOLS,
   IPC_CHANNELS.ONBOARDING_COMPLETE,
   IPC_CHANNELS.ONBOARDING_STATUS,
 ];
@@ -31,7 +30,6 @@ const ALLOWED_LISTEN_CHANNELS = [
   IPC_CHANNELS.AGENT_EVENT,
   IPC_CHANNELS.AUTH_STATE_CHANGED,
   IPC_CHANNELS.CONNECTOR_STATUS_CHANGED,
-  IPC_CHANNELS.CLI_TOOLS_CHANGED,
 ];
 
 // Map from caller-provided callback to the wrapped ipcRenderer handler,
@@ -43,13 +41,13 @@ const _listenerMap = new Map<IPCCallback, IPCHandler>();
 export function createPreloadScript(): void {
   contextBridge.exposeInMainWorld('ghoWorkIPC', {
     invoke: (channel: string, ...args: unknown[]) => {
-      if (!ALLOWED_INVOKE_CHANNELS.includes(channel)) {
+      if (!ALLOWED_INVOKE_CHANNELS.includes(channel as never)) {
         throw new Error(`IPC channel not allowed: ${channel}`);
       }
       return ipcRenderer.invoke(channel, ...args);
     },
     on: (channel: string, callback: (...args: unknown[]) => void) => {
-      if (!ALLOWED_LISTEN_CHANNELS.includes(channel)) {
+      if (!ALLOWED_LISTEN_CHANNELS.includes(channel as never)) {
         throw new Error(`IPC channel not allowed: ${channel}`);
       }
       const handler = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => callback(...args);
