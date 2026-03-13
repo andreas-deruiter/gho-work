@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { ConnectorConfig } from '@gho-work/base';
+import type { MCPServerConfig, MCPServerStatus } from '@gho-work/base';
 import type { ToolInfo } from '../common/mcpClientManager.js';
-import type { IConnectorRegistry } from '../common/connectorRegistry.js';
+import type { IConnectorConfigStore } from '../common/connectorConfigStore.js';
 
 // --- Mock MCPConnection ---
 
-type StatusListener = (status: ConnectorConfig['status']) => void;
+type StatusListener = (status: MCPServerStatus) => void;
 type ToolsListener = (tools: ToolInfo[]) => void;
 
 interface MockMCPConnectionInstance {
-  status: ConnectorConfig['status'];
+  status: MCPServerStatus;
   connect: ReturnType<typeof vi.fn>;
   disconnect: ReturnType<typeof vi.fn>;
   listTools: ReturnType<typeof vi.fn>;
@@ -18,15 +18,18 @@ interface MockMCPConnectionInstance {
   onDidChangeTools: (listener: ToolsListener) => void;
   _statusListeners: StatusListener[];
   _toolsListeners: ToolsListener[];
-  _fireStatus: (s: ConnectorConfig['status']) => void;
+  _fireStatus: (s: MCPServerStatus) => void;
   _fireTools: (t: ToolInfo[]) => void;
+  _config: MCPServerConfig;
 }
 
 function createMockConnection(
+  config: MCPServerConfig,
   connectImpl?: () => Promise<void>,
 ): MockMCPConnectionInstance {
   const instance: MockMCPConnectionInstance = {
-    status: 'disconnected' as ConnectorConfig['status'],
+    status: 'disconnected' as MCPServerStatus,
+    _config: config,
     connect: vi.fn().mockImplementation(connectImpl ?? (() => Promise.resolve())),
     disconnect: vi.fn().mockResolvedValue(undefined),
     listTools: vi.fn().mockReturnValue([]),
@@ -39,7 +42,7 @@ function createMockConnection(
     },
     _statusListeners: [],
     _toolsListeners: [],
-    _fireStatus: (s: ConnectorConfig['status']) => {
+    _fireStatus: (s: MCPServerStatus) => {
       instance.status = s;
       instance._statusListeners.forEach(l => l(s));
     },
@@ -55,12 +58,14 @@ let lastMockInstance: MockMCPConnectionInstance | null = null;
 const mockInstances: MockMCPConnectionInstance[] = [];
 
 vi.mock('../node/mcpConnection.js', () => {
-  const MockMCPConnection = vi.fn().mockImplementation(() => {
-    const inst = createMockConnection();
-    lastMockInstance = inst;
-    mockInstances.push(inst);
-    return inst;
-  });
+  const MockMCPConnection = vi.fn().mockImplementation(
+    (_name: string, config: MCPServerConfig) => {
+      const inst = createMockConnection(config);
+      lastMockInstance = inst;
+      mockInstances.push(inst);
+      return inst;
+    },
+  );
   return { MCPConnection: MockMCPConnection };
 });
 
@@ -70,41 +75,41 @@ import { MCPConnection } from '../node/mcpConnection.js';
 
 // --- Helpers ---
 
-function makeConfig(overrides: Partial<ConnectorConfig> = {}): ConnectorConfig {
+function makeConfig(overrides: Partial<MCPServerConfig> = {}): MCPServerConfig {
   return {
-    id: 'conn-1',
-    type: 'local_mcp',
-    name: 'Test Server',
-    transport: 'stdio',
+    type: 'stdio',
     command: 'node',
     args: ['server.js'],
-    enabled: true,
-    status: 'disconnected',
     ...overrides,
   };
 }
 
-function makeRegistry(
-  connectors: ConnectorConfig[] = [],
-): IConnectorRegistry & { _statuses: Map<string, ConnectorConfig['status']> } {
-  const _statuses = new Map<string, ConnectorConfig['status']>();
-  const map = new Map<string, ConnectorConfig>(connectors.map(c => [c.id, c]));
+type ConfigStoreChangeListener = (servers: Map<string, MCPServerConfig>) => void;
 
-  return {
-    _statuses,
-    addConnector: vi.fn(),
-    updateConnector: vi.fn(),
-    removeConnector: vi.fn(),
-    getConnector: vi.fn().mockImplementation(async (id: string) => map.get(id)),
-    getConnectors: vi.fn().mockResolvedValue(connectors),
-    getEnabledConnectors: vi.fn().mockResolvedValue(connectors.filter(c => c.enabled)),
-    updateStatus: vi.fn().mockImplementation(async (id: string, status: ConnectorConfig['status']) => {
-      _statuses.set(id, status);
-    }),
-    onDidChangeConnectors: vi.fn() as unknown as IConnectorRegistry['onDidChangeConnectors'],
-    onDidChangeStatus: vi.fn() as unknown as IConnectorRegistry['onDidChangeStatus'],
-    dispose: vi.fn(),
-  };
+function makeConfigStore(
+  initial: Map<string, MCPServerConfig> = new Map(),
+): IConnectorConfigStore & { _fire: (servers: Map<string, MCPServerConfig>) => void } {
+  const _listeners: ConfigStoreChangeListener[] = [];
+
+  const store: IConnectorConfigStore & { _fire: (servers: Map<string, MCPServerConfig>) => void } =
+    {
+      onDidChangeServers: vi.fn().mockImplementation((listener: ConfigStoreChangeListener) => {
+        _listeners.push(listener);
+        return { dispose: vi.fn() };
+      }),
+      getServers: vi.fn().mockReturnValue(initial),
+      getServer: vi.fn().mockImplementation((name: string) => initial.get(name)),
+      addServer: vi.fn().mockResolvedValue(undefined),
+      updateServer: vi.fn().mockResolvedValue(undefined),
+      removeServer: vi.fn().mockResolvedValue(undefined),
+      getFilePath: vi.fn().mockReturnValue('/fake/path/servers.json'),
+      dispose: vi.fn(),
+      _fire: (servers: Map<string, MCPServerConfig>) => {
+        _listeners.forEach(l => l(servers));
+      },
+    };
+
+  return store;
 }
 
 // --- Tests ---
@@ -114,12 +119,14 @@ describe('MCPClientManagerImpl', () => {
     vi.clearAllMocks();
     lastMockInstance = null;
     mockInstances.length = 0;
-    (MCPConnection as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      const inst = createMockConnection();
-      lastMockInstance = inst;
-      mockInstances.push(inst);
-      return inst;
-    });
+    (MCPConnection as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (_name: string, config: MCPServerConfig) => {
+        const inst = createMockConnection(config);
+        lastMockInstance = inst;
+        mockInstances.push(inst);
+        return inst;
+      },
+    );
   });
 
   afterEach(() => {
@@ -129,74 +136,80 @@ describe('MCPClientManagerImpl', () => {
   // --- connectServer ---
 
   describe('connectServer()', () => {
-    it('gets config from registry and calls connect()', async () => {
+    it('creates a connection and calls connect()', async () => {
       const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
-      await manager.connectServer('conn-1');
+      await manager.connectServer('my-server', config);
 
-      expect(registry.getConnector).toHaveBeenCalledWith('conn-1');
-      expect(MCPConnection).toHaveBeenCalledWith(config);
+      expect(MCPConnection).toHaveBeenCalledWith('my-server', config);
       expect(lastMockInstance!.connect).toHaveBeenCalledTimes(1);
 
       manager.dispose();
     });
 
-    it('throws when connector ID is not found in registry', async () => {
-      const registry = makeRegistry([]);
-      const manager = new MCPClientManagerImpl(registry);
-
-      await expect(manager.connectServer('unknown-id')).rejects.toThrow('Connector not found: unknown-id');
-
-      manager.dispose();
-    });
-
-    it('replaces existing connection when called again for same ID', async () => {
+    it('replaces existing connection when called again for the same name', async () => {
       const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
-      await manager.connectServer('conn-1');
+      await manager.connectServer('my-server', config);
       const first = lastMockInstance!;
 
-      await manager.connectServer('conn-1');
+      await manager.connectServer('my-server', config);
 
-      // The first connection should have been disposed
       expect(first.dispose).toHaveBeenCalled();
-      // A new connection should have been created
       expect(MCPConnection).toHaveBeenCalledTimes(2);
-
-      manager.dispose();
-    });
-
-    it('updates registry status to connected via onDidChangeStatus forwarding', async () => {
-      const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
-
-      await manager.connectServer('conn-1');
-
-      // Simulate connection firing a status event
-      lastMockInstance!._fireStatus('connected');
-
-      expect(registry.updateStatus).toHaveBeenCalledWith('conn-1', 'connected');
 
       manager.dispose();
     });
 
     it('does not throw when connection fails (error is swallowed)', async () => {
       const config = makeConfig();
-      const registry = makeRegistry([config]);
-      (MCPConnection as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
-        const inst = createMockConnection(() => Promise.reject(new Error('refused')));
-        lastMockInstance = inst;
-        mockInstances.push(inst);
-        return inst;
-      });
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      (MCPConnection as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(
+        (_name: string, cfg: MCPServerConfig) => {
+          const inst = createMockConnection(cfg, () => Promise.reject(new Error('refused')));
+          lastMockInstance = inst;
+          mockInstances.push(inst);
+          return inst;
+        },
+      );
+      const manager = new MCPClientManagerImpl(store);
 
-      await expect(manager.connectServer('conn-1')).resolves.not.toThrow();
+      await expect(manager.connectServer('my-server', config)).resolves.not.toThrow();
+
+      manager.dispose();
+    });
+
+    it('forwards onDidChangeStatus events from the connection', async () => {
+      const config = makeConfig();
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
+      const events: Array<{ serverName: string; status: MCPServerStatus }> = [];
+
+      manager.onDidChangeStatus(e => events.push(e));
+      await manager.connectServer('my-server', config);
+      lastMockInstance!._fireStatus('connected');
+
+      expect(events).toContainEqual({ serverName: 'my-server', status: 'connected' });
+
+      manager.dispose();
+    });
+
+    it('forwards onDidChangeTools events from the connection', async () => {
+      const config = makeConfig();
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
+      const events: Array<{ serverName: string; tools: ToolInfo[] }> = [];
+      const tools: ToolInfo[] = [{ name: 'my-tool', description: 'desc', enabled: true }];
+
+      manager.onDidChangeTools(e => events.push(e));
+      await manager.connectServer('my-server', config);
+      lastMockInstance!._fireTools(tools);
+
+      expect(events).toContainEqual({ serverName: 'my-server', tools });
 
       manager.dispose();
     });
@@ -207,12 +220,12 @@ describe('MCPClientManagerImpl', () => {
   describe('disconnectServer()', () => {
     it('calls disconnect() and dispose() on the connection', async () => {
       const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
-      await manager.connectServer('conn-1');
+      await manager.connectServer('my-server', config);
       const conn = lastMockInstance!;
-      await manager.disconnectServer('conn-1');
+      await manager.disconnectServer('my-server');
 
       expect(conn.disconnect).toHaveBeenCalledTimes(1);
       expect(conn.dispose).toHaveBeenCalledTimes(1);
@@ -220,76 +233,124 @@ describe('MCPClientManagerImpl', () => {
       manager.dispose();
     });
 
-    it('updates registry status to disconnected', async () => {
+    it('fires onDidChangeStatus with disconnected after disconnecting', async () => {
       const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
+      const events: Array<{ serverName: string; status: MCPServerStatus }> = [];
 
-      await manager.connectServer('conn-1');
-      await manager.disconnectServer('conn-1');
+      manager.onDidChangeStatus(e => events.push(e));
+      await manager.connectServer('my-server', config);
+      await manager.disconnectServer('my-server');
 
-      expect(registry.updateStatus).toHaveBeenCalledWith('conn-1', 'disconnected');
+      expect(events).toContainEqual({ serverName: 'my-server', status: 'disconnected' });
 
       manager.dispose();
     });
 
-    it('is a no-op for unknown connector ID', async () => {
-      const registry = makeRegistry([]);
-      const manager = new MCPClientManagerImpl(registry);
+    it('is a no-op for an unknown server name', async () => {
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
       await expect(manager.disconnectServer('unknown')).resolves.not.toThrow();
 
       manager.dispose();
     });
 
-    it('removes connection from active connections', async () => {
+    it('removes the connection so getTools returns [] afterwards', async () => {
       const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
-      await manager.connectServer('conn-1');
-      await manager.disconnectServer('conn-1');
+      await manager.connectServer('my-server', config);
+      await manager.disconnectServer('my-server');
 
-      // After disconnect, getTools should return [] (no active connection)
-      const tools = await manager.getTools('conn-1');
+      const tools = await manager.getTools('my-server');
       expect(tools).toEqual([]);
 
       manager.dispose();
     });
   });
 
-  // --- disconnectAll ---
+  // --- reconcile ---
 
-  describe('disconnectAll()', () => {
-    it('disconnects all active connections', async () => {
-      const configs = [makeConfig({ id: 'conn-1' }), makeConfig({ id: 'conn-2' })];
-      const registry = makeRegistry(configs);
-      const manager = new MCPClientManagerImpl(registry);
+  describe('reconcile()', () => {
+    it('connects new servers not currently tracked', async () => {
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
+      const config = makeConfig();
 
-      await manager.connectServer('conn-1');
-      const conn1 = mockInstances[0];
-      await manager.connectServer('conn-2');
-      const conn2 = mockInstances[1];
+      await manager.reconcile(new Map([['new-server', config]]));
 
-      await manager.disconnectAll();
-
-      expect(conn1.disconnect).toHaveBeenCalled();
-      expect(conn2.disconnect).toHaveBeenCalled();
+      expect(MCPConnection).toHaveBeenCalledWith('new-server', config);
+      expect(lastMockInstance!.connect).toHaveBeenCalledTimes(1);
 
       manager.dispose();
     });
 
-    it('leaves no active connections after call', async () => {
-      const configs = [makeConfig({ id: 'conn-1' }), makeConfig({ id: 'conn-2' })];
-      const registry = makeRegistry(configs);
-      const manager = new MCPClientManagerImpl(registry);
+    it('disconnects servers no longer in the map', async () => {
+      const config = makeConfig();
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
-      await manager.connectServer('conn-1');
-      await manager.connectServer('conn-2');
-      await manager.disconnectAll();
+      await manager.connectServer('old-server', config);
+      const conn = lastMockInstance!;
 
-      expect(await manager.getTools('conn-1')).toEqual([]);
-      expect(await manager.getTools('conn-2')).toEqual([]);
+      await manager.reconcile(new Map());
+
+      expect(conn.disconnect).toHaveBeenCalled();
+
+      manager.dispose();
+    });
+
+    it('leaves unchanged servers connected', async () => {
+      const config = makeConfig();
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
+
+      await manager.connectServer('stable-server', config);
+      const conn = lastMockInstance!;
+      const callsBefore = (MCPConnection as unknown as ReturnType<typeof vi.fn>).mock.calls.length;
+
+      await manager.reconcile(new Map([['stable-server', config]]));
+
+      // No new connection should have been created
+      expect((MCPConnection as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
+        callsBefore,
+      );
+      expect(conn.dispose).not.toHaveBeenCalled();
+
+      manager.dispose();
+    });
+
+    it('reconnects a server when its config changes', async () => {
+      const config = makeConfig({ command: 'node' });
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
+
+      await manager.connectServer('my-server', config);
+      const first = lastMockInstance!;
+
+      const updatedConfig = makeConfig({ command: 'python' });
+      await manager.reconcile(new Map([['my-server', updatedConfig]]));
+
+      expect(first.dispose).toHaveBeenCalled();
+      expect(MCPConnection).toHaveBeenCalledTimes(2);
+      expect(MCPConnection).toHaveBeenLastCalledWith('my-server', updatedConfig);
+
+      manager.dispose();
+    });
+
+    it('is triggered automatically when config store fires onDidChangeServers', async () => {
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
+      const config = makeConfig();
+
+      store._fire(new Map([['auto-server', config]]));
+      // Give the async reconcile a tick to run
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(MCPConnection).toHaveBeenCalledWith('auto-server', config);
 
       manager.dispose();
     });
@@ -300,22 +361,22 @@ describe('MCPClientManagerImpl', () => {
   describe('getTools()', () => {
     it('returns tools from active connection', async () => {
       const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
       const tools: ToolInfo[] = [{ name: 'read-file', description: 'Read', enabled: true }];
 
-      await manager.connectServer('conn-1');
+      await manager.connectServer('my-server', config);
       lastMockInstance!.listTools.mockReturnValue(tools);
 
-      const result = await manager.getTools('conn-1');
+      const result = await manager.getTools('my-server');
       expect(result).toEqual(tools);
 
       manager.dispose();
     });
 
-    it('returns empty array for unknown connector ID', async () => {
-      const registry = makeRegistry([]);
-      const manager = new MCPClientManagerImpl(registry);
+    it('returns empty array for unknown server name', async () => {
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
       const result = await manager.getTools('unknown');
       expect(result).toEqual([]);
@@ -328,89 +389,30 @@ describe('MCPClientManagerImpl', () => {
 
   describe('getAllTools()', () => {
     it('returns a map of all connections tools', async () => {
-      const configs = [makeConfig({ id: 'conn-1' }), makeConfig({ id: 'conn-2' })];
-      const registry = makeRegistry(configs);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
       const tools1: ToolInfo[] = [{ name: 'tool-a', description: 'A', enabled: true }];
       const tools2: ToolInfo[] = [{ name: 'tool-b', description: 'B', enabled: true }];
 
-      await manager.connectServer('conn-1');
+      await manager.connectServer('server-1', makeConfig());
       mockInstances[0].listTools.mockReturnValue(tools1);
-      await manager.connectServer('conn-2');
+      await manager.connectServer('server-2', makeConfig());
       mockInstances[1].listTools.mockReturnValue(tools2);
 
       const result = await manager.getAllTools();
 
-      expect(result.get('conn-1')).toEqual(tools1);
-      expect(result.get('conn-2')).toEqual(tools2);
+      expect(result.get('server-1')).toEqual(tools1);
+      expect(result.get('server-2')).toEqual(tools2);
 
       manager.dispose();
     });
 
     it('returns empty map when no connections are active', async () => {
-      const registry = makeRegistry([]);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
       const result = await manager.getAllTools();
       expect(result.size).toBe(0);
-
-      manager.dispose();
-    });
-  });
-
-  // --- testConnection ---
-
-  describe('testConnection()', () => {
-    it('returns { success: true } when connection succeeds', async () => {
-      const config = makeConfig();
-      const registry = makeRegistry([]);
-      const manager = new MCPClientManagerImpl(registry);
-
-      const result = await manager.testConnection(config);
-
-      expect(result).toEqual({ success: true });
-      // Should have connected and disconnected the temp connection
-      expect(lastMockInstance!.connect).toHaveBeenCalled();
-      expect(lastMockInstance!.disconnect).toHaveBeenCalled();
-      expect(lastMockInstance!.dispose).toHaveBeenCalled();
-
-      manager.dispose();
-    });
-
-    it('returns { success: false, error: message } when connection fails', async () => {
-      const config = makeConfig();
-      const registry = makeRegistry([]);
-      (MCPConnection as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
-        const inst = createMockConnection(() => Promise.reject(new Error('ECONNREFUSED')));
-        lastMockInstance = inst;
-        mockInstances.push(inst);
-        return inst;
-      });
-      const manager = new MCPClientManagerImpl(registry);
-
-      const result = await manager.testConnection(config);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('ECONNREFUSED');
-      expect(lastMockInstance!.dispose).toHaveBeenCalled();
-
-      manager.dispose();
-    });
-
-    it('disposes temp connection on failure', async () => {
-      const config = makeConfig();
-      const registry = makeRegistry([]);
-      (MCPConnection as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
-        const inst = createMockConnection(() => Promise.reject(new Error('fail')));
-        lastMockInstance = inst;
-        mockInstances.push(inst);
-        return inst;
-      });
-      const manager = new MCPClientManagerImpl(registry);
-
-      await manager.testConnection(config);
-
-      expect(lastMockInstance!.dispose).toHaveBeenCalled();
 
       manager.dispose();
     });
@@ -421,21 +423,21 @@ describe('MCPClientManagerImpl', () => {
   describe('getServerStatus()', () => {
     it('returns status from active connection', async () => {
       const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
-      await manager.connectServer('conn-1');
+      await manager.connectServer('my-server', config);
       lastMockInstance!.status = 'connected';
 
-      const status = manager.getServerStatus('conn-1');
+      const status = manager.getServerStatus('my-server');
       expect(status).toBe('connected');
 
       manager.dispose();
     });
 
-    it("returns 'disconnected' for unknown connector ID", () => {
-      const registry = makeRegistry([]);
-      const manager = new MCPClientManagerImpl(registry);
+    it("returns 'disconnected' for unknown server name", () => {
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
       expect(manager.getServerStatus('unknown')).toBe('disconnected');
 
@@ -443,40 +445,36 @@ describe('MCPClientManagerImpl', () => {
     });
   });
 
-  // --- onDidChangeStatus ---
+  // --- disconnectAll ---
 
-  describe('onDidChangeStatus event', () => {
-    it('fires when a connection fires a status change', async () => {
-      const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
-      const events: Array<{ connectorId: string; status: ConnectorConfig['status'] }> = [];
+  describe('disconnectAll()', () => {
+    it('disconnects all active connections', async () => {
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
-      manager.onDidChangeStatus(e => events.push(e));
-      await manager.connectServer('conn-1');
-      lastMockInstance!._fireStatus('connected');
+      await manager.connectServer('server-1', makeConfig());
+      const conn1 = mockInstances[0];
+      await manager.connectServer('server-2', makeConfig());
+      const conn2 = mockInstances[1];
 
-      expect(events).toContainEqual({ connectorId: 'conn-1', status: 'connected' });
+      await manager.disconnectAll();
+
+      expect(conn1.disconnect).toHaveBeenCalled();
+      expect(conn2.disconnect).toHaveBeenCalled();
 
       manager.dispose();
     });
-  });
 
-  // --- onDidChangeTools event ---
+    it('leaves no active connections after call', async () => {
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
-  describe('onDidChangeTools event', () => {
-    it('fires when a connection fires a tools change', async () => {
-      const config = makeConfig();
-      const registry = makeRegistry([config]);
-      const manager = new MCPClientManagerImpl(registry);
-      const events: Array<{ connectorId: string; tools: ToolInfo[] }> = [];
-      const tools: ToolInfo[] = [{ name: 'my-tool', description: 'desc', enabled: true }];
+      await manager.connectServer('server-1', makeConfig());
+      await manager.connectServer('server-2', makeConfig());
+      await manager.disconnectAll();
 
-      manager.onDidChangeTools(e => events.push(e));
-      await manager.connectServer('conn-1');
-      lastMockInstance!._fireTools(tools);
-
-      expect(events).toContainEqual({ connectorId: 'conn-1', tools });
+      expect(await manager.getTools('server-1')).toEqual([]);
+      expect(await manager.getTools('server-2')).toEqual([]);
 
       manager.dispose();
     });
@@ -486,13 +484,12 @@ describe('MCPClientManagerImpl', () => {
 
   describe('dispose()', () => {
     it('disconnects all active connections on dispose', async () => {
-      const configs = [makeConfig({ id: 'conn-1' }), makeConfig({ id: 'conn-2' })];
-      const registry = makeRegistry(configs);
-      const manager = new MCPClientManagerImpl(registry);
+      const store = makeConfigStore();
+      const manager = new MCPClientManagerImpl(store);
 
-      await manager.connectServer('conn-1');
+      await manager.connectServer('server-1', makeConfig());
       const conn1 = mockInstances[0];
-      await manager.connectServer('conn-2');
+      await manager.connectServer('server-2', makeConfig());
       const conn2 = mockInstances[1];
 
       manager.dispose();
