@@ -328,11 +328,20 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - `/weekly-report`: generate summary from multiple sources
    - Each skill: Markdown definition with YAML frontmatter, allowed tools, description
 
-- [ ] 5. **Skill loading** (`packages/agent`)
-   - Scan `.claude/skills/`, `.github/skills/`, `~/.claude/skills/` for skill definitions
-   - Parse YAML frontmatter for configuration
-   - Register skills as slash commands in the chat
-   - Dynamic context injection (shell command output in skill body)
+- [x] 5. **Skill registry** (`packages/agent`) — see [Skill Registry spec](superpowers/specs/2026-03-13-skill-registry-design.md)
+   - `ISkillRegistry` service: multi-source skill discovery with priority-based deduplication
+   - Sources: bundled (priority 0), marketplace (10), additional paths (15), user `~/.gho-work/skills/` (20)
+   - `buildSkillSources()` pure function computes source list from app config
+   - `--skills-path` CLI flag for E2E test isolation
+   - `AgentServiceImpl` delegates to registry instead of raw `fs.readFile`
+   - **Done in branch `feature/skill-registry`** — core registry implemented, bundled + user sources wired
+   - **Remaining:**
+     - [ ] 5a. Settings UI: panel to view/edit `skills.userPath` and `skills.additionalPaths` (depends on settings panel)
+     - [ ] 5b. Plugin management UI: view installed plugins, enable/disable (depends on marketplace infrastructure)
+     - [ ] 5c. Read `~/.gho-work/settings.json` for `additionalPaths` at startup
+     - [ ] 5d. Read `~/.gho-work/plugins/installed.json` for marketplace plugins at startup
+     - [ ] 5e. Register skills as slash commands in the chat
+     - [ ] 5f. File watching: auto-refresh registry when skill files change on disk
 
 - [ ] 6. **Hooks system** (`packages/agent`) — see [Hooks Configuration mockup](tutorial/index.html#settings)
    - Parse hooks from `.claude/settings.json`
@@ -380,7 +389,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 
 - [ ] 13. **Phase 4 tests**
    - Unit tests: memory context loading — CLAUDE.md parsing, .github/copilot-instructions.md fallback, global memory merge
-   - Unit tests: skill YAML frontmatter parsing — valid/invalid YAML, allowed tools extraction, dynamic context shell commands
+   - ~~Unit tests: skill YAML frontmatter parsing~~ — **done** in `skillRegistry.test.ts` (16 tests: scanning, frontmatter, priority dedup, refresh, buildSkillSources)
    - Unit tests: hook execution — pre/post tool call hooks, timeout enforcement, hook failure isolation
    - Unit tests: task queue state machine — pending → active → completed/failed, cancel mid-execution, queue ordering
    - Unit tests: context panel state — step progression, file list updates, context item tracking, per-conversation isolation

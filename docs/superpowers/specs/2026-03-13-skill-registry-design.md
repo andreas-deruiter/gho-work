@@ -372,3 +372,5 @@ Each entry maps to a cache path: `~/.gho-work/plugins/cache/{registry}/{name}/{v
 - **Plugin UI** — a settings panel for managing plugins is a future enhancement. For v1, plugins are managed via the settings file and filesystem.
 - **File watching** — the registry does not watch for filesystem changes. Users must restart the app or trigger a refresh after adding/modifying skill files. File watching is a future enhancement.
 - **Non-skill plugin features** — commands, agents, hooks, MCP servers from Claude Code plugins are ignored for v1.
+- **Reading settings.json / installed.json** — `buildSkillSources()` accepts `additionalPaths` and `installedPlugins` options but they are not wired to any file reader yet. Wire when the settings panel and plugin management UI are built (Phase 4, items 5a-5d in IMPLEMENTATION_PLAN.md).
+- **Slash command registration** — skills are loaded as system prompts but not yet registered as slash commands in the chat UI. Wire in Phase 4, item 5e.
