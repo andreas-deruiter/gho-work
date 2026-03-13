@@ -9,7 +9,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ConnectorConfig } from '@gho-work/base';
+import type { MCPServerConfig, MCPServerStatus } from '@gho-work/base';
 import { MCPConnection } from '../../packages/connectors/src/node/mcpConnection.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -27,21 +27,16 @@ describe('MCP Server Integration (MCPConnection)', () => {
   });
 
   it('connects to real MCP server, lists tools, and disconnects cleanly', async () => {
-    const config: ConnectorConfig = {
-      id: 'test-integration',
-      type: 'local_mcp',
-      name: 'Integration Test Server',
-      transport: 'stdio',
+    const config: MCPServerConfig = {
+      type: 'stdio',
       command: 'node',
       args: [FIXTURE_PATH],
-      enabled: true,
-      status: 'disconnected',
     };
 
-    connection = new MCPConnection(config);
+    connection = new MCPConnection('integration-test', config);
 
     // Track status transitions
-    const statuses: ConnectorConfig['status'][] = [];
+    const statuses: MCPServerStatus[] = [];
     connection.onDidChangeStatus(s => statuses.push(s));
 
     // Connect
@@ -57,7 +52,7 @@ describe('MCP Server Integration (MCPConnection)', () => {
     expect(toolNames).toContain('add');
     expect(toolNames).toContain('timestamp');
 
-    // All tools should be enabled by default (no toolsConfig provided)
+    // All tools should be enabled by default
     expect(tools.every(t => t.enabled)).toBe(true);
 
     // Tools should have descriptions
@@ -77,50 +72,33 @@ describe('MCP Server Integration (MCPConnection)', () => {
     expect(statuses).toContain('disconnected');
   }, 15_000); // generous timeout for process spawn
 
-  it('respects toolsConfig to disable specific tools', async () => {
-    const config: ConnectorConfig = {
-      id: 'test-integration-tools-config',
-      type: 'local_mcp',
-      name: 'Integration Test Server (tools config)',
-      transport: 'stdio',
+  it('all tools are enabled (toolsConfig removed in connector simplification)', async () => {
+    const config: MCPServerConfig = {
+      type: 'stdio',
       command: 'node',
       args: [FIXTURE_PATH],
-      enabled: true,
-      status: 'disconnected',
-      toolsConfig: { echo: false }, // disable echo tool
     };
 
-    connection = new MCPConnection(config);
+    connection = new MCPConnection('integration-test-tools', config);
     await connection.connect();
 
     const tools = connection.listTools();
     expect(tools).toHaveLength(3);
 
-    const echoTool = tools.find(t => t.name === 'echo');
-    expect(echoTool?.enabled).toBe(false);
-
-    const addTool = tools.find(t => t.name === 'add');
-    expect(addTool?.enabled).toBe(true);
-
-    const timestampTool = tools.find(t => t.name === 'timestamp');
-    expect(timestampTool?.enabled).toBe(true);
+    // All tools enabled — toolsConfig was removed in the connector simplification
+    expect(tools.every(t => t.enabled)).toBe(true);
 
     await connection.disconnect();
   }, 15_000);
 
   it('fires onDidChangeTools when tools are loaded', async () => {
-    const config: ConnectorConfig = {
-      id: 'test-integration-tools-event',
-      type: 'local_mcp',
-      name: 'Integration Test Server (tools event)',
-      transport: 'stdio',
+    const config: MCPServerConfig = {
+      type: 'stdio',
       command: 'node',
       args: [FIXTURE_PATH],
-      enabled: true,
-      status: 'disconnected',
     };
 
-    connection = new MCPConnection(config);
+    connection = new MCPConnection('integration-test-tools-event', config);
 
     const toolsChangedEvents: number[] = [];
     connection.onDidChangeTools(tools => toolsChangedEvents.push(tools.length));

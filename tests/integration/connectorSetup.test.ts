@@ -14,23 +14,22 @@ describe('Connector Setup Skills', () => {
       // Frontmatter
       expect(content).toContain('connector-setup');
 
-      // Must reference the MCP Registry API
-      expect(content).toContain('registry.modelcontextprotocol.io');
-      expect(content).toContain('CONNECTOR_ADD');
+      // Must reference the agent tools for MCP management
+      expect(content).toContain('add_mcp_server');
+      expect(content).toContain('remove_mcp_server');
+      expect(content).toContain('list_mcp_servers');
 
-      // Must cover all registry types
-      expect(content).toContain('npm');
-      expect(content).toContain('pypi');
-      expect(content).toContain('docker');
-      expect(content).toContain('streamable_http');
+      // Must cover transport types
+      expect(content).toContain('stdio');
+      expect(content).toContain('http');
     });
 
-    it('includes error handling guidance', async () => {
+    it('includes connection verification guidance', async () => {
       const skillPath = path.join(SKILLS_ROOT, 'connectors', 'setup.md');
       const content = await fs.readFile(skillPath, 'utf-8');
 
-      expect(content).toContain('curl');
-      expect(content).toMatch(/fallback|web search/i);
+      // Should describe how to verify connection status
+      expect(content).toMatch(/connected|connecting|error/i);
     });
 
     it('includes environment variable handling', async () => {
