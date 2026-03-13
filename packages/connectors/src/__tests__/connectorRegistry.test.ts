@@ -208,6 +208,85 @@ describe('ConnectorRegistryImpl', () => {
     expect(events).toHaveLength(0);
   });
 
+  // --- Full lifecycle chain ---
+
+  describe('full lifecycle chain', () => {
+    it('add → update → updateStatus(connected) → updateStatus(error) → updateStatus(disconnected) → remove', async () => {
+      // Step 1: add
+      await registry.addConnector(makeConfig({ id: 'lifecycle-1', name: 'Lifecycle Test' }));
+      let result = await registry.getConnector('lifecycle-1');
+      expect(result).toBeDefined();
+      expect(result!.name).toBe('Lifecycle Test');
+      expect(result!.status).toBe('disconnected');
+
+      // Step 2: update metadata
+      await registry.updateConnector('lifecycle-1', { name: 'Updated Name', enabled: false });
+      result = await registry.getConnector('lifecycle-1');
+      expect(result!.name).toBe('Updated Name');
+      expect(result!.enabled).toBe(false);
+
+      // Step 3: updateStatus → connected
+      await registry.updateStatus('lifecycle-1', 'connected');
+      result = await registry.getConnector('lifecycle-1');
+      expect(result!.status).toBe('connected');
+      expect(result!.error).toBeUndefined();
+
+      // Step 4: updateStatus → error
+      await registry.updateStatus('lifecycle-1', 'error', 'Connection lost');
+      result = await registry.getConnector('lifecycle-1');
+      expect(result!.status).toBe('error');
+      expect(result!.error).toBe('Connection lost');
+
+      // Step 5: updateStatus → disconnected (should clear error)
+      await registry.updateStatus('lifecycle-1', 'disconnected');
+      result = await registry.getConnector('lifecycle-1');
+      expect(result!.status).toBe('disconnected');
+
+      // Step 6: remove
+      await registry.removeConnector('lifecycle-1');
+      result = await registry.getConnector('lifecycle-1');
+      expect(result).toBeUndefined();
+    });
+  });
+
+  // --- Concurrent update safety ---
+
+  describe('concurrent update safety', () => {
+    it('handles concurrent updateConnector and updateStatus without error', async () => {
+      await registry.addConnector(makeConfig({ id: 'concurrent-1' }));
+
+      // Run both concurrently
+      await Promise.all([
+        registry.updateConnector('concurrent-1', { name: 'Concurrent Update' }),
+        registry.updateStatus('concurrent-1', 'connected'),
+      ]);
+
+      // Final state should be consistent — both updates applied
+      const result = await registry.getConnector('concurrent-1');
+      expect(result).toBeDefined();
+      // The name update should have been applied
+      expect(result!.name).toBe('Concurrent Update');
+      // The status update should have been applied
+      expect(result!.status).toBe('connected');
+    });
+
+    it('handles concurrent updateStatus calls without error', async () => {
+      await registry.addConnector(makeConfig({ id: 'concurrent-2' }));
+
+      // Run multiple status updates concurrently
+      await Promise.all([
+        registry.updateStatus('concurrent-2', 'initializing'),
+        registry.updateStatus('concurrent-2', 'connected'),
+        registry.updateStatus('concurrent-2', 'error', 'transient error'),
+      ]);
+
+      // Final state should be one of the valid statuses — no crash
+      const result = await registry.getConnector('concurrent-2');
+      expect(result).toBeDefined();
+      expect(['initializing', 'connected', 'error']).toContain(result!.status);
+    });
+  });
+
   // --- Dispose ---
 
   it('dispose cleans up emitters without throwing', () => {
