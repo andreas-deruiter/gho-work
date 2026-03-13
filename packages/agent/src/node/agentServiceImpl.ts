@@ -140,7 +140,7 @@ export class AgentServiceImpl implements IAgentService {
       case 'assistant.message':
         return { type: 'text', content: (data.content as string) ?? '' };
       case 'assistant.reasoning_delta':
-        return { type: 'thinking_delta', content: (data.content as string) ?? '' };
+        return { type: 'thinking_delta', content: (data.deltaContent as string) ?? (data.content as string) ?? '' };
       case 'tool.execution_start':
         return {
           type: 'tool_call_start',

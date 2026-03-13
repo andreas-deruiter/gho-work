@@ -60,6 +60,8 @@ export class ChatThinkingSection extends ChatCollapsible {
     this._thinkingContent += text;
     if (this._thinkingTextEl) {
       this._thinkingTextEl.textContent = this._thinkingContent;
+      // Auto-scroll to bottom so user sees latest thoughts
+      this._thinkingTextEl.scrollTop = this._thinkingTextEl.scrollHeight;
     }
   }
 

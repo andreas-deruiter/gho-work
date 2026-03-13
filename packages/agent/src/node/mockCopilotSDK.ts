@@ -126,7 +126,7 @@ class MockSDKSession implements ISDKSession {
     // Reasoning delta
     this.emit({
       type: 'assistant.reasoning_delta',
-      data: { content: `Analyzing: "${prompt}"` },
+      data: { reasoningId: generateUUID(), deltaContent: `Analyzing: "${prompt}"` },
     });
     await this.delay(50, signal);
     if (signal.aborted) { return; }

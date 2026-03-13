@@ -753,10 +753,11 @@ html, body {
 .thinking-text {
   color: var(--fg-muted);
   font-family: var(--font-mono);
-  font-size: var(--font-size-xs, 11px);
-  line-height: 1.5;
+  font-size: 10px;
+  line-height: 1.4;
   max-height: 200px;
   overflow-y: auto;
+  scroll-behavior: smooth;
   white-space: pre-wrap;
   word-break: break-word;
   padding: 4px 0;

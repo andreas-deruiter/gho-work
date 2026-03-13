@@ -400,11 +400,13 @@ export class ChatPanel extends Disposable {
     switch (event.type) {
       case 'thinking': {
         this._currentThinkingSection.value?.setActive(true);
+        this._scrollToBottom();
         break;
       }
       case 'thinking_delta': {
         this._currentThinkingSection.value?.setActive(true);
         this._currentThinkingSection.value?.appendThinkingText(event.content);
+        this._scrollToBottom();
         break;
       }
       case 'text_delta': {
@@ -417,11 +419,13 @@ export class ChatPanel extends Disposable {
           event.toolCall.id,
           event.toolCall.toolName,
         );
+        this._scrollToBottom();
         break;
       }
       case 'tool_call_result': {
         const state = event.result.success ? 'completed' : 'failed';
         this._currentThinkingSection.value?.updateToolCall(event.toolCallId, state);
+        this._scrollToBottom();
         break;
       }
       case 'error': {
