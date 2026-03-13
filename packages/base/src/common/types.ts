@@ -25,7 +25,6 @@ export interface Workspace {
   name: string;
   rootPath: string;
   memoryFilePaths: string[];
-  connectorOverrides: Record<string, Partial<ConnectorConfig>>;
   createdAt: number;
   lastOpenedAt: number;
 }
@@ -92,28 +91,26 @@ export enum ToolCallState {
 
 // --- Connectors ---
 
-export interface ConnectorConfig {
-  id: string;
-  type: 'builtin' | 'local_mcp' | 'remote_mcp' | 'agent_skill';
-  name: string;
-  transport: 'stdio' | 'streamable_http';
-  command?: string;
-  args?: string[];
-  env?: Record<string, string>;
-  url?: string;
-  headers?: Record<string, string>;
-  enabled: boolean;
-  capabilities?: ServerCapabilities;
-  status: 'connected' | 'disconnected' | 'error' | 'initializing';
-  error?: string;
-  toolsConfig?: Record<string, boolean>;
+/** Persisted in mcp.json — one entry per server. VS Code-compatible. */
+export interface MCPServerConfig {
+  type: 'stdio' | 'http';
+  command?: string;                    // stdio
+  args?: string[];                     // stdio
+  env?: Record<string, string>;        // stdio
+  cwd?: string;                        // stdio
+  url?: string;                        // http
+  headers?: Record<string, string>;    // http
 }
 
-export interface ServerCapabilities {
-  tools?: boolean;
-  resources?: boolean;
-  prompts?: boolean;
+/** Runtime state — held in memory only. */
+export interface MCPServerState {
+  name: string;
+  config: MCPServerConfig;
+  status: 'connected' | 'disconnected' | 'error' | 'initializing';
+  error?: string;
 }
+
+export type MCPServerStatus = MCPServerState['status'];
 
 // --- Permissions ---
 
