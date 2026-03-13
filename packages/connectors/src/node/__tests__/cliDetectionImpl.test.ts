@@ -21,20 +21,15 @@ describe('CLIDetectionServiceImpl.installTool', () => {
 });
 
 describe('CLIDetectionServiceImpl.authenticateTool', () => {
-  it('runs auth command and returns success', async () => {
-    const mockExec: ExecFileFunction = vi.fn().mockResolvedValue({ stdout: 'OK', stderr: '' });
-    const service = new CLIDetectionServiceImpl(mockExec);
-    const result = await service.authenticateTool('gh');
-    expect(result.success).toBe(true);
-    expect(mockExec).toHaveBeenCalledWith('gh', ['auth', 'login']);
-  });
+  // authenticateTool uses spawn (not execFile) for device code flow.
+  // Only edge cases testable via execFile mock:
 
-  it('returns error when auth command fails', async () => {
-    const mockExec: ExecFileFunction = vi.fn().mockRejectedValue(new Error('auth failed'));
+  it('returns error for unknown tool', async () => {
+    const mockExec: ExecFileFunction = vi.fn();
     const service = new CLIDetectionServiceImpl(mockExec);
-    const result = await service.authenticateTool('gh');
+    const result = await service.authenticateTool('nonexistent');
     expect(result.success).toBe(false);
-    expect(result.error).toMatch(/auth failed/);
+    expect(result.error).toMatch(/unknown/i);
   });
 
   it('returns error for tool without auth command', async () => {
