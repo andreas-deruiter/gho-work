@@ -31,7 +31,6 @@ import type {
   GhLoginResponse,
   GhLoginEvent,
   CopilotCheckResponse,
-  ToolDetectResponse,
   OnboardingStatusResponse,
 } from '@gho-work/platform';
 import {
@@ -44,21 +43,18 @@ import {
 } from '@gho-work/agent';
 import type { AgentContext } from '@gho-work/base';
 import {
-  IConnectorRegistry,
   IMCPClientManager,
-  ICLIDetectionService,
-  IPlatformDetectionService,
-  ConnectorRegistryImpl,
+  IConnectorConfigStore,
+  ConnectorConfigStoreImpl,
   MCPClientManagerImpl,
-  CLIDetectionServiceImpl,
-  MockCLIDetectionService,
-  PlatformDetectionServiceImpl,
+  handleAddMCPServer,
+  handleRemoveMCPServer,
+  handleListMCPServers,
 } from '@gho-work/connectors';
-import { mapConnectorsToSDKConfig } from './connectorMapping.js';
 import type {
   ConnectorRemoveRequest,
-  ConnectorUpdateRequest,
-  ConnectorGetToolsRequest,
+  ConnectorConnectRequest,
+  ConnectorDisconnectRequest,
 } from '@gho-work/platform';
 
 /**
@@ -258,81 +254,51 @@ export function createMainProcess(
   services.set(IAgentService, agentService);
 
   // --- Connector Services ---
-  let connectorRegistry: ConnectorRegistryImpl | null = null;
-  let mcpClientManager: MCPClientManagerImpl | null = null;
-  // CLI detection — use mock in --mock mode so sidebar populates without real tools
-  const cliDetectionService = useMock
-    ? new MockCLIDetectionService()
-    : new CLIDetectionServiceImpl();
-  services.set(ICLIDetectionService, cliDetectionService);
-
-  const platformDetectionService = new PlatformDetectionServiceImpl(
-    async (cmd: string, args: string[]) => {
-      const { stdout } = await execFileAsync(cmd, args);
-      return stdout;
-    },
+  const mcpJsonPath = path.join(
+    options?.userDataPath ?? app.getPath('userData'),
+    'mcp.json',
   );
-  services.set(IPlatformDetectionService, platformDetectionService);
+  const configStore = new ConnectorConfigStoreImpl(mcpJsonPath);
+  const mcpClientManager = new MCPClientManagerImpl(configStore);
 
-  const globalDb = storageService?.getGlobalDatabase?.();
-  if (globalDb) {
-    connectorRegistry = new ConnectorRegistryImpl(globalDb);
-    mcpClientManager = new MCPClientManagerImpl(connectorRegistry);
+  services.set(IConnectorConfigStore, configStore);
+  services.set(IMCPClientManager, mcpClientManager);
 
-    services.set(IConnectorRegistry, connectorRegistry);
-    services.set(IMCPClientManager, mcpClientManager);
-
-    // Forward status/tools events to renderer
-    mcpClientManager.onDidChangeStatus((event) => {
-      ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CONNECTOR_STATUS_CHANGED, {
-        id: event.connectorId,
-        status: event.status,
-      });
+  // Forward status events to renderer
+  mcpClientManager.onDidChangeStatus((event) => {
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CONNECTOR_STATUS_CHANGED, {
+      name: event.serverName,
+      status: event.status,
     });
-    mcpClientManager.onDidChangeTools((event) => {
-      ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CONNECTOR_TOOLS_CHANGED, event);
-    });
+  });
 
-    // Auto-connect enabled servers on startup (non-blocking)
-    void (async () => {
-      try {
-        const enabled = await connectorRegistry!.getEnabledConnectors();
-        for (const c of enabled) {
-          await mcpClientManager!.connectServer(c.id);
-        }
-        console.log(`[main] Connected ${enabled.length} MCP server(s)`);
-      } catch (err) {
-        console.error('[main] Error connecting MCP servers:', err instanceof Error ? err.message : String(err));
+  // Forward config changes to renderer so sidebar refreshes
+  configStore.onDidChangeServers(() => {
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CONNECTOR_LIST_CHANGED);
+  });
+
+  // Auto-reconcile on startup — connect all configured servers (non-blocking)
+  void (async () => {
+    try {
+      const servers = configStore.getServers();
+      if (servers.size > 0) {
+        await mcpClientManager.reconcile(servers);
+        console.log(`[main] Reconciled ${servers.size} MCP server(s) on startup`);
       }
-    })();
-  }
+    } catch (err) {
+      console.error('[main] Error reconciling MCP servers on startup:', err instanceof Error ? err.message : String(err));
+    }
+  })();
 
   // --- Set up IPC handlers ---
 
   ipcMainAdapter.handle(IPC_CHANNELS.AGENT_SEND_MESSAGE, async (...args: unknown[]) => {
     const request = args[0] as SendMessageRequest;
 
-    // Build system prompt with CLI tool context so the agent knows what's available
-    let systemPrompt = '';
-    try {
-      const tools = await cliDetectionService.detectAll();
-      const installed = tools.filter(t => t.installed);
-      if (installed.length > 0) {
-        const lines = installed.map(t => {
-          const auth = t.authenticated === true ? ' (authenticated)' : t.authenticated === false ? ' (not authenticated)' : '';
-          return `- ${t.name} (${t.id}) v${t.version ?? 'unknown'}${auth}`;
-        });
-        systemPrompt = `## Available CLI Tools\nThe following CLI tools are installed on the user's machine and available for you to use via bash:\n${lines.join('\n')}`;
-      }
-    } catch (err) {
-      console.warn('[main] Could not get CLI tool status for agent context:', err instanceof Error ? err.message : String(err));
-    }
-
     const context: AgentContext = {
       conversationId: request.conversationId,
       workspaceId: workspaceId ?? 'default',
       model: request.model,
-      systemPrompt: systemPrompt || undefined,
     };
 
     // Persist user message
@@ -349,16 +315,22 @@ export function createMainProcess(
     (async () => {
       let assistantContent = '';
       try {
-        // Bridge MCP connectors to SDK config
+        // Bridge connected MCP servers to SDK config
         let mcpServers: Record<string, import('@gho-work/agent').MCPServerConfig> | undefined;
-        if (connectorRegistry) {
-          try {
-            const enabled = await connectorRegistry.getEnabledConnectors();
-            const connected = enabled.filter(c => c.status === 'connected');
-            if (connected.length > 0) {
-              mcpServers = mapConnectorsToSDKConfig(connected);
+        try {
+          const servers = configStore.getServers();
+          const connected: Record<string, import('@gho-work/agent').MCPServerConfig> = {};
+          for (const [name, cfg] of servers) {
+            if (mcpClientManager.getServerStatus(name) === 'connected') {
+              // Map base MCPServerConfig to agent MCPServerConfig (adds tools: string[])
+              connected[name] = { ...cfg, tools: [] };
             }
-          } catch (err) { console.warn('[main] Non-critical error:', err instanceof Error ? err.message : String(err)); }
+          }
+          if (Object.keys(connected).length > 0) {
+            mcpServers = connected;
+          }
+        } catch (err) {
+          console.warn('[main] Non-critical error building MCP server config:', err instanceof Error ? err.message : String(err));
         }
 
         for await (const event of agentService.executeTask(request.content, context, mcpServers)) {
@@ -724,130 +696,59 @@ export function createMainProcess(
     }
   });
 
-  ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_DETECT_TOOLS, async (): Promise<ToolDetectResponse> => {
-    const toolDefs = [
-      { name: 'gh', description: 'GitHub CLI — Issues, PRs, repos' },
-      { name: 'mgc', description: 'Microsoft Graph CLI — OneDrive, Outlook, Teams' },
-      { name: 'pandoc', description: 'Document conversion — DOCX, PDF, HTML' },
-      { name: 'az', description: 'Azure CLI — Cloud resources' },
-      { name: 'gcloud', description: 'Google Cloud CLI' },
-    ];
-
-    const tools = await Promise.all(toolDefs.map(async (def) => {
-      try {
-        await execFileAsync('which', [def.name]);
-        let version: string | undefined;
-        try {
-          const { stdout } = await execFileAsync(def.name, ['--version']);
-          const match = stdout.match(/[\d]+\.[\d]+\.[\d]+/);
-          if (match) {
-            version = match[0];
-          }
-        } catch (err) {
-          console.warn(`[ONBOARDING_DETECT_TOOLS] Failed to get version for ${def.name}:`, err instanceof Error ? err.message : String(err));
-        }
-        return { ...def, found: true, version };
-      } catch {
-        // Tool not found on PATH — expected if not installed
-        return { ...def, found: false };
-      }
-    }));
-
-    return { tools };
-  });
-
   // --- Connector IPC handlers ---
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_LIST, async () => {
-    if (!connectorRegistry) {
-      return { connectors: [] };
-    }
-    const connectors = await connectorRegistry.getConnectors();
-    return { connectors };
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_ADD, async (...args: unknown[]) => {
-    if (!connectorRegistry) {
-      return;
-    }
-    const config = args[0] as import('@gho-work/base').ConnectorConfig;
-    await connectorRegistry.addConnector(config);
-    // Auto-connect if enabled
-    if (config.enabled && mcpClientManager) {
-      await mcpClientManager.connectServer(config.id);
-    }
-    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CONNECTOR_LIST_CHANGED);
-    return { success: true };
+    const servers = configStore.getServers();
+    const result = Array.from(servers.entries()).map(([name, config]) => ({
+      name,
+      config,
+      status: mcpClientManager.getServerStatus(name),
+    }));
+    return { servers: result };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_REMOVE, async (...args: unknown[]) => {
-    if (!connectorRegistry) {
-      return;
-    }
     const request = args[0] as ConnectorRemoveRequest;
-    if (mcpClientManager) {
-      await mcpClientManager.disconnectServer(request.id);
-    }
-    await connectorRegistry.removeConnector(request.id);
-    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CONNECTOR_LIST_CHANGED);
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_UPDATE, async (...args: unknown[]) => {
-    if (!connectorRegistry) {
-      return;
-    }
-    const request = args[0] as ConnectorUpdateRequest;
-    await connectorRegistry.updateConnector(request.id, request.updates);
-    // Handle connect/disconnect when enabled flag changes
-    if (mcpClientManager && request.updates.enabled !== undefined) {
-      if (request.updates.enabled) {
-        await mcpClientManager.connectServer(request.id);
-      } else {
-        await mcpClientManager.disconnectServer(request.id);
-      }
-    }
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_TEST, async (...args: unknown[]) => {
-    if (!mcpClientManager) {
-      return { success: false, error: 'Service not available' };
-    }
-    const config = args[0] as import('@gho-work/base').ConnectorConfig;
-    return mcpClientManager.testConnection(config);
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_GET_TOOLS, async (...args: unknown[]) => {
-    if (!mcpClientManager) {
-      return { tools: [] };
-    }
-    const request = args[0] as ConnectorGetToolsRequest;
-    const tools = await mcpClientManager.getTools(request.id);
-    return { tools };
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CLI_DETECT_ALL, async () => {
-    const tools = await cliDetectionService.detectAll();
-    return { tools };
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CLI_REFRESH, async () => {
-    await cliDetectionService.refresh();
-  });
-
-  // Push CLI tool status changes to renderer (e.g., after background auth completes)
-  cliDetectionService.onDidChangeTools((tools) => {
-    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CLI_TOOLS_CHANGED, { tools });
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CLI_GET_PLATFORM_CONTEXT, async () => {
-    return platformDetectionService.detect();
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_SETUP_CONVERSATION, async (...args: unknown[]) => {
-    const { query } = (args[0] ?? {}) as { query?: string };
     try {
-      const platformContext = await platformDetectionService.detect();
-      const conversationId = await agentService.createSetupConversation(query, platformContext);
+      // Reconciliation triggered via onDidChangeServers will auto-disconnect
+      await configStore.removeServer(request.name);
+      return { success: true };
+    } catch (err) {
+      console.error('[mainProcess] CONNECTOR_REMOVE failed:', err instanceof Error ? err.message : String(err));
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_CONNECT, async (...args: unknown[]) => {
+    const request = args[0] as ConnectorConnectRequest;
+    const config = configStore.getServer(request.name);
+    if (!config) {
+      return { success: false, error: `Server not found: ${request.name}` };
+    }
+    try {
+      await mcpClientManager.connectServer(request.name, config);
+      return { success: true };
+    } catch (err) {
+      console.error('[mainProcess] CONNECTOR_CONNECT failed:', err instanceof Error ? err.message : String(err));
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_DISCONNECT, async (...args: unknown[]) => {
+    const request = args[0] as ConnectorDisconnectRequest;
+    try {
+      await mcpClientManager.disconnectServer(request.name);
+      return { success: true };
+    } catch (err) {
+      console.error('[mainProcess] CONNECTOR_DISCONNECT failed:', err instanceof Error ? err.message : String(err));
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_SETUP_CONVERSATION, async () => {
+    try {
+      const conversationId = await agentService.createSetupConversation();
       return { conversationId };
     } catch (err) {
       console.error('[mainProcess] Setup conversation failed:', err);
@@ -855,37 +756,10 @@ export function createMainProcess(
     }
   });
 
-  ipcMainAdapter.handle(IPC_CHANNELS.CLI_INSTALL, async (...args: unknown[]) => {
-    const request = args[0] as { toolId: string };
-    const result = await cliDetectionService.installTool(request.toolId);
-    if (result.success && result.installUrl) {
-      await shell.openExternal(result.installUrl);
-    }
-    return result;
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CLI_AUTHENTICATE, async (...args: unknown[]) => {
-    const request = args[0] as { toolId: string };
-    const result = await cliDetectionService.authenticateTool(request.toolId);
-    return result;
-  });
-
-  ipcMainAdapter.handle(IPC_CHANNELS.CLI_CREATE_AUTH_CONVERSATION, async (...args: unknown[]) => {
-    const { toolId } = args[0] as { toolId: string };
-    // Start auth in background to capture device code/URL
-    const authResult = await cliDetectionService.authenticateTool(toolId);
-    // Create conversation with auth context (device code, URL)
-    const conversationId = await agentService.createAuthConversation(toolId, {
-      authUrl: authResult.authUrl,
-      deviceCode: authResult.deviceCode,
-    });
-    // Open the auth URL in browser after a delay — gives the agent time
-    // to show the device code to the user first
-    if (authResult.authUrl) {
-      setTimeout(() => { void shell.openExternal(authResult.authUrl!); }, 3000);
-    }
-    return { conversationId, authUrl: authResult.authUrl, deviceCode: authResult.deviceCode };
-  });
+  // TODO: Register agent tools (add_mcp_server, remove_mcp_server, list_mcp_servers)
+  // via SDK session configuration when the Copilot SDK exposes a tool registration API.
+  // Functions available: handleAddMCPServer(configStore, input), handleRemoveMCPServer(configStore, input),
+  // handleListMCPServers(configStore)
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {
     // Write onboarding-complete flag
