@@ -1,4 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterAll } from 'vitest';
+import * as os from 'node:os';
+import * as fs from 'node:fs';
+import * as nodePath from 'node:path';
+
+const mockUserDataDir = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'gho-electron-test-'));
 
 // Capture IPC handlers registered via ipcMain.handle
 const ipcHandlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
@@ -6,7 +11,7 @@ const ipcHandlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
 vi.mock('electron', () => ({
   app: {
     getAppPath: () => '/mock',
-    getPath: () => '/mock',
+    getPath: () => mockUserDataDir,
     whenReady: () => Promise.resolve(),
     on: vi.fn(),
     quit: vi.fn(),
@@ -39,6 +44,10 @@ vi.mock('electron', () => ({
 import { createMainProcess } from '../main/mainProcess.js';
 import { BrowserWindow } from 'electron';
 import { IPC_CHANNELS } from '@gho-work/platform';
+
+afterAll(() => {
+  fs.rmSync(mockUserDataDir, { recursive: true, force: true });
+});
 
 describe('electron main process', () => {
   it('createMainProcess returns a ServiceCollection', () => {

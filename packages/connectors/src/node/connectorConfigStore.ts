@@ -20,6 +20,13 @@ export class ConnectorConfigStoreImpl extends Disposable implements IConnectorCo
   constructor(filePath: string) {
     super();
     this._filePath = filePath;
+
+    // Ensure parent directory exists
+    const dir = path.dirname(this._filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
     this._readFile();
 
     // If file didn't exist, create it with empty servers
