@@ -120,9 +120,21 @@ export class Workbench extends Disposable {
       await this._connectorDrawer.openForConnector(id);
     });
 
-    this._connectorSidebar.onDidRequestAddConnector(() => {
+    this._connectorSidebar.onDidRequestAddConnector(async () => {
       this._connectorSidebar.highlightConnector(null);
-      this._connectorDrawer.openForNew();
+      try {
+        const result = await this._ipc.invoke<{ conversationId: string; error?: string }>(
+          IPC_CHANNELS.CONNECTOR_SETUP_CONVERSATION,
+        );
+        if (result.error) {
+          this._chatPanel.showError(`Failed to start connector setup: ${result.error}`);
+          return;
+        }
+        await this._openSetupConversation(result.conversationId);
+      } catch (err) {
+        console.error('[workbench] Setup conversation failed:', err);
+        this._chatPanel.showError('Failed to start connector setup. Check that the agent service is running.');
+      }
     });
 
     this._connectorDrawer.onDidClose(() => {
@@ -133,9 +145,9 @@ export class Workbench extends Disposable {
     this._connectorSidebar.onDidRequestInstallCLI(async (toolId) => {
       this._connectorSidebar.setCLIToolLoading(toolId, 'Starting...');
       try {
-        const result = await this._ipc.invoke<{ conversationId: string }>(
-          IPC_CHANNELS.CLI_CREATE_INSTALL_CONVERSATION,
-          { toolId },
+        const result = await this._ipc.invoke<{ conversationId: string; error?: string }>(
+          IPC_CHANNELS.CONNECTOR_SETUP_CONVERSATION,
+          { query: toolId },
         );
         const toolNames: Record<string, string> = {
           gh: 'GitHub CLI', pandoc: 'pandoc', git: 'git',
@@ -144,7 +156,7 @@ export class Workbench extends Disposable {
         };
         // Refresh sidebar to clear loading spinner — conversation handles UX now
         await this._connectorSidebar.refreshCLITools();
-        await this._openInstallConversation(result.conversationId, toolNames[toolId] ?? toolId);
+        await this._openSetupConversation(result.conversationId, toolNames[toolId] ?? toolId);
       } catch (err) {
         console.error('[workbench] Install conversation failed:', err);
         await this._connectorSidebar.refreshCLITools();
@@ -211,7 +223,7 @@ export class Workbench extends Disposable {
     this._statusBar.addRightItem('Copilot SDK');
   }
 
-  private async _openInstallConversation(conversationId: string, toolName?: string): Promise<void> {
+  private async _openSetupConversation(conversationId: string, toolName?: string): Promise<void> {
     try {
       // Switch activity bar and panels to chat view
       this._activityBar.setActiveItem('chat');
@@ -220,11 +232,11 @@ export class Workbench extends Disposable {
       await this._chatPanel.loadConversation(conversationId);
       await this._conversationList.refresh();
 
-      // Auto-send kickoff message to trigger the install skill
-      const name = toolName ?? 'this tool';
-      await this._chatPanel.sendMessage(`Help me install ${name} on my machine.`);
+      // Auto-send kickoff message to trigger the setup skill
+      const name = toolName ?? 'a connector';
+      await this._chatPanel.sendMessage(`Help me set up ${name}.`);
     } catch (err) {
-      console.error('Failed to open install conversation:', err);
+      console.error('Failed to open setup conversation:', err);
     }
   }
 

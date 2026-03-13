@@ -160,8 +160,8 @@ export class ConnectorsPanel extends Disposable {
 	private async _handleInstallClick(toolId: string): Promise<void> {
 		try {
 			const result = await this._ipc.invoke<{ conversationId: string }>(
-				IPC_CHANNELS.CLI_CREATE_INSTALL_CONVERSATION,
-				{ toolId },
+				IPC_CHANNELS.CONNECTOR_SETUP_CONVERSATION,
+				{ query: toolId },
 			);
 
 			// Track this conversation so we know to refresh when it completes

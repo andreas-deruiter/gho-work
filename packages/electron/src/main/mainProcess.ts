@@ -832,11 +832,16 @@ export function createMainProcess(
     return platformDetectionService.detect();
   });
 
-  ipcMainAdapter.handle(IPC_CHANNELS.CLI_CREATE_INSTALL_CONVERSATION, async (...args: unknown[]) => {
-    const { toolId } = args[0] as { toolId: string };
-    const platformContext = await platformDetectionService.detect();
-    const conversationId = await agentService.createInstallConversation(toolId, platformContext);
-    return { conversationId };
+  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_SETUP_CONVERSATION, async (...args: unknown[]) => {
+    const { query } = (args[0] ?? {}) as { query?: string };
+    try {
+      const platformContext = await platformDetectionService.detect();
+      const conversationId = await agentService.createSetupConversation(query, platformContext);
+      return { conversationId };
+    } catch (err) {
+      console.error('[mainProcess] Setup conversation failed:', err);
+      return { conversationId: '', error: err instanceof Error ? err.message : String(err) };
+    }
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CLI_INSTALL, async (...args: unknown[]) => {
