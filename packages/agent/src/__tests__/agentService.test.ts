@@ -109,7 +109,7 @@ describe('AgentServiceImpl', () => {
     }
 
     const types = events.map((e) => e.type);
-    expect(types).toContain('thinking');
+    expect(types).toContain('thinking_delta');
   });
 
   it('injects system prompt from context', async () => {

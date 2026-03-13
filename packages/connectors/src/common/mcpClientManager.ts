@@ -1,5 +1,5 @@
 import { createServiceIdentifier } from '@gho-work/base';
-import type { IDisposable, Event, ConnectorConfig } from '@gho-work/base';
+import type { IDisposable, Event, MCPServerConfig, MCPServerStatus } from '@gho-work/base';
 
 export interface ToolInfo {
   name: string;
@@ -9,16 +9,16 @@ export interface ToolInfo {
 }
 
 export interface IMCPClientManager extends IDisposable {
-  connectServer(connectorId: string): Promise<void>;
-  disconnectServer(connectorId: string): Promise<void>;
+  connectServer(name: string, config: MCPServerConfig): Promise<void>;
+  disconnectServer(name: string): Promise<void>;
   disconnectAll(): Promise<void>;
-  getTools(connectorId: string): Promise<ToolInfo[]>;
+  reconcile(servers: Map<string, MCPServerConfig>): Promise<void>;
+  getTools(name: string): Promise<ToolInfo[]>;
   getAllTools(): Promise<Map<string, ToolInfo[]>>;
-  testConnection(config: ConnectorConfig): Promise<{ success: boolean; error?: string }>;
-  getServerStatus(connectorId: string): ConnectorConfig['status'];
+  getServerStatus(name: string): MCPServerStatus;
 
-  readonly onDidChangeTools: Event<{ connectorId: string; tools: ToolInfo[] }>;
-  readonly onDidChangeStatus: Event<{ connectorId: string; status: ConnectorConfig['status'] }>;
+  readonly onDidChangeTools: Event<{ serverName: string; tools: ToolInfo[] }>;
+  readonly onDidChangeStatus: Event<{ serverName: string; status: MCPServerStatus }>;
 }
 
 export const IMCPClientManager = createServiceIdentifier<IMCPClientManager>('IMCPClientManager');

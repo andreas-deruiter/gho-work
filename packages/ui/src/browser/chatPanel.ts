@@ -403,6 +403,7 @@ export class ChatPanel extends Disposable {
         break;
       }
       case 'thinking_delta': {
+        this._currentThinkingSection.value?.setActive(true);
         this._currentThinkingSection.value?.appendThinkingText(event.content);
         break;
       }

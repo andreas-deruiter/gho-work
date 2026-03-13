@@ -127,7 +127,7 @@ Use these skills at the appropriate points in the development cycle:
 - **before-task** — Self-assess readiness, capture baseline, plan approach
 - **after-edit** — Lint, type check, run affected tests after every code change
 - **verify-task** — Evidence-based verification against acceptance criteria
-- **supervisor** — Independent quality gate (spawns Opus sub-agent) that adversarially verifies work before completion. MUST run before claiming any task/phase is done.
+- **boss** — Independent quality gate (Opus agent in `.claude/agents/boss.md`) that adversarially verifies work before completion. MUST run before claiming any task/phase is done. Invoke via `Agent` tool with `subagent_type: "boss"`, NOT via the Skill tool.
 - **`/reflect`** — End-of-session failure analysis and instruction improvement (slash command in `.claude/commands/`)
 - **vscode-patterns** — Reference guide for VS Code patterns (consult before implementing DI, events, disposables, services, widgets, IPC)
 - **electron-hardening** — Security, packaging, signing, native modules, safeStorage, multi-process, crash recovery
@@ -210,8 +210,8 @@ A test that only exercises the fallback proves the fallback works, not that the 
 ### HARD GATE must verify the actual feature, not just "app runs"
 Launching the app and seeing it render is necessary but not sufficient. The HARD GATE verification must exercise the specific feature that was implemented. If the feature is "real SDK integration," verify the app is using the real SDK — not silently falling back to mock. Check console output, network activity, or behavioral differences that distinguish real from fake.
 
-### Supervisor gate: before declaring completion, invoke the supervisor skill
-The HARD GATES above are self-checks — the same agent that did the work verifies it. History shows this is insufficient: the agent's completion bias causes it to interpret ambiguous evidence optimistically. **Before declaring ANY task, phase, or feature complete, invoke the supervisor skill.** The supervisor spawns an independent sub-agent (Opus) whose sole job is to find problems. It runs the app, takes screenshots, reads them, checks acceptance criteria against actual behavior, and reports honestly. If the supervisor says NEEDS WORK, fix the issues and re-run the supervisor. Do not skip this step for "small changes" — small changes have caused the biggest surprises.
+### Boss gate: before declaring completion, invoke the boss agent
+The HARD GATES above are self-checks — the same agent that did the work verifies it. History shows this is insufficient: the agent's completion bias causes it to interpret ambiguous evidence optimistically. **Before declaring ANY task, phase, or feature complete, invoke the boss agent** (`.claude/agents/boss.md`) using the `Agent` tool with `subagent_type: "boss"`. The boss is an independent Opus agent whose sole job is to find problems. It runs the app, takes screenshots, reads them, checks acceptance criteria against actual behavior, and reports honestly. If the boss says NEEDS WORK, fix the issues and re-run the boss. Do not skip this step for "small changes" — small changes have caused the biggest surprises.
 
 ## Task execution
 

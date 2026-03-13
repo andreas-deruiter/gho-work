@@ -26,6 +26,10 @@ export class ChatThinkingSection extends ChatCollapsible {
       this.getDomNode().classList.add('thinking-active');
       const verb = THINKING_VERBS[Math.floor(Math.random() * THINKING_VERBS.length)];
       this.setTitle(verb);
+      // Auto-expand so thinking text and tool calls are visible while streaming
+      if (!this.isExpanded) {
+        this.toggle();
+      }
     } else {
       this.getDomNode().classList.remove('thinking-active');
       this._updateCompletedTitle();
