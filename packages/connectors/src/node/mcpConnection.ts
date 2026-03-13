@@ -3,27 +3,27 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
 import { ToolListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types';
 import { Disposable, Emitter, toDisposable } from '@gho-work/base';
-import type { ConnectorConfig, Event } from '@gho-work/base';
+import type { MCPServerConfig, MCPServerStatus, Event } from '@gho-work/base';
 import type { ToolInfo } from '../common/mcpClientManager.js';
 
 export class MCPConnection extends Disposable {
   private _client: Client | null = null;
   private _tools: ToolInfo[] = [];
-  private _status: ConnectorConfig['status'] = 'disconnected';
+  private _status: MCPServerStatus = 'disconnected';
   private _heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private _missedPings = 0;
 
-  private readonly _onDidChangeStatus = this._register(new Emitter<ConnectorConfig['status']>());
-  readonly onDidChangeStatus: Event<ConnectorConfig['status']> = this._onDidChangeStatus.event;
+  private readonly _onDidChangeStatus = this._register(new Emitter<MCPServerStatus>());
+  readonly onDidChangeStatus: Event<MCPServerStatus> = this._onDidChangeStatus.event;
 
   private readonly _onDidChangeTools = this._register(new Emitter<ToolInfo[]>());
   readonly onDidChangeTools: Event<ToolInfo[]> = this._onDidChangeTools.event;
 
-  constructor(private readonly _config: ConnectorConfig) {
+  constructor(private readonly _name: string, private readonly _config: MCPServerConfig) {
     super();
   }
 
-  get status(): ConnectorConfig['status'] {
+  get status(): MCPServerStatus {
     return this._status;
   }
 
@@ -70,11 +70,12 @@ export class MCPConnection extends Disposable {
   }
 
   private _createTransport(): StdioClientTransport | StreamableHTTPClientTransport {
-    if (this._config.transport === 'stdio') {
+    if (this._config.type === 'stdio') {
       return new StdioClientTransport({
         command: this._config.command!,
         args: this._config.args,
         env: this._config.env,
+        cwd: this._config.cwd,
       });
     } else {
       return new StreamableHTTPClientTransport(
@@ -89,12 +90,11 @@ export class MCPConnection extends Disposable {
       return;
     }
     const result = await this._client.listTools();
-    const toolsConfig = this._config.toolsConfig ?? {};
     this._tools = result.tools.map(t => ({
       name: t.name,
       description: t.description ?? '',
       inputSchema: t.inputSchema as Record<string, unknown> | undefined,
-      enabled: toolsConfig[t.name] !== false, // enabled unless explicitly disabled
+      enabled: true,
     }));
     this._onDidChangeTools.fire(this._tools);
   }
@@ -125,7 +125,7 @@ export class MCPConnection extends Disposable {
     }
   }
 
-  private _setStatus(status: ConnectorConfig['status']): void {
+  private _setStatus(status: MCPServerStatus): void {
     if (this._status !== status) {
       this._status = status;
       this._onDidChangeStatus.fire(status);

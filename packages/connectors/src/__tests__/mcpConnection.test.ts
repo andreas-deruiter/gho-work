@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { ConnectorConfig } from '@gho-work/base';
+import type { MCPServerConfig, MCPServerStatus } from '@gho-work/base';
 
 const mockClient = {
   connect: vi.fn().mockResolvedValue(undefined),
@@ -32,27 +32,17 @@ import { Client } from '@modelcontextprotocol/sdk/client';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
 
-const stdioConfig: ConnectorConfig = {
-  id: 'test-stdio',
-  type: 'local_mcp',
-  name: 'Test Stdio Server',
-  transport: 'stdio',
+const stdioConfig: MCPServerConfig = {
+  type: 'stdio',
   command: 'node',
   args: ['server.js'],
   env: { NODE_ENV: 'test' },
-  enabled: true,
-  status: 'disconnected',
 };
 
-const httpConfig: ConnectorConfig = {
-  id: 'test-http',
-  type: 'remote_mcp',
-  name: 'Test HTTP Server',
-  transport: 'streamable_http',
+const httpConfig: MCPServerConfig = {
+  type: 'http',
   url: 'http://localhost:3000/mcp',
   headers: { Authorization: 'Bearer token' },
-  enabled: true,
-  status: 'disconnected',
 };
 
 describe('MCPConnection', () => {
@@ -75,19 +65,20 @@ describe('MCPConnection', () => {
 
   describe('connect() with stdio config', () => {
     it('creates StdioClientTransport with correct args', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
 
       expect(StdioClientTransport).toHaveBeenCalledWith({
         command: 'node',
         args: ['server.js'],
         env: { NODE_ENV: 'test' },
+        cwd: undefined,
       });
       conn.dispose();
     });
 
     it('creates Client and calls connect', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
 
       expect(Client).toHaveBeenCalledWith({ name: 'gho-work', version: '1.0.0' });
@@ -96,7 +87,7 @@ describe('MCPConnection', () => {
     });
 
     it('refreshes tools after connecting', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
 
       expect(mockClient.listTools).toHaveBeenCalledTimes(1);
@@ -105,7 +96,7 @@ describe('MCPConnection', () => {
     });
 
     it('sets status to connected after successful connect', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
 
       expect(conn.status).toBe('connected');
@@ -115,7 +106,7 @@ describe('MCPConnection', () => {
 
   describe('connect() with HTTP config', () => {
     it('creates StreamableHTTPClientTransport with correct URL', async () => {
-      const conn = new MCPConnection(httpConfig);
+      const conn = new MCPConnection('test-server', httpConfig);
       await conn.connect();
 
       expect(StreamableHTTPClientTransport).toHaveBeenCalledWith(
@@ -126,11 +117,11 @@ describe('MCPConnection', () => {
     });
 
     it('creates StreamableHTTPClientTransport without requestInit when no headers', async () => {
-      const configNoHeaders: ConnectorConfig = {
+      const configNoHeaders: MCPServerConfig = {
         ...httpConfig,
         headers: undefined,
       };
-      const conn = new MCPConnection(configNoHeaders);
+      const conn = new MCPConnection('test-server', configNoHeaders);
       await conn.connect();
 
       expect(StreamableHTTPClientTransport).toHaveBeenCalledWith(
@@ -143,7 +134,7 @@ describe('MCPConnection', () => {
 
   describe('disconnect()', () => {
     it('calls client.close()', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
       await conn.disconnect();
 
@@ -151,7 +142,7 @@ describe('MCPConnection', () => {
     });
 
     it('sets status to disconnected', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
       await conn.disconnect();
 
@@ -159,14 +150,14 @@ describe('MCPConnection', () => {
     });
 
     it('is safe to call when not connected', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await expect(conn.disconnect()).resolves.not.toThrow();
     });
   });
 
   describe('listTools()', () => {
     it('returns discovered tools with correct shape', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
 
       const tools = conn.listTools();
@@ -187,57 +178,16 @@ describe('MCPConnection', () => {
     });
 
     it('returns empty array before connecting', () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       expect(conn.listTools()).toEqual([]);
-      conn.dispose();
-    });
-  });
-
-  describe('toolsConfig filtering', () => {
-    it('marks tool as disabled when toolsConfig sets it to false', async () => {
-      const configWithDisabled: ConnectorConfig = {
-        ...stdioConfig,
-        toolsConfig: { 'read-file': false },
-      };
-      const conn = new MCPConnection(configWithDisabled);
-      await conn.connect();
-
-      const tools = conn.listTools();
-      const readFile = tools.find(t => t.name === 'read-file');
-      const writeFile = tools.find(t => t.name === 'write-file');
-
-      expect(readFile?.enabled).toBe(false);
-      expect(writeFile?.enabled).toBe(true);
-      conn.dispose();
-    });
-
-    it('enables all tools when toolsConfig is empty', async () => {
-      const configEmpty: ConnectorConfig = {
-        ...stdioConfig,
-        toolsConfig: {},
-      };
-      const conn = new MCPConnection(configEmpty);
-      await conn.connect();
-
-      const tools = conn.listTools();
-      expect(tools.every(t => t.enabled)).toBe(true);
-      conn.dispose();
-    });
-
-    it('enables all tools when toolsConfig is undefined', async () => {
-      const conn = new MCPConnection(stdioConfig);
-      await conn.connect();
-
-      const tools = conn.listTools();
-      expect(tools.every(t => t.enabled)).toBe(true);
       conn.dispose();
     });
   });
 
   describe('status events', () => {
     it('fires onDidChangeStatus with initializing then connected on successful connect', async () => {
-      const conn = new MCPConnection(stdioConfig);
-      const statusEvents: ConnectorConfig['status'][] = [];
+      const conn = new MCPConnection('test-server', stdioConfig);
+      const statusEvents: MCPServerStatus[] = [];
       conn.onDidChangeStatus(s => statusEvents.push(s));
 
       await conn.connect();
@@ -249,10 +199,10 @@ describe('MCPConnection', () => {
     });
 
     it('fires onDidChangeStatus with disconnected on disconnect', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
 
-      const statusEvents: ConnectorConfig['status'][] = [];
+      const statusEvents: MCPServerStatus[] = [];
       conn.onDidChangeStatus(s => statusEvents.push(s));
       await conn.disconnect();
 
@@ -264,7 +214,7 @@ describe('MCPConnection', () => {
     it('sets status to error when connect throws', async () => {
       mockClient.connect.mockRejectedValueOnce(new Error('Connection refused'));
 
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await expect(conn.connect()).rejects.toThrow('Connection refused');
 
       expect(conn.status).toBe('error');
@@ -274,8 +224,8 @@ describe('MCPConnection', () => {
     it('fires onDidChangeStatus with error on failed connect', async () => {
       mockClient.connect.mockRejectedValueOnce(new Error('Timeout'));
 
-      const conn = new MCPConnection(stdioConfig);
-      const statusEvents: ConnectorConfig['status'][] = [];
+      const conn = new MCPConnection('test-server', stdioConfig);
+      const statusEvents: MCPServerStatus[] = [];
       conn.onDidChangeStatus(s => statusEvents.push(s));
 
       await conn.connect().catch(() => {});
@@ -287,7 +237,7 @@ describe('MCPConnection', () => {
 
   describe('dispose()', () => {
     it('calls disconnect and cleans up', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
       conn.dispose();
 
@@ -299,7 +249,7 @@ describe('MCPConnection', () => {
 
   describe('onDidChangeTools event', () => {
     it('fires when tools are discovered on connect', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       const toolEvents: unknown[] = [];
       conn.onDidChangeTools(tools => toolEvents.push(tools));
 
@@ -315,7 +265,7 @@ describe('MCPConnection', () => {
       vi.useFakeTimers();
       mockClient.ping.mockRejectedValue(new Error('ping failed'));
 
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
 
       expect(conn.status).toBe('connected');
@@ -335,8 +285,8 @@ describe('MCPConnection', () => {
       vi.useFakeTimers();
       mockClient.ping.mockRejectedValue(new Error('ping failed'));
 
-      const conn = new MCPConnection(stdioConfig);
-      const statusEvents: ConnectorConfig['status'][] = [];
+      const conn = new MCPConnection('test-server', stdioConfig);
+      const statusEvents: MCPServerStatus[] = [];
       conn.onDidChangeStatus(s => statusEvents.push(s));
 
       await conn.connect();
@@ -354,7 +304,7 @@ describe('MCPConnection', () => {
 
   describe('tool list refresh on notification', () => {
     it('calls listTools again when ToolListChanged notification is received', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       await conn.connect();
 
       // listTools was called once during connect
@@ -384,7 +334,7 @@ describe('MCPConnection', () => {
     });
 
     it('fires onDidChangeTools after notification-triggered refresh', async () => {
-      const conn = new MCPConnection(stdioConfig);
+      const conn = new MCPConnection('test-server', stdioConfig);
       const toolEvents: unknown[][] = [];
       conn.onDidChangeTools(tools => toolEvents.push(tools as unknown[]));
 
