@@ -5,6 +5,7 @@ import type { AgentEvent } from '@gho-work/base';
 import { MockCopilotSDK } from '../node/mockCopilotSDK.js';
 import { AgentServiceImpl } from '../node/agentServiceImpl.js';
 import { ConversationServiceImpl } from '../node/conversationServiceImpl.js';
+import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
 
 describe('Agent Integration', () => {
   let db: Database.Database;
@@ -20,7 +21,9 @@ describe('Agent Integration', () => {
 
     sdk = new MockCopilotSDK();
     await sdk.start();
-    agentService = new AgentServiceImpl(sdk, null, '');
+    const registry = new SkillRegistryImpl([]);
+    await registry.scan();
+    agentService = new AgentServiceImpl(sdk, null, registry);
   });
 
   afterEach(async () => {

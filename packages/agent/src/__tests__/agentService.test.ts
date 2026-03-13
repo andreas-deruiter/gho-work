@@ -2,19 +2,24 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { AgentContext, AgentEvent } from '@gho-work/base';
 import { MockCopilotSDK } from '../node/mockCopilotSDK.js';
 import { AgentServiceImpl } from '../node/agentServiceImpl.js';
+import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
 
 describe('AgentServiceImpl', () => {
   let sdk: MockCopilotSDK;
   let service: AgentServiceImpl;
+  let registry: SkillRegistryImpl;
 
   beforeEach(async () => {
     sdk = new MockCopilotSDK();
     await sdk.start();
-    service = new AgentServiceImpl(sdk, null, '');
+    registry = new SkillRegistryImpl([]);
+    await registry.scan();
+    service = new AgentServiceImpl(sdk, null, registry);
   });
 
   afterEach(async () => {
     await sdk.stop();
+    registry.dispose();
   });
 
   it('streams events from executeTask', async () => {
@@ -130,7 +135,7 @@ describe('AgentServiceImpl', () => {
   });
 
   it('uses context file reader when provided', async () => {
-    const serviceWithContext = new AgentServiceImpl(sdk, null, '', async () => 'Context from files');
+    const serviceWithContext = new AgentServiceImpl(sdk, null, registry, async () => 'Context from files');
 
     const context: AgentContext = {
       conversationId: 'test-conv',
@@ -149,7 +154,7 @@ describe('AgentServiceImpl', () => {
   it('emits error event when SDK fails', async () => {
     const badSdk = new MockCopilotSDK();
     // Don't call start() — createSession will throw
-    const badService = new AgentServiceImpl(badSdk, null, '');
+    const badService = new AgentServiceImpl(badSdk, null, registry);
 
     const context: AgentContext = {
       conversationId: 'test-conv',

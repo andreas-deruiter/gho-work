@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { PlatformContext } from '@gho-work/base';
 import { AgentServiceImpl } from '../node/agentServiceImpl.js';
+import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
 
 function createMockConversationService() {
 	const conversations = new Map<string, { id: string; title: string }>();
@@ -40,6 +41,7 @@ describe('createSetupConversation', () => {
 	let conversationService: ReturnType<typeof createMockConversationService>;
 	let copilotSDK: ReturnType<typeof createMockCopilotSDK>;
 	let tmpSkillsDir: string;
+	let registry: SkillRegistryImpl;
 
 	beforeEach(async () => {
 		const fs = await import('node:fs/promises');
@@ -57,14 +59,23 @@ describe('createSetupConversation', () => {
 			'# Setup connector\nHelp the user set up a connector.',
 		);
 
+		registry = new SkillRegistryImpl([
+			{ id: 'test', priority: 0, basePath: tmpSkillsDir },
+		]);
+		await registry.scan();
+
 		conversationService = createMockConversationService();
 		copilotSDK = createMockCopilotSDK();
-		// Constructor: (sdk, conversationService, bundledSkillsPath, readContextFiles?)
+		// Constructor: (sdk, conversationService, skillRegistry, readContextFiles?)
 		agentService = new AgentServiceImpl(
 			copilotSDK as any,
 			conversationService as any,
-			tmpSkillsDir,
+			registry,
 		);
+	});
+
+	afterEach(() => {
+		registry.dispose();
 	});
 
 	it('creates a conversation titled "Set up connector" when no query given', async () => {
@@ -114,6 +125,7 @@ describe('createSetupConversation', () => {
 		const fs = await import('node:fs/promises');
 		const path = await import('node:path');
 		await fs.writeFile(path.join(tmpSkillsDir, 'install', 'workiq.md'), '# Install Work IQ CLI');
+		await registry.refresh();
 		const convId = await agentService.createSetupConversation('workiq', MOCK_PLATFORM);
 		const context = agentService.getInstallContext(convId);
 		expect(context).toContain('# Install Work IQ CLI');
