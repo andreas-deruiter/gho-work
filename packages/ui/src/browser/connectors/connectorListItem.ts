@@ -1,53 +1,94 @@
 import { Emitter } from '@gho-work/base';
-import type { Event, ConnectorConfig } from '@gho-work/base';
+import type { Event, MCPServerStatus } from '@gho-work/base';
 import { Widget } from '../widget.js';
 import { h } from '../dom.js';
 
+export interface ConnectorListItemData {
+  name: string;
+  type: 'stdio' | 'http';
+  status: MCPServerStatus;
+}
+
 export class ConnectorListItemWidget extends Widget {
   private readonly _dotEl: HTMLElement;
-  private _config: ConnectorConfig;
+  private readonly _actionsEl: HTMLElement;
+  private _data: ConnectorListItemData;
 
-  private readonly _onDidClick = this._register(new Emitter<string>());
-  readonly onDidClick: Event<string> = this._onDidClick.event;
+  private readonly _onDidRequestConnect = this._register(new Emitter<string>());
+  readonly onDidRequestConnect: Event<string> = this._onDidRequestConnect.event;
 
-  constructor(config: ConnectorConfig) {
+  private readonly _onDidRequestDisconnect = this._register(new Emitter<string>());
+  readonly onDidRequestDisconnect: Event<string> = this._onDidRequestDisconnect.event;
+
+  private readonly _onDidRequestRemove = this._register(new Emitter<string>());
+  readonly onDidRequestRemove: Event<string> = this._onDidRequestRemove.event;
+
+  constructor(data: ConnectorListItemData) {
     const layout = h('div.connector-list-item', [
       h('span.connector-status-dot@dot'),
       h('span.connector-list-item-name@name'),
+      h('span.connector-transport-badge@badge'),
+      h('div.connector-list-item-actions@actions'),
     ]);
     super(layout.root);
-    this._config = config;
+    this._data = data;
     this._dotEl = layout.dot;
-    layout.name.textContent = config.name;
-    this._updateDot(config.status);
+    this._actionsEl = layout.actions;
+    layout.name.textContent = data.name;
+    layout.badge.textContent = data.type;
+    layout.badge.className = `connector-transport-badge badge-${data.type}`;
+    this._updateDot(data.status);
+    this._renderActions();
 
-    this.element.setAttribute('tabindex', '0');
-    this.element.setAttribute('role', 'button');
-    this.element.setAttribute('aria-label', `${config.name}, ${config.status}`);
-
-    this.listen(this.element, 'click', () => this._onDidClick.fire(this._config.id));
-    this.listen(this.element, 'keydown', (e) => {
-      const key = (e as KeyboardEvent).key;
-      if (key === 'Enter' || key === ' ') {
-        e.preventDefault();
-        this._onDidClick.fire(this._config.id);
-      }
-    });
+    this.element.setAttribute('role', 'listitem');
+    this.element.setAttribute('aria-label', `${data.name}, ${data.type}, ${data.status}`);
   }
 
-  get connectorId(): string { return this._config.id; }
+  get serverName(): string { return this._data.name; }
 
-  updateStatus(status: ConnectorConfig['status']): void {
-    this._config = { ...this._config, status };
+  updateStatus(status: MCPServerStatus): void {
+    this._data = { ...this._data, status };
     this._updateDot(status);
-    this.element.setAttribute('aria-label', `${this._config.name}, ${status}`);
+    this._renderActions();
+    this.element.setAttribute('aria-label', `${this._data.name}, ${this._data.type}, ${status}`);
   }
 
-  setHighlighted(active: boolean): void {
-    this.element.classList.toggle('active', active);
-  }
-
-  private _updateDot(status: ConnectorConfig['status']): void {
+  private _updateDot(status: MCPServerStatus): void {
     this._dotEl.className = `connector-status-dot status-${status}`;
+  }
+
+  private _renderActions(): void {
+    while (this._actionsEl.firstChild) {
+      this._actionsEl.removeChild(this._actionsEl.firstChild);
+    }
+
+    if (this._data.status === 'connected') {
+      const btn = document.createElement('button');
+      btn.className = 'connector-action-btn';
+      btn.textContent = 'Disconnect';
+      this.listen(btn, 'click', (e) => {
+        e.stopPropagation();
+        this._onDidRequestDisconnect.fire(this._data.name);
+      });
+      this._actionsEl.appendChild(btn);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'connector-action-btn';
+      btn.textContent = 'Connect';
+      this.listen(btn, 'click', (e) => {
+        e.stopPropagation();
+        this._onDidRequestConnect.fire(this._data.name);
+      });
+      this._actionsEl.appendChild(btn);
+    }
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'connector-action-btn connector-remove-btn';
+    removeBtn.textContent = 'Remove';
+    this.listen(removeBtn, 'click', (e) => {
+      e.stopPropagation();
+      this._onDidRequestRemove.fire(this._data.name);
+    });
+    this._actionsEl.appendChild(removeBtn);
   }
 }

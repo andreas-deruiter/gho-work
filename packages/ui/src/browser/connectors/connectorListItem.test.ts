@@ -1,16 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ConnectorListItemWidget } from './connectorListItem.js';
-import type { ConnectorConfig } from '@gho-work/base';
+import type { ConnectorListItemData } from './connectorListItem.js';
 
-function makeConfig(overrides: Partial<ConnectorConfig> = {}): ConnectorConfig {
+function makeData(overrides: Partial<ConnectorListItemData> = {}): ConnectorListItemData {
   return {
-    id: 'test-1',
-    type: 'local_mcp',
     name: 'Test Server',
-    transport: 'stdio',
-    command: 'node',
-    enabled: true,
-    status: 'connected',
+    type: 'stdio',
+    status: 'disconnected',
     ...overrides,
   };
 }
@@ -19,51 +15,102 @@ describe('ConnectorListItemWidget', () => {
   beforeEach(() => { document.body.textContent = ''; });
 
   it('renders connector name', () => {
-    const w = new ConnectorListItemWidget(makeConfig({ name: 'My Server' }));
+    const w = new ConnectorListItemWidget(makeData({ name: 'My Server' }));
     document.body.appendChild(w.getDomNode());
     expect(w.getDomNode().textContent).toContain('My Server');
     w.dispose();
   });
 
-  it('renders green dot when connected', () => {
-    const w = new ConnectorListItemWidget(makeConfig({ status: 'connected' }));
+  it('renders transport type badge', () => {
+    const w = new ConnectorListItemWidget(makeData({ type: 'http' }));
+    document.body.appendChild(w.getDomNode());
+    const badge = w.getDomNode().querySelector('.connector-transport-badge');
+    expect(badge?.textContent).toBe('http');
+    expect(badge?.classList.contains('badge-http')).toBe(true);
+    w.dispose();
+  });
+
+  it('renders status dot with correct class', () => {
+    const w = new ConnectorListItemWidget(makeData({ status: 'connected' }));
     document.body.appendChild(w.getDomNode());
     const dot = w.getDomNode().querySelector('.connector-status-dot');
     expect(dot?.classList.contains('status-connected')).toBe(true);
     w.dispose();
   });
 
-  it('renders red dot when error', () => {
-    const w = new ConnectorListItemWidget(makeConfig({ status: 'error' }));
-    document.body.appendChild(w.getDomNode());
-    expect(w.getDomNode().querySelector('.status-error')).toBeTruthy();
-    w.dispose();
-  });
-
-  it('fires onDidClick with connector id', () => {
-    const w = new ConnectorListItemWidget(makeConfig({ id: 'c1' }));
-    document.body.appendChild(w.getDomNode());
-    const fn = vi.fn();
-    w.onDidClick(fn);
-    w.getDomNode().click();
-    expect(fn).toHaveBeenCalledWith('c1');
-    w.dispose();
-  });
-
-  it('updateStatus changes dot class', () => {
-    const w = new ConnectorListItemWidget(makeConfig({ status: 'connected' }));
+  it('updateStatus changes the dot class', () => {
+    const w = new ConnectorListItemWidget(makeData({ status: 'disconnected' }));
     document.body.appendChild(w.getDomNode());
     w.updateStatus('error');
-    expect(w.getDomNode().querySelector('.status-error')).toBeTruthy();
+    const dot = w.getDomNode().querySelector('.connector-status-dot');
+    expect(dot?.classList.contains('status-error')).toBe(true);
     w.dispose();
   });
 
-  it('setHighlighted toggles active class', () => {
-    const w = new ConnectorListItemWidget(makeConfig());
-    w.setHighlighted(true);
-    expect(w.getDomNode().classList.contains('active')).toBe(true);
-    w.setHighlighted(false);
-    expect(w.getDomNode().classList.contains('active')).toBe(false);
+  it('shows Connect button when status is not connected', () => {
+    const w = new ConnectorListItemWidget(makeData({ status: 'disconnected' }));
+    document.body.appendChild(w.getDomNode());
+    const btns = w.getDomNode().querySelectorAll('.connector-action-btn');
+    const labels = Array.from(btns).map((b) => b.textContent);
+    expect(labels).toContain('Connect');
+    expect(labels).not.toContain('Disconnect');
     w.dispose();
+  });
+
+  it('shows Disconnect button when status is connected', () => {
+    const w = new ConnectorListItemWidget(makeData({ status: 'connected' }));
+    document.body.appendChild(w.getDomNode());
+    const btns = w.getDomNode().querySelectorAll('.connector-action-btn');
+    const labels = Array.from(btns).map((b) => b.textContent);
+    expect(labels).toContain('Disconnect');
+    expect(labels).not.toContain('Connect');
+    w.dispose();
+  });
+
+  it('Connect button fires onDidRequestConnect with server name', () => {
+    const w = new ConnectorListItemWidget(makeData({ name: 'srv1', status: 'disconnected' }));
+    document.body.appendChild(w.getDomNode());
+    const fn = vi.fn();
+    w.onDidRequestConnect(fn);
+    const connectBtn = Array.from(w.getDomNode().querySelectorAll('.connector-action-btn'))
+      .find((b) => b.textContent === 'Connect') as HTMLElement;
+    connectBtn.click();
+    expect(fn).toHaveBeenCalledWith('srv1');
+    w.dispose();
+  });
+
+  it('Disconnect button fires onDidRequestDisconnect when status is connected', () => {
+    const w = new ConnectorListItemWidget(makeData({ name: 'srv2', status: 'connected' }));
+    document.body.appendChild(w.getDomNode());
+    const fn = vi.fn();
+    w.onDidRequestDisconnect(fn);
+    const disconnectBtn = Array.from(w.getDomNode().querySelectorAll('.connector-action-btn'))
+      .find((b) => b.textContent === 'Disconnect') as HTMLElement;
+    disconnectBtn.click();
+    expect(fn).toHaveBeenCalledWith('srv2');
+    w.dispose();
+  });
+
+  it('Remove button fires onDidRequestRemove with server name', () => {
+    const w = new ConnectorListItemWidget(makeData({ name: 'srv3' }));
+    document.body.appendChild(w.getDomNode());
+    const fn = vi.fn();
+    w.onDidRequestRemove(fn);
+    const removeBtn = Array.from(w.getDomNode().querySelectorAll('.connector-action-btn'))
+      .find((b) => b.textContent === 'Remove') as HTMLElement;
+    removeBtn.click();
+    expect(fn).toHaveBeenCalledWith('srv3');
+    w.dispose();
+  });
+
+  it('Remove button is always present regardless of status', () => {
+    for (const status of ['connected', 'disconnected', 'error', 'initializing'] as const) {
+      const w = new ConnectorListItemWidget(makeData({ status }));
+      document.body.appendChild(w.getDomNode());
+      const removeBtn = Array.from(w.getDomNode().querySelectorAll('.connector-action-btn'))
+        .find((b) => b.textContent === 'Remove');
+      expect(removeBtn).toBeTruthy();
+      w.dispose();
+    }
   });
 });
