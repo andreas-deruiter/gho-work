@@ -105,6 +105,12 @@ const ToolResultSchema = z.object({
   error: z.string().optional(),
 });
 
+const FileMetaSchema = z.object({
+  path: z.string(),
+  size: z.number(),
+  action: z.enum(['created', 'modified']),
+});
+
 // NOTE: AgentEvent is defined in both types.ts and ipc.ts — keep in sync.
 export const AgentEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('text'), content: z.string() }),
@@ -112,9 +118,35 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('thinking'), content: z.string() }),
   z.object({ type: z.literal('thinking_delta'), content: z.string() }),
   z.object({ type: z.literal('tool_call_start'), toolCall: ToolCallPartialSchema }),
-  z.object({ type: z.literal('tool_call_result'), toolCallId: z.string(), result: ToolResultSchema }),
+  z.object({ type: z.literal('tool_call_result'), toolCallId: z.string(), result: ToolResultSchema, fileMeta: FileMetaSchema.optional() }),
   z.object({ type: z.literal('error'), error: z.string() }),
   z.object({ type: z.literal('done'), messageId: z.string() }),
+  z.object({
+    type: z.literal('plan_created'),
+    plan: z.object({
+      id: z.string(),
+      steps: z.array(z.object({ id: z.string(), label: z.string() })),
+    }),
+  }),
+  z.object({
+    type: z.literal('plan_step_updated'),
+    planId: z.string(),
+    stepId: z.string(),
+    state: z.enum(['pending', 'running', 'completed', 'failed']),
+    startedAt: z.number().optional(),
+    completedAt: z.number().optional(),
+    error: z.string().optional(),
+    messageId: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('attachment_added'),
+    messageId: z.string(),
+    attachment: z.object({
+      name: z.string(),
+      path: z.string(),
+      source: z.string(),
+    }),
+  }),
 ]);
 export type AgentEvent = z.infer<typeof AgentEventSchema>;
 
