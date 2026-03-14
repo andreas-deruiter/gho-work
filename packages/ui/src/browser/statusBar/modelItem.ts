@@ -40,5 +40,6 @@ export class ModelItem extends Disposable {
 
   update(data: ModelData): void {
     this._labelEl.textContent = data.modelName;
+    this.element.title = `Model: ${data.modelName}`;
   }
 }

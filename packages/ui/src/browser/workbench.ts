@@ -261,11 +261,14 @@ export class Workbench extends Disposable {
 
     // Auth/user — seed + subscribe
     let isAuthenticated = false;
-    let hasQuota = false;
+    let lastRemainingPercentage = 100;
 
     const updateUsageVisibility = (remainingPercentage: number) => {
-      this._statusBar.updateUsage({ remainingPercentage, visible: isAuthenticated && hasQuota });
+      this._statusBar.updateUsage({ remainingPercentage, visible: true });
     };
+
+    // Show usage meter immediately with full bar; quota data will update it
+    updateUsageVisibility(lastRemainingPercentage);
 
     void (async () => {
       try {
@@ -275,6 +278,7 @@ export class Workbench extends Disposable {
           githubLogin: result?.user?.githubLogin ?? null,
           isAuthenticated,
         });
+        updateUsageVisibility(lastRemainingPercentage);
       } catch (err) {
         console.warn('[Workbench] Failed to seed auth state for status bar:', err);
       }
@@ -287,6 +291,7 @@ export class Workbench extends Disposable {
         githubLogin: event?.user?.githubLogin ?? null,
         isAuthenticated,
       });
+      updateUsageVisibility(lastRemainingPercentage);
     });
 
     // Agent state — subscribe
@@ -310,15 +315,12 @@ export class Workbench extends Disposable {
     }));
 
     // Quota — seed + subscribe
-    let lastRemainingPercentage = 1;
-
     void (async () => {
       try {
         const result = await this._ipc.invoke<{ snapshots: Array<{ quotaType: string; remainingPercentage: number }> }>(IPC_CHANNELS.QUOTA_GET);
         const snapshots = result?.snapshots ?? [];
         const snap = snapshots.find(s => s.quotaType === 'premium_interactions') ?? snapshots[0];
         if (snap) {
-          hasQuota = true;
           lastRemainingPercentage = snap.remainingPercentage;
           updateUsageVisibility(lastRemainingPercentage);
         }

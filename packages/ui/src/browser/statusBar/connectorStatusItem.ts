@@ -59,7 +59,9 @@ export class ConnectorStatusItem extends Disposable {
     this.element.style.display = '';
 
     const count = servers.length;
-    this._labelEl.textContent = count === 1 ? '1 connector' : `${count} connectors`;
+    const label = count === 1 ? '1 connector' : `${count} connectors`;
+    this._labelEl.textContent = label;
+    this.element.title = servers.map(s => `${s.name}: ${s.status}`).join('\n');
 
     const allConnected = servers.every((s) => s.status === 'connected');
     const allDisconnected = servers.every(

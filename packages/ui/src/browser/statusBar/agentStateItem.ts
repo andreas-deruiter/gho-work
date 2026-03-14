@@ -51,5 +51,6 @@ export class AgentStateItem extends Disposable {
     }
 
     this._labelEl.textContent = config.label;
+    this.element.title = `Agent: ${config.label}`;
   }
 }

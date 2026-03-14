@@ -42,7 +42,7 @@ export class UsageMeterItem extends Disposable {
     root.setAttribute('role', 'button');
     root.setAttribute('tabindex', '0');
 
-    // Hidden initially
+    // Hidden until authenticated
     root.style.display = 'none';
 
     root.addEventListener('click', () => this._onDidClick.fire());
@@ -62,12 +62,15 @@ export class UsageMeterItem extends Disposable {
 
     this.element.style.display = '';
 
-    const remainingPct = Math.round(data.remainingPercentage * 100);
+    // remainingPercentage may be 0–1 (fraction) or 0–100 (percent) depending on source
+    const raw = data.remainingPercentage > 1 ? data.remainingPercentage : data.remainingPercentage * 100;
+    const remainingPct = Math.round(Math.min(100, Math.max(0, raw)));
     const usedPct = 100 - remainingPct;
 
     this._labelEl.textContent = `${remainingPct}%`;
     this._fillEl.style.width = `${usedPct}%`;
     this._barEl.setAttribute('aria-valuenow', String(remainingPct));
+    this.element.title = `Copilot quota: ${remainingPct}% remaining`;
 
     // Visual state classes
     this.element.classList.remove('usage-warning', 'usage-critical');

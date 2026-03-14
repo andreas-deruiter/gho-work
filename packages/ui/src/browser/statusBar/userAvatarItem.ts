@@ -48,11 +48,13 @@ export class UserAvatarItem extends Disposable {
     this.element.textContent = '';
     this.element.textContent = login[0].toUpperCase();
     this.element.classList.add('sb-user-avatar');
+    this.element.title = `Signed in as ${login}`;
   }
 
   private _showIcon(): void {
     this.element.textContent = '';
     this.element.appendChild(createUserIcon());
     this.element.classList.remove('sb-user-avatar');
+    this.element.title = 'Not signed in';
   }
 }
