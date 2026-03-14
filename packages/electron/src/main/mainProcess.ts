@@ -306,7 +306,8 @@ export function createMainProcess(
     return raw ? JSON.parse(raw) : [];
   };
   const pluginAgentRegistry = new PluginAgentRegistryImpl();
-  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, undefined, getDisabledSkills, pluginAgentRegistry);
+  const hookService = new HookServiceImpl();
+  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, undefined, getDisabledSkills, pluginAgentRegistry, hookService);
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
@@ -377,8 +378,6 @@ export function createMainProcess(
     unregister: (id) => pluginAgentRegistry.unregister(id),
     unregisterPlugin: (name) => pluginAgentRegistry.unregisterPlugin(name),
   };
-
-  const hookService = new HookServiceImpl();
 
   const hookRegistration: PluginHookRegistration = {
     registerHooks: (pluginName, pluginRoot, hooks) =>
