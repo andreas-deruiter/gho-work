@@ -6,3 +6,4 @@ export * from './common/uuid.js';
 export * from './common/descriptors.js';
 export * from './common/serviceCollection.js';
 export * from './common/instantiationService.js';
+export * from './common/pluginTypes.js';

@@ -1,5 +1,6 @@
 export * from './common/copilotSDK.js';
 export * from './common/agent.js';
+export * from './common/mcpConfigMapping.js';
 export * from './common/conversation.js';
 export * from './common/types.js';
 export * from './common/skillRegistry.js';
@@ -9,4 +10,4 @@ export * from './node/conversationServiceImpl.js';
 export * from './node/agentServiceImpl.js';
 export { SkillRegistryImpl } from './node/skillRegistryImpl.js';
 export { buildSkillSources } from './node/buildSkillSources.js';
-export type { InstalledPlugin, BuildSkillSourcesOptions } from './node/buildSkillSources.js';
+export type { BuildSkillSourcesOptions } from './node/buildSkillSources.js';

@@ -45,6 +45,19 @@ export const IPC_CHANNELS = {
   SKILL_TOGGLE: 'skill:toggle',
   SKILL_DISABLED_LIST: 'skill:disabled-list',
   SKILL_OPEN_FILE: 'skill:open-file',
+  // Plugin channels
+  PLUGIN_CATALOG: 'plugin:catalog',
+  PLUGIN_INSTALL: 'plugin:install',
+  PLUGIN_UNINSTALL: 'plugin:uninstall',
+  PLUGIN_ENABLE: 'plugin:enable',
+  PLUGIN_DISABLE: 'plugin:disable',
+  PLUGIN_LIST: 'plugin:list',
+  PLUGIN_UPDATE: 'plugin:update',
+  PLUGIN_CHANGED: 'plugin:changed',
+  PLUGIN_INSTALL_PROGRESS: 'plugin:install-progress',
+  // Additional connector channels
+  CONNECTOR_ADD: 'connector:add',
+  CONNECTOR_UPDATE: 'connector:update',
   // Dialog channels
   DIALOG_OPEN_FOLDER: 'dialog:open-folder',
   // File channels
@@ -220,6 +233,7 @@ const MCPServerConfigSchema = z.object({
   cwd: z.string().optional(),
   url: z.string().optional(),
   headers: z.record(z.string(), z.string()).optional(),
+  source: z.string().optional(),
 });
 
 /** Mirrors MCPServerState from @gho-work/base for IPC transport. */
@@ -262,6 +276,33 @@ export const ConnectorSetupResponseSchema = z.object({
   error: z.string().optional(),
 });
 export type ConnectorSetupResponse = z.infer<typeof ConnectorSetupResponseSchema>;
+
+export const ConnectorAddRequestSchema = z.object({
+  name: z.string(),
+  config: MCPServerConfigSchema,
+});
+export type ConnectorAddRequest = z.infer<typeof ConnectorAddRequestSchema>;
+
+export const ConnectorUpdateRequestSchema = z.object({
+  name: z.string(),
+  config: MCPServerConfigSchema,
+});
+export type ConnectorUpdateRequest = z.infer<typeof ConnectorUpdateRequestSchema>;
+
+// --- Plugin schemas ---
+
+export const PluginNameRequestSchema = z.object({ name: z.string() });
+export type PluginNameRequest = z.infer<typeof PluginNameRequestSchema>;
+
+export const PluginCatalogRequestSchema = z.object({ forceRefresh: z.boolean().optional() });
+export type PluginCatalogRequest = z.infer<typeof PluginCatalogRequestSchema>;
+
+export const PluginInstallProgressSchema = z.object({
+  name: z.string(),
+  status: z.enum(['downloading', 'extracting', 'registering', 'done', 'error']),
+  message: z.string(),
+});
+export type PluginInstallProgress = z.infer<typeof PluginInstallProgressSchema>;
 
 // --- Skill schemas ---
 

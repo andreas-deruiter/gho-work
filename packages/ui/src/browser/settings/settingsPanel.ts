@@ -4,6 +4,8 @@ import { h } from '../dom.js';
 import type { IThemeService } from '../theme.js';
 import { AppearancePage } from './appearancePage.js';
 import { SkillsPage } from './skillsPage.js';
+import { PluginsPage } from './pluginsPage.js';
+import { ConnectorsPage } from './connectorsPage.js';
 
 interface NavItem {
   id: string;
@@ -11,8 +13,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'appearance', label: 'Appearance' },
+  { id: 'appearance', label: 'General' },
   { id: 'skills', label: 'Skills' },
+  { id: 'plugins', label: 'Plugins' },
+  { id: 'connectors', label: 'Connectors' },
 ];
 
 export class SettingsPanel extends Widget {
@@ -71,6 +75,18 @@ export class SettingsPanel extends Widget {
         const skillsPage = new SkillsPage(this._ipc);
         void skillsPage.load();
         page = skillsPage;
+        break;
+      }
+      case 'plugins': {
+        const pluginsPage = new PluginsPage(this._ipc);
+        void pluginsPage.load();
+        page = pluginsPage;
+        break;
+      }
+      case 'connectors': {
+        const connectorsPage = new ConnectorsPage(this._ipc);
+        void connectorsPage.load();
+        page = connectorsPage;
         break;
       }
       case 'appearance':

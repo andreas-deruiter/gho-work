@@ -1,12 +1,5 @@
 import type { SkillSource } from '../common/skillRegistry.js';
-
-export interface InstalledPlugin {
-  name: string;
-  registry: string;
-  version: string;
-  enabled: boolean;
-  cachePath: string;
-}
+import type { InstalledPlugin } from '@gho-work/base';
 
 export interface BuildSkillSourcesOptions {
   bundledPath: string;

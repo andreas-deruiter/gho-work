@@ -134,9 +134,16 @@ export class SkillsPage extends Widget {
       pathEl.textContent = source.basePath;
       info.appendChild(pathEl);
 
+      const isPlugin = source.id.startsWith('plugin:');
+      const isDefault = source.priority <= 0;
+
       const descEl = document.createElement('div');
       descEl.className = 'skill-source-desc';
-      descEl.textContent = source.priority <= 0 ? 'Built-in (bundled with app)' : 'User skills directory';
+      descEl.textContent = isDefault
+        ? 'Built-in (bundled with app)'
+        : isPlugin
+          ? `Managed by plugin (${source.id.replace('plugin:', '')})`
+          : 'User skills directory';
       info.appendChild(descEl);
 
       item.appendChild(info);
@@ -145,11 +152,15 @@ export class SkillsPage extends Widget {
       actions.className = 'skill-source-actions';
 
       const badge = document.createElement('span');
-      badge.className = source.priority <= 0 ? 'skill-source-badge default' : 'skill-source-badge user';
-      badge.textContent = source.priority <= 0 ? 'default' : 'user';
+      badge.className = isDefault
+        ? 'skill-source-badge default'
+        : isPlugin
+          ? 'skill-source-badge plugin'
+          : 'skill-source-badge user';
+      badge.textContent = isDefault ? 'default' : isPlugin ? 'plugin' : 'user';
       actions.appendChild(badge);
 
-      if (source.priority > 0) {
+      if (!isDefault && !isPlugin) {
         const removeBtn = document.createElement('button');
         removeBtn.className = 'skill-source-remove';
         removeBtn.textContent = '\u00d7';

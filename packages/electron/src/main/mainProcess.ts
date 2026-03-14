@@ -44,6 +44,7 @@ import {
   IAgentService,
   SkillRegistryImpl,
   buildSkillSources,
+  toSdkMcpConfig,
 } from '@gho-work/agent';
 import * as os from 'node:os';
 import type { AgentContext } from '@gho-work/base';
@@ -55,12 +56,17 @@ import {
   handleAddMCPServer,
   handleRemoveMCPServer,
   handleListMCPServers,
+  PluginServiceImpl,
+  PluginCatalogFetcher,
+  PluginInstaller,
 } from '@gho-work/connectors';
+import type { PluginSettingsStore } from '@gho-work/connectors';
 import type {
   ConnectorRemoveRequest,
   ConnectorConnectRequest,
   ConnectorDisconnectRequest,
 } from '@gho-work/platform';
+import type { MCPServerConfig } from '@gho-work/base';
 
 /**
  * Sets up the main process: DI container, IPC handlers, conversation service.
@@ -344,6 +350,59 @@ export function createMainProcess(
     ipcMainAdapter.sendToRenderer(IPC_CHANNELS.CONNECTOR_LIST_CHANGED);
   });
 
+  // --- Plugin Service ---
+  const userDataPath = options?.userDataPath ?? app.getPath('userData');
+  const pluginCacheDir = path.join(userDataPath, 'plugins', 'cache');
+  const pluginFetcher = new PluginCatalogFetcher();
+  const pluginInstaller = new PluginInstaller(pluginCacheDir);
+
+  const pluginSettings: PluginSettingsStore = {
+    get: (key: string) => storageService?.getSetting(key) ?? undefined,
+    set: (key: string, value: string) => { storageService?.setSetting(key, value); },
+  };
+
+  const skillRegistration = {
+    addSource: (source: { id: string; path: string; priority: number }) => {
+      skillRegistry.addSource({ id: source.id, basePath: source.path, priority: source.priority });
+    },
+    removeSource: (sourceId: string) => { skillRegistry.removeSource(sourceId); },
+    refresh: () => skillRegistry.refresh(),
+  };
+
+  const pluginService = new PluginServiceImpl(
+    pluginFetcher,
+    pluginInstaller,
+    skillRegistration,
+    configStore,
+    pluginSettings,
+  );
+
+  // Re-register skill sources for enabled installed plugins on startup.
+  // Uses the default skills path convention (<cachePath>/skills); a full re-enable
+  // via pluginService.enable() would parse the manifest but requires async I/O.
+  for (const plugin of pluginService.getInstalled()) {
+    if (plugin.enabled && plugin.skillCount > 0) {
+      skillRegistry.addSource({
+        id: `plugin:${plugin.name}`,
+        basePath: path.join(plugin.cachePath, 'skills'),
+        priority: 10,
+      });
+    }
+  }
+
+  // Forward plugin events to renderer
+  pluginService.onDidChangePlugins((plugins) => {
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.PLUGIN_CHANGED, plugins);
+  });
+  pluginService.onInstallProgress((progress) => {
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.PLUGIN_INSTALL_PROGRESS, progress);
+  });
+
+  // Dispose plugin service on app quit
+  app.on('will-quit', () => {
+    pluginService.dispose();
+  });
+
   // Auto-reconcile on startup — connect all configured servers (non-blocking)
   void (async () => {
     try {
@@ -396,14 +455,13 @@ export function createMainProcess(
       let assistantContent = '';
       try {
         // Bridge connected MCP servers to SDK config
-        let mcpServers: Record<string, import('@gho-work/agent').MCPServerConfig> | undefined;
+        let mcpServers: Parameters<typeof agentService.executeTask>[2];
         try {
           const servers = configStore.getServers();
-          const connected: Record<string, import('@gho-work/agent').MCPServerConfig> = {};
+          const connected: NonNullable<Parameters<typeof agentService.executeTask>[2]> = {};
           for (const [name, cfg] of servers) {
             if (mcpClientManager.getServerStatus(name) === 'connected') {
-              // Map base MCPServerConfig to agent MCPServerConfig (adds tools: string[])
-              connected[name] = { ...cfg, tools: [] };
+              connected[name] = toSdkMcpConfig(cfg);
             }
           }
           if (Object.keys(connected).length > 0) {
@@ -829,12 +887,16 @@ export function createMainProcess(
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_LIST, async () => {
     const servers = configStore.getServers();
-    const result = Array.from(servers.entries()).map(([name, config]) => ({
-      name,
-      type: config.type,
-      status: mcpClientManager.getServerStatus(name),
-    }));
-    return { servers: result };
+    return Array.from(servers.entries()).map(([name, config]) => {
+      const status = mcpClientManager.getServerStatus(name);
+      return {
+        name,
+        type: config.type,
+        connected: status === 'connected',
+        error: status === 'error' ? 'Connection failed' : undefined,
+        source: config.source,
+      };
+    });
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_REMOVE, async (...args: unknown[]) => {
@@ -899,7 +961,7 @@ export function createMainProcess(
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_SOURCES, async () => {
-    return skillSources;
+    return skillRegistry.getSources();
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_ADD_PATH, async (...args: unknown[]) => {
@@ -971,6 +1033,54 @@ export function createMainProcess(
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_DISABLED_LIST, async () => {
     const raw = storageService?.getSetting('skills.disabled');
     return raw ? JSON.parse(raw) : [];
+  });
+
+  // --- Plugin IPC handlers ---
+
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_CATALOG, async (...args: unknown[]) => {
+    const request = (args[0] ?? {}) as { forceRefresh?: boolean };
+    return pluginService.fetchCatalog(request.forceRefresh);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_INSTALL, async (...args: unknown[]) => {
+    const { name } = args[0] as { name: string };
+    await pluginService.install(name);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_UNINSTALL, async (...args: unknown[]) => {
+    const { name } = args[0] as { name: string };
+    await pluginService.uninstall(name);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_ENABLE, async (...args: unknown[]) => {
+    const { name } = args[0] as { name: string };
+    await pluginService.enable(name);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_DISABLE, async (...args: unknown[]) => {
+    const { name } = args[0] as { name: string };
+    await pluginService.disable(name);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_LIST, async () => {
+    return pluginService.getInstalled();
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_UPDATE, async (...args: unknown[]) => {
+    const { name } = args[0] as { name: string };
+    await pluginService.update(name);
+  });
+
+  // --- Connector add/update IPC handlers ---
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_ADD, async (...args: unknown[]) => {
+    const { name, config } = args[0] as { name: string; config: MCPServerConfig };
+    await configStore.addServer(name, config);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_UPDATE, async (...args: unknown[]) => {
+    const { name, config } = args[0] as { name: string; config: MCPServerConfig };
+    await configStore.updateServer(name, config);
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.DIALOG_OPEN_FOLDER, async () => {
