@@ -320,6 +320,15 @@ export class ChatPanel extends Disposable {
     this._messageListEl.appendChild(welcome);
   }
 
+  scrollToMessage(messageId: string): void {
+    const msgEl = this._messageListEl.querySelector(`[data-message-id="${messageId}"]`) as HTMLElement | null;
+    if (msgEl) {
+      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      msgEl.classList.add('chat-message--highlighted');
+      setTimeout(() => msgEl.classList.remove('chat-message--highlighted'), 2000);
+    }
+  }
+
   /** Programmatically send a message (e.g., auto-kickoff for install conversations). */
   async sendMessage(content: string): Promise<void> {
     this._inputEl.value = content;
@@ -478,6 +487,7 @@ export class ChatPanel extends Disposable {
     const el = document.createElement('div');
     el.className = `chat-message chat-message-${msg.role}`;
     el.id = `msg-${msg.id}`;
+    el.setAttribute('data-message-id', msg.id);
 
     const body = document.createElement('div');
     body.className = 'chat-message-body';

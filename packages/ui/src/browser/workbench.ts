@@ -15,6 +15,8 @@ import { ConversationListPanel } from './conversationList.js';
 import { SettingsPanel } from './settings/settingsPanel.js';
 import { ThemeService } from './theme.js';
 import { FilesPanel } from './filesPanel.js';
+import { InfoPanel } from './infoPanel/index.js';
+import type { AgentEvent } from '@gho-work/base';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
@@ -29,6 +31,10 @@ export class Workbench extends Disposable {
   private _themeService!: ThemeService;
   private _mainEl!: HTMLElement;
   private _sidebarWrapperEl!: HTMLElement;
+  private _infoPanel!: InfoPanel;
+  private _infoPanelEl!: HTMLElement;
+  private _infoPanelVisible = false;
+  private _userCollapsedInfoPanel = false;
 
   constructor(
     private readonly _container: HTMLElement,
@@ -99,6 +105,8 @@ export class Workbench extends Disposable {
 
     this._conversationList.onDidSelectConversation((conversationId) => {
       void this._chatPanel.loadConversation(conversationId);
+      this._infoPanel.setConversation(conversationId);
+      this._userCollapsedInfoPanel = false;
     });
     this._conversationList.onDidRequestNewConversation(() => {
       void this._createNewConversation();
@@ -138,6 +146,60 @@ export class Workbench extends Disposable {
     this._chatPanel = this._register(new ChatPanel(this._ipc));
     this._chatPanel.render(chatPanelContainer);
 
+    // Info panel container (must be declared before resize handle that references it)
+    const infoPanelContainer = document.createElement('div');
+    infoPanelContainer.className = 'info-panel-container';
+    infoPanelContainer.style.display = 'none'; // hidden by default
+    this._infoPanelEl = infoPanelContainer;
+
+    this._infoPanel = this._register(new InfoPanel());
+    infoPanelContainer.appendChild(this._infoPanel.getDomNode());
+
+    // Info panel resize handle (on the left side of info panel)
+    const infoPanelResizeHandle = document.createElement('div');
+    infoPanelResizeHandle.classList.add('info-panel-resize-handle');
+    let ipStartX = 0;
+    let ipStartWidth = 0;
+
+    const onInfoPanelMouseMove = (e: MouseEvent) => {
+      // Dragging left increases width
+      const newWidth = Math.max(160, Math.min(480, ipStartWidth - (e.clientX - ipStartX)));
+      infoPanelContainer.style.width = `${newWidth}px`;
+    };
+
+    const onInfoPanelMouseUp = () => {
+      document.removeEventListener('mousemove', onInfoPanelMouseMove);
+      document.removeEventListener('mouseup', onInfoPanelMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    infoPanelResizeHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      ipStartX = e.clientX;
+      ipStartWidth = infoPanelContainer.getBoundingClientRect().width;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onInfoPanelMouseMove);
+      document.addEventListener('mouseup', onInfoPanelMouseUp);
+    });
+
+    layout.main.appendChild(infoPanelResizeHandle);
+    layout.main.appendChild(infoPanelContainer);
+
+    // Subscribe to agent events for InfoPanel
+    this._ipc.on(IPC_CHANNELS.AGENT_EVENT, (...args: unknown[]) => {
+      const event = args[0] as AgentEvent;
+      this._infoPanel.handleEvent(event);
+    });
+
+    // Wire InfoPanel events
+    this._infoPanel.onDidRequestScrollToMessage(msgId => this._chatPanel.scrollToMessage(msgId));
+    this._infoPanel.onDidRequestRevealFile(filePath => {
+      void this._ipc.invoke(IPC_CHANNELS.SHELL_SHOW_ITEM_IN_FOLDER, { path: filePath });
+    });
+    this._infoPanel.onDidPlanCreated(() => this._autoShowInfoPanel());
+
     // Store reference to main element for settings panel injection
     this._mainEl = layout.main;
 
@@ -147,6 +209,7 @@ export class Workbench extends Disposable {
         this._sidebarWrapperEl.style.display = 'none';
         this._sidebar.getDomNode().style.display = 'none';
         this._chatPanelEl.style.display = 'none';
+        this._infoPanelEl.style.display = 'none';
 
         if (!this._settingsPanel) {
           this._settingsPanel = this._register(new SettingsPanel(this._ipc, this._themeService));
@@ -159,6 +222,9 @@ export class Workbench extends Disposable {
         this._sidebarWrapperEl.style.display = '';
         this._sidebar.getDomNode().style.display = '';
         this._chatPanelEl.style.display = '';
+        if (this._infoPanelVisible) {
+          this._infoPanelEl.style.display = '';
+        }
         if (this._settingsPanel) {
           this._settingsPanel.getDomNode().style.display = 'none';
         }
@@ -205,6 +271,8 @@ export class Workbench extends Disposable {
       );
       this._chatPanel.conversationId = response.id;
       await this._chatPanel.loadConversation(response.id);
+      this._infoPanel.setConversation(response.id);
+      this._userCollapsedInfoPanel = false;
       await this._conversationList.refresh();
     } catch (err) {
       console.error('Failed to create conversation:', err);
@@ -223,10 +291,43 @@ export class Workbench extends Disposable {
       meta: true,
       handler: () => void this._createNewConversation(),
     });
+    // Cmd+Shift+B for info panel toggle
+    this._shortcuts.bind({
+      key: 'b',
+      meta: true,
+      shift: true,
+      handler: () => this._toggleInfoPanel(),
+    });
   }
 
   private _toggleSidebar(): void {
     this._sidebarVisible = !this._sidebarVisible;
     this._sidebar.getDomNode().style.display = this._sidebarVisible ? '' : 'none';
+  }
+
+  private _toggleInfoPanel(): void {
+    if (this._infoPanelVisible) {
+      this._hideInfoPanel();
+      this._userCollapsedInfoPanel = true;
+    } else {
+      this._showInfoPanel();
+      this._userCollapsedInfoPanel = false;
+    }
+  }
+
+  private _showInfoPanel(): void {
+    this._infoPanelVisible = true;
+    this._infoPanelEl.style.display = '';
+  }
+
+  private _hideInfoPanel(): void {
+    this._infoPanelVisible = false;
+    this._infoPanelEl.style.display = 'none';
+  }
+
+  private _autoShowInfoPanel(): void {
+    if (!this._userCollapsedInfoPanel) {
+      this._showInfoPanel();
+    }
   }
 }

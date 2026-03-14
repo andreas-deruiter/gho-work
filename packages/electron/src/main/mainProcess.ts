@@ -1028,6 +1028,11 @@ export function createMainProcess(
     }
   });
 
+  ipcMainAdapter.handle(IPC_CHANNELS.SHELL_SHOW_ITEM_IN_FOLDER, async (...args: unknown[]) => {
+    const { path: filePath } = args[0] as { path: string };
+    shell.showItemInFolder(filePath);
+  });
+
   ipcMainAdapter.handle(IPC_CHANNELS.FILES_SEARCH, async (...args: unknown[]) => {
     const { rootPath, query, maxResults } = args[0] as { rootPath: string; query: string; maxResults?: number };
     validatePath(rootPath);

@@ -58,6 +58,7 @@ export const IPC_CHANNELS = {
   FILES_CHANGED: 'files:changed',
   WORKSPACE_GET_ROOT: 'workspace:get-root',
   FILES_SEARCH: 'files:search',
+  SHELL_SHOW_ITEM_IN_FOLDER: 'shell:showItemInFolder',
 } as const;
 
 export const SendMessageRequestSchema = z.object({
