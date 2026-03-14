@@ -128,29 +128,35 @@ export class PluginInstaller {
   async parseManifest(pluginDir: string): Promise<PluginManifest> {
     const manifestPath = path.join(pluginDir, '.claude-plugin', 'plugin.json');
 
+    let manifest: PluginManifest;
+
     if (fs.existsSync(manifestPath)) {
       const raw = fs.readFileSync(manifestPath, 'utf8');
-      const parsed = JSON.parse(raw) as PluginManifest;
-      return parsed;
+      manifest = JSON.parse(raw) as PluginManifest;
+    } else {
+      manifest = { name: path.basename(pluginDir) };
     }
 
-    // Auto-discover from directory structure
-    const name = path.basename(pluginDir);
-    const manifest: PluginManifest = { name };
-
-    const skillsDir = path.join(pluginDir, 'skills');
-    if (fs.existsSync(skillsDir) && fs.statSync(skillsDir).isDirectory()) {
-      manifest.skills = 'skills/';
+    // Auto-discover fields not declared in the manifest
+    if (manifest.skills === undefined) {
+      const skillsDir = path.join(pluginDir, 'skills');
+      if (fs.existsSync(skillsDir) && fs.statSync(skillsDir).isDirectory()) {
+        manifest.skills = 'skills/';
+      }
     }
 
-    const agentsDir = path.join(pluginDir, 'agents');
-    if (fs.existsSync(agentsDir) && fs.statSync(agentsDir).isDirectory()) {
-      manifest.agents = 'agents/';
+    if (manifest.agents === undefined) {
+      const agentsDir = path.join(pluginDir, 'agents');
+      if (fs.existsSync(agentsDir) && fs.statSync(agentsDir).isDirectory()) {
+        manifest.agents = 'agents/';
+      }
     }
 
-    const mcpJsonPath = path.join(pluginDir, '.mcp.json');
-    if (fs.existsSync(mcpJsonPath)) {
-      manifest.mcpServers = '.mcp.json';
+    if (manifest.mcpServers === undefined) {
+      const mcpJsonPath = path.join(pluginDir, '.mcp.json');
+      if (fs.existsSync(mcpJsonPath)) {
+        manifest.mcpServers = '.mcp.json';
+      }
     }
 
     return manifest;

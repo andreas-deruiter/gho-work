@@ -189,11 +189,14 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       throw err;
     }
 
+    // For git-subdir locations, the plugin root is nested inside the clone
+    const pluginRoot = this._resolvePluginRoot(cachePath, entry.location);
+
     // Parse manifest
     this._emitProgress(name, 'extracting', 'Reading plugin manifest…');
     let manifest: Awaited<ReturnType<PluginInstaller['parseManifest']>>;
     try {
-      manifest = await this._installer.parseManifest(cachePath);
+      manifest = await this._installer.parseManifest(pluginRoot);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this._emitProgress(name, 'error', `Manifest parse failed: ${message}`);
@@ -204,11 +207,11 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     }
 
     // Count skills and agents
-    const skillCount = await this._installer.countSkills(cachePath, manifest.skills);
-    const agentCount = await this._installer.countAgents(cachePath, manifest.agents);
+    const skillCount = await this._installer.countSkills(pluginRoot, manifest.skills);
+    const agentCount = await this._installer.countAgents(pluginRoot, manifest.agents);
 
     // Parse MCP servers
-    const mcpServerMap = await this._installer.parseMcpServers(cachePath, manifest.mcpServers);
+    const mcpServerMap = await this._installer.parseMcpServers(pluginRoot, manifest.mcpServers);
 
     // Register
     this._emitProgress(name, 'registering', 'Registering skills and MCP servers…');
@@ -219,7 +222,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     try {
       // Register skill source
       if (skillCount > 0 || manifest.skills !== undefined) {
-        const skillPath = this._resolveSkillPath(cachePath, manifest.skills);
+        const skillPath = this._resolveSkillPath(pluginRoot, manifest.skills);
         const sourceId = `plugin:${name}`;
         this._skillRegistration.addSource({ id: sourceId, path: skillPath, priority: 10 });
         registeredSourceIds.push(sourceId);
@@ -324,17 +327,19 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       return; // already enabled
     }
 
+    const pluginRoot = this._resolvePluginRoot(plugin.cachePath, plugin.catalogMeta.location);
+
     // Re-register skill source
     if (plugin.skillCount > 0) {
-      const manifest = await this._installer.parseManifest(plugin.cachePath);
-      const skillPath = this._resolveSkillPath(plugin.cachePath, manifest.skills);
+      const manifest = await this._installer.parseManifest(pluginRoot);
+      const skillPath = this._resolveSkillPath(pluginRoot, manifest.skills);
       this._skillRegistration.addSource({ id: `plugin:${name}`, path: skillPath, priority: 10 });
       await this._skillRegistration.refresh();
     }
 
     // Re-register MCP servers
-    const enableManifest = await this._installer.parseManifest(plugin.cachePath);
-    const enableServers = await this._installer.parseMcpServers(plugin.cachePath, enableManifest.mcpServers);
+    const enableManifest = await this._installer.parseManifest(pluginRoot);
+    const enableServers = await this._installer.parseMcpServers(pluginRoot, enableManifest.mcpServers);
     for (const serverName of plugin.mcpServerNames) {
       const serverConfig = enableServers.get(serverName);
       if (serverConfig !== undefined) {
@@ -436,5 +441,17 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     }
     const first = Array.isArray(skills) ? skills[0] : skills;
     return path.join(cachePath, first.replace(/\/$/, ''));
+  }
+
+  /**
+   * For `git-subdir` locations, the actual plugin content is nested inside the
+   * clone at `location.path`. For all other location types, the plugin root is
+   * the clone root itself.
+   */
+  private _resolvePluginRoot(cachePath: string, location: string | CatalogEntry['location']): string {
+    if (typeof location !== 'string' && location.type === 'git-subdir') {
+      return path.join(cachePath, location.path.replace(/^\.\//, ''));
+    }
+    return cachePath;
   }
 }
