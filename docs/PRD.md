@@ -378,6 +378,12 @@ VS Code-inspired layout with five zones:
 - **Downloads**: Files created or modified during the current task. Each entry shows filename, icon, and size. Click to open/preview in the main panel. External-link icon to reveal in Finder/Explorer. Empty state: "No files created yet."
 - **Context**: Tools and files referenced during the current task. Shows MCP server icons, tool names, and file thumbnails/icons. Gives the user a quick overview of what data the agent has touched. Click a file to preview, click a tool to jump to its call in the chat.
 
+**Context Panel** (right side, 280px, collapsible):
+- Shows task-level metadata for the active conversation. Collapsible via `Cmd+Shift+B` or drag handle. Hidden when no task is active. Sections are collapsible individually.
+- **Progress**: Visual step tracker for multi-step tasks. Shows completed (checkmark), active (spinner), and pending steps. Steps are derived from the agent's plan decomposition (if the agent breaks a task into sub-steps, they appear here). For short tasks, this section may be empty/hidden.
+- **Downloads**: Files created or modified during the current task. Each entry shows filename, icon, and size. Click to open/preview in the main panel. External-link icon to reveal in Finder/Explorer. Empty state: "No files created yet."
+- **Context**: Tools and files referenced during the current task. Shows MCP server icons, tool names, and file thumbnails/icons. Gives the user a quick overview of what data the agent has touched. Click a file to preview, click a tool to jump to its call in the chat.
+
 **Status Bar** (full width, 24px):
 - Left: workspace path (clickable — opens workspace picker), MCP connector count with status dot (e.g., "MCP: 2/3" — clickable, navigates to Settings > Connectors)
 - Right: active model name, agent state indicator (idle / working / queued), Copilot usage meter, user avatar
