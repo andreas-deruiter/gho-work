@@ -11,6 +11,16 @@ const userDataDir = resolve(__dirname, '../../.e2e-userdata-settings');
 mkdirSync(userDataDir, { recursive: true });
 writeFileSync(resolve(userDataDir, 'onboarding-complete.json'), '{"complete":true}');
 
+// Seed a test skill so the toggle test has something to work with.
+// app.getAppPath() returns apps/desktop/out/main when launched directly,
+// so bundled skills resolve to apps/desktop/skills (../../skills from out/main).
+const testSkillDir = resolve(appPath, 'skills', 'test');
+mkdirSync(testSkillDir, { recursive: true });
+writeFileSync(
+  resolve(testSkillDir, 'demo.md'),
+  '---\ndescription: Demo skill for E2E testing\n---\nThis is a test skill.\n',
+);
+
 let electronApp: ElectronApplication;
 let page: Page;
 
@@ -174,6 +184,45 @@ test.describe('Settings panel', () => {
 
     // Verify the html element still has data-theme="light" after restart
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light', { timeout: 5000 });
+  });
+
+  test('skill toggle switches are rendered and clickable', async () => {
+    await openSettings();
+
+    // Navigate to Skills page
+    const skillsNav = page.locator('.settings-nav-item', { hasText: 'Skills' });
+    await skillsNav.click();
+    await expect(page.locator('.settings-page-skills')).toBeVisible({ timeout: 5000 });
+
+    // The initial skill list may be empty if the async scan hasn't finished.
+    // Click Rescan to force a refresh and wait for skills to load.
+    const rescanBtn = page.locator('.skill-rescan-btn');
+    await expect(rescanBtn).toBeVisible({ timeout: 3000 });
+    await rescanBtn.click();
+
+    // Wait for skills to load and toggle switches to appear
+    const toggles = page.locator('.skill-toggle');
+    await expect(toggles.first()).toBeVisible({ timeout: 10000 });
+
+    // Check initial state
+    const firstToggle = toggles.first();
+    await expect(firstToggle).toHaveAttribute('role', 'switch');
+    await expect(firstToggle).toHaveAttribute('aria-checked', 'true');
+
+    // Click to disable
+    await firstToggle.click();
+
+    // Verify toggle flipped
+    await expect(firstToggle).toHaveAttribute('aria-checked', 'false');
+
+    // Verify disclaimer appeared
+    const disclaimer = page.locator('.skill-toggle-disclaimer');
+    await expect(disclaimer).toBeVisible();
+    await expect(disclaimer).toContainText('new conversations');
+
+    // Click again to re-enable
+    await firstToggle.click();
+    await expect(firstToggle).toHaveAttribute('aria-checked', 'true');
   });
 
   test('clicking chat activity bar item returns to chat view', async () => {
