@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as path from 'node:path';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
 import type { SkillEntry } from '../common/skillRegistry.js';
 
@@ -115,6 +117,91 @@ describe('SkillRegistryImpl', () => {
     it('concurrent refresh calls do not race', async () => {
       await Promise.all([registry.refresh(), registry.refresh()]);
       expect(registry.list().length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('addSource', () => {
+    let tmpDir: string;
+
+    beforeEach(async () => {
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-test-'));
+      // Create a category dir with a valid skill file
+      const catDir = path.join(tmpDir, 'plugin-cat');
+      await fs.mkdir(catDir, { recursive: true });
+      await fs.writeFile(
+        path.join(catDir, 'plugin-skill.md'),
+        '---\ndescription: Plugin skill\n---\n# Plugin Skill\n\nContent here.'
+      );
+    });
+
+    afterEach(async () => {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    });
+
+    it('addSource adds a source and makes its skills discoverable after refresh()', async () => {
+      registry.addSource({ id: 'plugin-source', priority: 10, basePath: tmpDir });
+      await registry.refresh();
+
+      const entry = registry.getEntry('plugin-cat', 'plugin-skill');
+      expect(entry).toBeDefined();
+      expect(entry!.sourceId).toBe('plugin-source');
+      expect(entry!.description).toBe('Plugin skill');
+    });
+
+    it('addSource with duplicate ID does not create duplicates', async () => {
+      registry.addSource({ id: 'plugin-source', priority: 10, basePath: tmpDir });
+      registry.addSource({ id: 'plugin-source', priority: 10, basePath: tmpDir });
+      await registry.refresh();
+
+      // Should only appear once — only one sourceId 'plugin-source'
+      const all = registry.list();
+      const fromSource = all.filter(e => e.sourceId === 'plugin-source');
+      // One source, one skill file → exactly 1 entry
+      expect(fromSource).toHaveLength(1);
+    });
+  });
+
+  describe('removeSource', () => {
+    let tmpDir: string;
+
+    beforeEach(async () => {
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-test-remove-'));
+      const catDir = path.join(tmpDir, 'plugin-cat');
+      await fs.mkdir(catDir, { recursive: true });
+      await fs.writeFile(
+        path.join(catDir, 'plugin-skill.md'),
+        '---\ndescription: Plugin skill\n---\n# Plugin Skill\n\nContent here.'
+      );
+    });
+
+    afterEach(async () => {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    });
+
+    it('removeSource removes a source and its skills, fires onDidChangeSkills', async () => {
+      const reg = new SkillRegistryImpl([
+        { id: 'bundled', priority: 0, basePath: FIXTURES },
+        { id: 'plugin-source', priority: 10, basePath: tmpDir },
+      ]);
+      await reg.scan();
+
+      expect(reg.getEntry('plugin-cat', 'plugin-skill')).toBeDefined();
+
+      const fired: SkillEntry[][] = [];
+      reg.onDidChangeSkills(entries => fired.push(entries));
+
+      reg.removeSource('plugin-source');
+
+      expect(reg.getEntry('plugin-cat', 'plugin-skill')).toBeUndefined();
+      expect(fired).toHaveLength(1);
+      // Remaining skills should all be from bundled
+      expect(fired[0].every(e => e.sourceId === 'bundled')).toBe(true);
+
+      reg.dispose();
+    });
+
+    it('removeSource with non-existent ID does not throw', () => {
+      expect(() => registry.removeSource('no-such-source')).not.toThrow();
     });
   });
 });

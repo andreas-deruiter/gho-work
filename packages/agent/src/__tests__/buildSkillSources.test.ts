@@ -51,7 +51,16 @@ describe('buildSkillSources', () => {
     const sources = buildSkillSources({
       bundledPath: '/app/skills',
       installedPlugins: [
-        { name: 'my-plugin', registry: 'official', version: '1.0.0', enabled: true, cachePath: '/cache/official/my-plugin/1.0.0/skills' },
+        {
+          name: 'my-plugin',
+          version: '1.0.0',
+          enabled: true,
+          cachePath: '/cache/official/my-plugin/1.0.0/skills',
+          installedAt: '2026-01-01T00:00:00.000Z',
+          catalogMeta: { name: 'my-plugin', description: 'A plugin', version: '1.0.0', location: 'https://example.com', hasSkills: true, hasMcpServers: false },
+          skillCount: 0,
+          mcpServerNames: [],
+        },
       ],
     });
     const plugin = sources.find(s => s.id === 'marketplace:my-plugin');
@@ -63,7 +72,16 @@ describe('buildSkillSources', () => {
     const sources = buildSkillSources({
       bundledPath: '/app/skills',
       installedPlugins: [
-        { name: 'disabled-plugin', registry: 'official', version: '1.0.0', enabled: false, cachePath: '/cache/official/disabled-plugin/1.0.0/skills' },
+        {
+          name: 'disabled-plugin',
+          version: '1.0.0',
+          enabled: false,
+          cachePath: '/cache/official/disabled-plugin/1.0.0/skills',
+          installedAt: '2026-01-01T00:00:00.000Z',
+          catalogMeta: { name: 'disabled-plugin', description: 'A plugin', version: '1.0.0', location: 'https://example.com', hasSkills: true, hasMcpServers: false },
+          skillCount: 0,
+          mcpServerNames: [],
+        },
       ],
     });
     expect(sources.find(s => s.id === 'marketplace:disabled-plugin')).toBeUndefined();

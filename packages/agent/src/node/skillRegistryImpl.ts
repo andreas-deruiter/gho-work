@@ -25,8 +25,31 @@ export class SkillRegistryImpl extends Disposable implements ISkillRegistry {
   private readonly _onDidChangeSkills = this._register(new Emitter<SkillEntry[]>());
   readonly onDidChangeSkills: Event<SkillEntry[]> = this._onDidChangeSkills.event;
 
-  constructor(private readonly _sources: SkillSource[]) {
+  constructor(private _sources: SkillSource[]) {
     super();
+  }
+
+  addSource(source: SkillSource): void {
+    const duplicate = this._sources.some(s => s.id === source.id);
+    if (duplicate) {
+      return;
+    }
+    this._sources.push(source);
+    this._sources.sort((a, b) => a.priority - b.priority);
+  }
+
+  removeSource(sourceId: string): void {
+    const index = this._sources.findIndex(s => s.id === sourceId);
+    if (index === -1) {
+      return;
+    }
+    this._sources.splice(index, 1);
+    for (const [key, entry] of this._skills) {
+      if (entry.sourceId === sourceId) {
+        this._skills.delete(key);
+      }
+    }
+    this._onDidChangeSkills.fire(Array.from(this._skills.values()));
   }
 
   async scan(): Promise<void> {

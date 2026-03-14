@@ -22,6 +22,8 @@ export interface ISkillRegistry extends IDisposable {
   getEntry(category: string, name: string): SkillEntry | undefined;
   list(category?: string): SkillEntry[];
   refresh(): Promise<void>;
+  addSource(source: SkillSource): void;
+  removeSource(sourceId: string): void;
   readonly onDidChangeSkills: Event<SkillEntry[]>;
 }
 
