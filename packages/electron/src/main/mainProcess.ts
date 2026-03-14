@@ -291,7 +291,11 @@ export function createMainProcess(
   void skillRegistry.scan().catch((err) => {
     console.error('[main] Skill registry scan failed:', err instanceof Error ? err.message : String(err));
   });
-  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry);
+  const getDisabledSkills = (): string[] => {
+    const raw = storageService?.getSetting('skills.disabled');
+    return raw ? JSON.parse(raw) : [];
+  };
+  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, undefined, getDisabledSkills);
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
