@@ -12,6 +12,8 @@ import { StatusBar } from './statusBar.js';
 import { KeyboardShortcuts } from './keyboardShortcuts.js';
 import { ChatPanel } from './chatPanel.js';
 import { ConversationListPanel } from './conversationList.js';
+import { SettingsPanel } from './settings/settingsPanel.js';
+import { ThemeService } from './theme.js';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
@@ -21,6 +23,9 @@ export class Workbench extends Disposable {
   private _chatPanel!: ChatPanel;
   private _conversationList!: ConversationListPanel;
   private _sidebarVisible = true;
+  private _settingsPanel: SettingsPanel | undefined;
+  private _themeService!: ThemeService;
+  private _mainEl!: HTMLElement;
 
   constructor(
     private readonly _container: HTMLElement,
@@ -65,14 +70,40 @@ export class Workbench extends Disposable {
       void this._createNewConversation();
     });
 
-    // Wire activity bar to sidebar panel switching
-    this._register(this._activityBar.onDidSelectItem((item) => {
-      this._sidebar.showPanel(item);
-    }));
+    // Theme service
+    this._themeService = this._register(new ThemeService(this._ipc));
+    void this._themeService.init();
 
     // Chat panel in main content
     this._chatPanel = this._register(new ChatPanel(this._ipc));
     this._chatPanel.render(layout.main);
+
+    // Store reference to main element for settings panel injection
+    this._mainEl = layout.main;
+
+    // Wire activity bar to sidebar/settings panel switching
+    this._register(this._activityBar.onDidSelectItem(async (item) => {
+      if (item === 'settings') {
+        this._sidebar.getDomNode().style.display = 'none';
+        this._chatPanel.getDomNode().style.display = 'none';
+
+        if (!this._settingsPanel) {
+          this._settingsPanel = this._register(new SettingsPanel(this._ipc, this._themeService));
+        }
+        this._settingsPanel.getDomNode().style.display = '';
+        if (!this._mainEl.contains(this._settingsPanel.getDomNode())) {
+          this._mainEl.appendChild(this._settingsPanel.getDomNode());
+        }
+      } else {
+        this._sidebar.getDomNode().style.display = '';
+        this._chatPanel.getDomNode().style.display = '';
+        if (this._settingsPanel) {
+          this._settingsPanel.getDomNode().style.display = 'none';
+        }
+
+        this._sidebar.showPanel(item);
+      }
+    }));
 
     // Status bar
     const statusBarWrapper = h('div.workbench-statusbar');
