@@ -127,6 +127,12 @@ export interface PermissionRule {
 
 // --- Agent Events (event-driven architecture) ---
 
+export interface FileMeta {
+  path: string;
+  size: number;
+  action: 'created' | 'modified';
+}
+
 // NOTE: AgentEvent is defined in both types.ts and ipc.ts — keep in sync.
 export type AgentEvent =
   | { type: 'text'; content: string }
@@ -134,9 +140,25 @@ export type AgentEvent =
   | { type: 'thinking'; content: string }
   | { type: 'thinking_delta'; content: string }
   | { type: 'tool_call_start'; toolCall: Omit<ToolCall, 'result' | 'durationMs'> }
-  | { type: 'tool_call_result'; toolCallId: string; result: ToolResult }
+  | { type: 'tool_call_result'; toolCallId: string; result: ToolResult; fileMeta?: FileMeta }
   | { type: 'error'; error: string }
-  | { type: 'done'; messageId: string };
+  | { type: 'done'; messageId: string }
+  | { type: 'plan_created'; plan: { id: string; steps: Array<{ id: string; label: string }> } }
+  | {
+      type: 'plan_step_updated';
+      planId: string;
+      stepId: string;
+      state: 'pending' | 'running' | 'completed' | 'failed';
+      startedAt?: number;
+      completedAt?: number;
+      error?: string;
+      messageId?: string;
+    }
+  | {
+      type: 'attachment_added';
+      messageId: string;
+      attachment: { name: string; path: string; source: string };
+    };
 
 // --- Agent Context ---
 

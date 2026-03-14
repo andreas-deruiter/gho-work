@@ -96,7 +96,7 @@ describe('MockCopilotSDK', () => {
 
     // Verify tool events use data payload
     const toolStart = events.find((e) => e.type === 'tool.execution_start')!;
-    expect((toolStart.data as Record<string, unknown>).toolName).toBe('FileRead');
+    expect((toolStart.data as Record<string, unknown>).toolName).toBe('read_file');
     expect((toolStart.data as Record<string, unknown>).toolCallId).toBeTruthy();
 
     const toolComplete = events.find((e) => e.type === 'tool.execution_complete')!;

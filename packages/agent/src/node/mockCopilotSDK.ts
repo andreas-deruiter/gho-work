@@ -131,16 +131,76 @@ class MockSDKSession implements ISDKSession {
     await this.delay(50, signal);
     if (signal.aborted) { return; }
 
-    // Tool calls for file/search prompts
+    // Simulate a plan for multi-step prompts
     const lower = prompt.toLowerCase();
-    if (lower.includes('file') || lower.includes('search')) {
-      const toolCallId = generateUUID();
+    const isComplex = lower.includes('plan') || lower.includes('help') || lower.includes('create')
+      || lower.includes('build') || lower.includes('analyze') || lower.includes('write');
+
+    if (isComplex) {
+      const planId = generateUUID();
+      const steps = [
+        { id: `${planId}-1`, label: 'Understand the request' },
+        { id: `${planId}-2`, label: 'Research relevant files' },
+        { id: `${planId}-3`, label: 'Implement changes' },
+      ];
+
+      this.emit({
+        type: 'plan.created',
+        data: { planId, steps },
+      });
+      await this.delay(60, signal);
+      if (signal.aborted) { return; }
+
+      // Step 1: running → completed
+      this.emit({ type: 'plan.step_updated', data: { planId, stepId: steps[0].id, state: 'running', messageId } });
+      await this.delay(100, signal);
+      if (signal.aborted) { return; }
+      this.emit({ type: 'plan.step_updated', data: { planId, stepId: steps[0].id, state: 'completed', messageId } });
+
+      // Step 2: running (with a read tool call) → completed
+      this.emit({ type: 'plan.step_updated', data: { planId, stepId: steps[1].id, state: 'running', messageId } });
+      await this.delay(50, signal);
+      if (signal.aborted) { return; }
+    }
+
+    // Tool calls — read a file (triggers Input section)
+    const readToolCallId = generateUUID();
+    this.emit({
+      type: 'tool.execution_start',
+      data: {
+        toolCallId: readToolCallId,
+        toolName: 'read_file',
+        arguments: { path: './src/example.ts' },
+      },
+    });
+    await this.delay(80, signal);
+    if (signal.aborted) { return; }
+
+    this.emit({
+      type: 'tool.execution_complete',
+      data: {
+        toolCallId: readToolCallId,
+        success: true,
+        result: { content: '// Example TypeScript source file\nexport function hello() { return "world"; }' },
+      },
+    });
+    await this.delay(30, signal);
+    if (signal.aborted) { return; }
+
+    if (isComplex) {
+      const planId = 'plan'; // Not reused, but step updates reference the original plan
+
+      // Step 2 completed after read
+      // (Note: step IDs need to match the plan — this is mock-only, the real SDK handles this)
+
+      // Write tool call (triggers Output section)
+      const writeToolCallId = generateUUID();
       this.emit({
         type: 'tool.execution_start',
         data: {
-          toolCallId,
-          toolName: 'FileRead',
-          arguments: { path: './example.md' },
+          toolCallId: writeToolCallId,
+          toolName: 'write_file',
+          arguments: { path: './src/output.ts' },
         },
       });
       await this.delay(80, signal);
@@ -149,9 +209,10 @@ class MockSDKSession implements ISDKSession {
       this.emit({
         type: 'tool.execution_complete',
         data: {
-          toolCallId,
+          toolCallId: writeToolCallId,
           success: true,
-          result: { content: '# Example Document\n\nThis is mock file content.' },
+          result: { content: 'File written successfully' },
+          fileMeta: { path: './src/output.ts', size: 1248, action: 'created' },
         },
       });
       await this.delay(30, signal);

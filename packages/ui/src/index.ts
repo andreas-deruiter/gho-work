@@ -15,3 +15,4 @@ export * from './browser/modelSelector.js';
 export { OnboardingFlow } from './browser/onboarding/onboardingFlow.js';
 export { SettingsPanel } from './browser/settings/settingsPanel.js';
 export { FilesPanel } from './browser/filesPanel.js';
+export { InfoPanel } from './browser/infoPanel/index.js';
