@@ -196,6 +196,51 @@ Key patterns to adapt:
 - `Barrier` — a promise that can be resolved externally
 - `Queue<T>` — sequential async task execution
 
+## Architecture Rules (from CLAUDE.md)
+
+### Environment subdirectories
+
+Within each package, organize code by runtime target:
+- `common/` — Pure TypeScript, no DOM, no Node (runs everywhere)
+- `browser/` — Requires DOM APIs (renderer process)
+- `node/` — Requires Node.js APIs (main process, utility processes)
+- `electron-main/` — Requires Electron main process APIs
+
+Code in `common/` must never import from `browser/` or `node/`.
+
+### Barrel exports must respect environment boundaries
+
+A package barrel (`index.ts`) that re-exports both `common/` and `node/` code forces browser consumers to pull in Node.js dependencies (e.g., `better-sqlite3`), crashing the renderer. Packages with mixed environments must provide separate entry points:
+- `@gho-work/<pkg>` — full package (Node.js consumers only)
+- `@gho-work/<pkg>/common` — browser-safe exports (no Node.js, no native modules)
+
+Browser code (`packages/ui/src/browser/`, renderer entry points) must import from `/common` subpaths, never from the full barrel of packages that contain Node.js code.
+
+### Native modules and bundling
+
+Before instantiating a class that uses a native module (like `better-sqlite3`), trace the bundling chain: is the module externalized in `electron.vite.config.ts`? Is the `require()` at the top level or lazy? Will tree-shaking remove it if the class is only used as a type? Native modules used in Electron must be lazy-loaded (`const load = () => require('mod')`) so the `require` only executes when the code path is actually reached.
+
+**Never restore Node.js ABI for better-sqlite3.** Keep it compiled for Electron at all times. After any `npm install` or `npm rebuild`, re-run: `cd node_modules/better-sqlite3 && npx node-gyp rebuild --target=35.7.5 --arch=arm64 --dist-url=https://electronjs.org/headers --runtime=electron`.
+
+### Dependency decisions
+
+| Decision | When to apply |
+|----------|--------------|
+| **Build in-house** | UI components, performance-critical code, core patterns (DI, events, disposables) |
+| **Fork/maintain** | Native bindings that need to track Electron versions |
+| **Take external dep** | Commodity tasks (zip, encoding, HTTP proxy) — small, stable, well-maintained, not critical path |
+| **Never** | UI frameworks (React, Vue, etc.) — we control our own rendering |
+
+Before adding any dependency, check: Does VS Code solve this without a dependency? See `references/vscode/src/vs/base/`.
+
+### Coding style
+
+- PascalCase for types/enums/classes, camelCase for functions/methods/properties/variables
+- Prefer `export function` over `export const fn = () =>` (better stack traces)
+- Always use curly braces for loops/conditionals
+- Prefer complete words in identifiers (not abbreviations)
+- **DOM creation**: Use `h()` helper instead of raw `document.createElement()`. All widgets extend `Disposable`.
+
 ## When to use this skill
 
 Before implementing any of these, read the VS Code reference first:

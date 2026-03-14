@@ -237,3 +237,9 @@ await session.send({
 4. Use custom session IDs for conversation persistence
 5. Write descriptive tool names and descriptions
 6. Use available models query: `const models = await client.getModels()`
+
+## Bundled Skills (in skills/)
+
+Agent-facing skills (e.g., `skills/install/`, `skills/auth/`) are loaded as system prompts for the Copilot SDK agent. They must be written as **agent directives**, not user-facing documentation. The agent has bash tool access — tell it to run commands itself. The user should never need to open a terminal. All CLI tool workflows (install, authenticate) use the conversational approach: create a conversation, auto-send a kickoff message, let the agent guide the user.
+
+**CLI auth must use device code flow.** Browser-based OAuth (localhost redirect) does not work from a subprocess — the redirect loops forever. Every `authCommand` in `cliDetectionImpl.ts` and every auth step in skills must include the device-code flag (e.g., `--authType deviceCode`, `--use-device-code`, `--strategy DeviceCode`, `--no-browser`).
