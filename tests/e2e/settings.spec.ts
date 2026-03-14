@@ -118,6 +118,64 @@ test.describe('Settings panel', () => {
     await expect(page.locator('.settings-nav-item.active')).toHaveText('Skills');
   });
 
+  test('theme change applies correct background color CSS variable', async () => {
+    await openSettings();
+
+    // Ensure we're on the Appearance page (previous test may have left us on Skills)
+    const appearanceNav = page.locator('.settings-nav-item', { hasText: 'Appearance' });
+    await appearanceNav.click();
+    await expect(page.locator('.theme-card')).toHaveCount(3, { timeout: 3000 });
+
+    // Click the Light theme card
+    const lightCard = page.locator('.theme-card[data-theme="light"]');
+    await expect(lightCard).toBeVisible({ timeout: 3000 });
+    await lightCard.click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light', { timeout: 3000 });
+
+    // Verify the actual computed background color is white
+    const lightBg = await page.evaluate(
+      () => getComputedStyle(document.body).backgroundColor,
+    );
+    expect(lightBg).toBe('rgb(255, 255, 255)');
+
+    // Click the Dark theme card
+    const darkCard = page.locator('.theme-card[data-theme="dark"]');
+    await expect(darkCard).toBeVisible({ timeout: 3000 });
+    await darkCard.click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark', { timeout: 3000 });
+
+    // Verify the actual computed background color is dark
+    const darkBg = await page.evaluate(
+      () => getComputedStyle(document.body).backgroundColor,
+    );
+    expect(darkBg).toBe('rgb(30, 30, 30)');
+  });
+
+  test('theme persists across app restart', async () => {
+    await openSettings();
+
+    // Set theme to Light
+    const lightCard = page.locator('.theme-card[data-theme="light"]');
+    await expect(lightCard).toBeVisible({ timeout: 3000 });
+    await lightCard.click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light', { timeout: 3000 });
+
+    // Close the app
+    await electronApp.close();
+
+    // Relaunch with the same userDataDir so persistence works
+    electronApp = await electron.launch({
+      args: [resolve(appPath, 'out/main/index.js')],
+      cwd: appPath,
+      env: { ...process.env, GHO_USER_DATA_DIR: userDataDir },
+    });
+    page = await electronApp.firstWindow();
+    await expect(page.locator('.workbench-activity-bar')).toBeVisible({ timeout: 10000 });
+
+    // Verify the html element still has data-theme="light" after restart
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light', { timeout: 5000 });
+  });
+
   test('clicking chat activity bar item returns to chat view', async () => {
     await openSettings();
     await openChat();

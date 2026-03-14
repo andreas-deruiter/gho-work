@@ -3,7 +3,12 @@ import { SettingsPanel } from '../settingsPanel.js';
 
 function createMockIPC() {
   return {
-    invoke: vi.fn().mockResolvedValue({}),
+    invoke: vi.fn().mockImplementation((channel: string) => {
+      if (channel === 'skill:sources' || channel === 'skill:list') {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve({});
+    }),
     on: vi.fn(),
     removeListener: vi.fn(),
   };
