@@ -50,6 +50,10 @@ export class ChatPanel extends Disposable {
   private readonly _onDidChangeAttachments = this._register(new Emitter<Array<{ name: string; path: string; size: number }>>());
   readonly onDidChangeAttachments: Event<Array<{ name: string; path: string; size: number }>> = this._onDidChangeAttachments.event;
 
+  get modelSelector(): ModelSelector {
+    return this._modelSelector;
+  }
+
   get conversationId(): string {
     return this._conversationId;
   }

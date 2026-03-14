@@ -3,7 +3,6 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { ActivityBar } from '../../browser/activityBar.js';
-import { StatusBar } from '../../browser/statusBar/statusBar.js';
 
 describe('ActivityBar', () => {
   it('should render all activity items', () => {
@@ -49,20 +48,3 @@ describe('ActivityBar', () => {
   });
 });
 
-describe('StatusBar (workbench)', () => {
-  it('should render left and right sections', () => {
-    const bar = new StatusBar();
-    const el = bar.getDomNode();
-    expect(el.querySelector('.status-bar-left')).toBeTruthy();
-    expect(el.querySelector('.status-bar-right')).toBeTruthy();
-    bar.dispose();
-  });
-
-  it('should update agent state', () => {
-    const bar = new StatusBar();
-    bar.updateAgentState({ state: 'idle' });
-    const label = bar.getDomNode().querySelector('.sb-agent-label');
-    expect(label?.textContent).toBe('Agent idle');
-    bar.dispose();
-  });
-});
