@@ -5,7 +5,7 @@
  */
 import { Disposable, Emitter, generateUUID, MutableDisposable } from '@gho-work/base';
 import type { Event, AgentEvent } from '@gho-work/base';
-import type { IIPCRenderer } from '@gho-work/platform/common';
+import type { IIPCRenderer, FileEntry } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { ModelSelector } from './modelSelector.js';
 import { ChatThinkingSection } from './chatThinkingSection.js';
@@ -45,6 +45,9 @@ export class ChatPanel extends Disposable {
 
   private readonly _onDidSendMessage = this._register(new Emitter<SendMessageEvent>());
   readonly onDidSendMessage: Event<SendMessageEvent> = this._onDidSendMessage.event;
+
+  private readonly _onDidChangeAttachments = this._register(new Emitter<Array<{ name: string; path: string; size: number }>>());
+  readonly onDidChangeAttachments: Event<Array<{ name: string; path: string; size: number }>> = this._onDidChangeAttachments.event;
 
   get conversationId(): string {
     return this._conversationId;
@@ -566,6 +569,23 @@ export class ChatPanel extends Disposable {
   private _dismissErrorBanner(): void {
     const existing = this._messageListEl?.parentElement?.querySelector('.chat-error-banner');
     if (existing) { existing.remove(); }
+  }
+
+  addAttachment(entry: FileEntry): void {
+    if (this._attachments.some(a => a.path === entry.path)) { return; }
+    this._attachments.push({ type: 'file', path: entry.path, displayName: entry.name });
+    this._renderAttachments();
+    this._onDidChangeAttachments.fire(
+      this._attachments.map(a => ({ name: a.displayName, path: a.path, size: 0 }))
+    );
+  }
+
+  removeAttachment(path: string): void {
+    this._attachments = this._attachments.filter(a => a.path !== path);
+    this._renderAttachments();
+    this._onDidChangeAttachments.fire(
+      this._attachments.map(a => ({ name: a.displayName, path: a.path, size: 0 }))
+    );
   }
 
   private _addAttachment(file: File): void {

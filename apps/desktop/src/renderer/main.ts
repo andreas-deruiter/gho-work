@@ -7,6 +7,7 @@ import { Workbench, OnboardingFlow } from '@gho-work/ui';
 import './styles.css';
 import './chatProgress.css';
 import './settings.css';
+import './files.css';
 
 // Declare the IPC bridge exposed by preload
 declare global {

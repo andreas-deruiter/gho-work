@@ -42,12 +42,28 @@ export const IPC_CHANNELS = {
   SKILL_REMOVE_PATH: 'skill:remove-path',
   SKILL_RESCAN: 'skill:rescan',
   SKILL_CHANGED: 'skill:changed',
+  // File channels
+  FILES_READ_DIR: 'files:read-dir',
+  FILES_STAT: 'files:stat',
+  FILES_CREATE: 'files:create',
+  FILES_RENAME: 'files:rename',
+  FILES_DELETE: 'files:delete',
+  FILES_WATCH: 'files:watch',
+  FILES_UNWATCH: 'files:unwatch',
+  FILES_CHANGED: 'files:changed',
+  WORKSPACE_GET_ROOT: 'workspace:get-root',
+  FILES_SEARCH: 'files:search',
 } as const;
 
 export const SendMessageRequestSchema = z.object({
   conversationId: z.string(),
   content: z.string(),
   model: z.string().optional(),
+  attachments: z.array(z.object({
+    name: z.string(),
+    path: z.string(),
+    size: z.number(),
+  })).optional(),
 });
 export type SendMessageRequest = z.infer<typeof SendMessageRequestSchema>;
 
@@ -267,3 +283,70 @@ export type SkillAddPathResponse = z.infer<typeof SkillAddPathResponseSchema>;
 
 export const SkillRemovePathRequestSchema = z.object({ path: z.string() });
 export type SkillRemovePathRequest = z.infer<typeof SkillRemovePathRequestSchema>;
+
+// --- File schemas ---
+
+export const FileEntrySchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  type: z.enum(['file', 'directory', 'symlink']),
+  size: z.number(),
+  mtime: z.number(),
+  isHidden: z.boolean(),
+});
+export type FileEntry = z.infer<typeof FileEntrySchema>;
+
+export const FileChangeEventSchema = z.object({
+  type: z.enum(['created', 'changed', 'deleted']),
+  path: z.string(),
+});
+export type FileChangeEvent = z.infer<typeof FileChangeEventSchema>;
+
+export const FilesReadDirRequestSchema = z.object({ path: z.string() });
+export type FilesReadDirRequest = z.infer<typeof FilesReadDirRequestSchema>;
+
+export const FilesStatRequestSchema = z.object({ path: z.string() });
+export type FilesStatRequest = z.infer<typeof FilesStatRequestSchema>;
+
+export const FilesCreateRequestSchema = z.object({
+  path: z.string(),
+  type: z.enum(['file', 'directory']),
+  content: z.string().optional(),
+});
+export type FilesCreateRequest = z.infer<typeof FilesCreateRequestSchema>;
+
+export const FilesRenameRequestSchema = z.object({
+  oldPath: z.string(),
+  newPath: z.string(),
+});
+export type FilesRenameRequest = z.infer<typeof FilesRenameRequestSchema>;
+
+export const FilesDeleteRequestSchema = z.object({ path: z.string() });
+export type FilesDeleteRequest = z.infer<typeof FilesDeleteRequestSchema>;
+
+export const FilesWatchRequestSchema = z.object({ path: z.string() });
+export type FilesWatchRequest = z.infer<typeof FilesWatchRequestSchema>;
+
+export const FilesWatchResponseSchema = z.object({ watchId: z.string() });
+export type FilesWatchResponse = z.infer<typeof FilesWatchResponseSchema>;
+
+export const FilesUnwatchRequestSchema = z.object({ watchId: z.string() });
+export type FilesUnwatchRequest = z.infer<typeof FilesUnwatchRequestSchema>;
+
+export const WorkspaceGetRootResponseSchema = z.object({
+  path: z.string().nullable(),
+});
+export type WorkspaceGetRootResponse = z.infer<typeof WorkspaceGetRootResponseSchema>;
+
+export const FilesSearchRequestSchema = z.object({
+  rootPath: z.string(),
+  query: z.string(),
+  maxResults: z.number().optional(),
+});
+
+export const FileAttachmentSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  size: z.number(),
+});
+export type FileAttachment = z.infer<typeof FileAttachmentSchema>;

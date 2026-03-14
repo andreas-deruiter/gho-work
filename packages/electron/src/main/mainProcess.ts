@@ -20,6 +20,7 @@ import {
   IAuthService,
   ISecureStorageService,
   SqliteStorageService,
+  NodeFileService,
 } from '@gho-work/platform';
 import type {
   SendMessageRequest,
@@ -874,6 +875,99 @@ export function createMainProcess(
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_RESCAN, async () => {
     await skillRegistry.refresh();
     return skillRegistry.list();
+  });
+
+  // --- File IPC handlers ---
+
+  const fileService = new NodeFileService();
+
+  // Dispose file service on app quit
+  app.on('will-quit', () => {
+    fileService.dispose();
+  });
+
+  const workspaceRoot = os.homedir();
+
+  function validatePath(targetPath: string): void {
+    const resolved = path.resolve(targetPath);
+    const resolvedRoot = path.resolve(workspaceRoot) + path.sep;
+    if (resolved !== path.resolve(workspaceRoot) && !resolved.startsWith(resolvedRoot)) {
+      throw new Error('Path traversal detected: path is outside workspace');
+    }
+  }
+
+  ipcMainAdapter.handle(IPC_CHANNELS.WORKSPACE_GET_ROOT, async () => {
+    return { path: workspaceRoot };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.FILES_READ_DIR, async (...args: unknown[]) => {
+    const { path: dirPath } = args[0] as { path: string };
+    validatePath(dirPath);
+    return fileService.readDirWithStats(dirPath);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.FILES_STAT, async (...args: unknown[]) => {
+    const { path: filePath } = args[0] as { path: string };
+    validatePath(filePath);
+    return fileService.stat(filePath);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.FILES_CREATE, async (...args: unknown[]) => {
+    const { path: filePath, type, content } = args[0] as { path: string; type: 'file' | 'directory'; content?: string };
+    validatePath(filePath);
+    if (type === 'directory') {
+      await fileService.createDir(filePath);
+    } else {
+      await fileService.createFile(filePath, content);
+    }
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.FILES_RENAME, async (...args: unknown[]) => {
+    const { oldPath, newPath } = args[0] as { oldPath: string; newPath: string };
+    validatePath(oldPath);
+    validatePath(newPath);
+    await fileService.rename(oldPath, newPath);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.FILES_DELETE, async (...args: unknown[]) => {
+    const { path: filePath } = args[0] as { path: string };
+    validatePath(filePath);
+    await fileService.delete(filePath);
+  });
+
+  const watchers = new Map<string, { dispose: () => void }>();
+  let nextWatchId = 0;
+
+  ipcMainAdapter.handle(IPC_CHANNELS.FILES_WATCH, async (...args: unknown[]) => {
+    const { path: dirPath } = args[0] as { path: string };
+    validatePath(dirPath);
+    const watchId = String(nextWatchId++);
+    const watcher = await fileService.watch(dirPath);
+    const listener = fileService.onDidChangeFile((event) => {
+      ipcMainAdapter.sendToRenderer(IPC_CHANNELS.FILES_CHANGED, event);
+    });
+    watchers.set(watchId, {
+      dispose: () => {
+        watcher.dispose();
+        listener.dispose();
+      },
+    });
+    return { watchId };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.FILES_UNWATCH, async (...args: unknown[]) => {
+    const { watchId } = args[0] as { watchId: string };
+    const watcher = watchers.get(watchId);
+    if (watcher) {
+      watcher.dispose();
+      watchers.delete(watchId);
+    }
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.FILES_SEARCH, async (...args: unknown[]) => {
+    const { rootPath, query, maxResults } = args[0] as { rootPath: string; query: string; maxResults?: number };
+    validatePath(rootPath);
+    return fileService.search(rootPath, query, maxResults);
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {

@@ -14,6 +14,7 @@ import { ChatPanel } from './chatPanel.js';
 import { ConversationListPanel } from './conversationList.js';
 import { SettingsPanel } from './settings/settingsPanel.js';
 import { ThemeService } from './theme.js';
+import { FilesPanel } from './filesPanel.js';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
@@ -57,6 +58,36 @@ export class Workbench extends Disposable {
     // Sidebar with panel switching
     layout.sidebar.appendChild(this._sidebar.getDomNode());
 
+    // Resize handle
+    const resizeHandle = document.createElement('div');
+    resizeHandle.classList.add('sidebar-resize-handle');
+    let startX = 0;
+    let startWidth = 0;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.max(160, Math.min(600, startWidth + (e.clientX - startX)));
+      layout.sidebar.style.width = `${newWidth}px`;
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = layout.sidebar.getBoundingClientRect().width;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    layout.sidebar.appendChild(resizeHandle);
+
     // Chat panel in sidebar (default)
     this._conversationList = this._register(new ConversationListPanel(this._ipc));
     const chatSidebarContainer = document.createElement('div');
@@ -70,6 +101,28 @@ export class Workbench extends Disposable {
     this._conversationList.onDidRequestNewConversation(() => {
       void this._createNewConversation();
     });
+
+    // Files panel — lazy-loaded
+    let filesPanel: FilesPanel | undefined;
+    let filesLoaded = false;
+
+    void (async () => {
+      try {
+        const result = await this._ipc.invoke<{ path: string | null }>(IPC_CHANNELS.WORKSPACE_GET_ROOT, {});
+        const workspacePath = result?.path;
+        if (workspacePath) {
+          filesPanel = this._register(new FilesPanel(workspacePath, this._ipc));
+          this._sidebar.addPanel('files', filesPanel.getDomNode());
+
+          // Wire attach event to chat
+          filesPanel.onDidRequestAttach(file => {
+            this._chatPanel.addAttachment(file);
+          });
+        }
+      } catch (err) {
+        console.warn('[Workbench] Failed to initialize files panel:', err);
+      }
+    })();
 
     // Theme service
     this._themeService = this._register(new ThemeService(this._ipc));
@@ -104,6 +157,12 @@ export class Workbench extends Disposable {
         this._chatPanelEl.style.display = '';
         if (this._settingsPanel) {
           this._settingsPanel.getDomNode().style.display = 'none';
+        }
+
+        // Lazy-load files panel on first activation
+        if (item === 'files' && !filesLoaded && filesPanel) {
+          filesLoaded = true;
+          void filesPanel.load();
         }
 
         this._sidebar.showPanel(item);
