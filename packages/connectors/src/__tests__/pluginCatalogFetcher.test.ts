@@ -222,7 +222,7 @@ describe('PluginCatalogFetcher', () => {
   it('maps github source object to PluginLocation with type=github', async () => {
     const plugin = {
       ...BARE_PLUGIN,
-      source: { type: 'github', repo: 'owner/my-plugin' },
+      source: { source: 'github', repo: 'owner/my-plugin' },
     };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       makeJsonResponse({ plugins: [plugin] }),
@@ -239,7 +239,7 @@ describe('PluginCatalogFetcher', () => {
   it('maps url source object to PluginLocation with type=url', async () => {
     const plugin = {
       ...BARE_PLUGIN,
-      source: { type: 'url', url: 'https://example.com/plugin.zip' },
+      source: { source: 'url', url: 'https://example.com/plugin.zip' },
     };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       makeJsonResponse({ plugins: [plugin] }),
@@ -257,7 +257,7 @@ describe('PluginCatalogFetcher', () => {
     const plugin = {
       ...BARE_PLUGIN,
       source: {
-        type: 'git-subdir',
+        source: 'git-subdir',
         url: 'https://github.com/org/monorepo',
         path: 'plugins/foo',
       },

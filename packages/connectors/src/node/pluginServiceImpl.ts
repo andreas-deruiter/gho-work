@@ -166,7 +166,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       throw new Error(`Plugin "${name}" not found in catalog. Run fetchCatalog() first.`);
     }
 
-    const version = entry.version;
+    const version = entry.version ?? 'latest';
     const cachePath = this._installer.getCachePath(name, version);
 
     // Check git is available

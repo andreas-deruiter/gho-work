@@ -14,9 +14,9 @@ const DEFAULT_CATALOG_URL =
 // ---------------------------------------------------------------------------
 
 type RawSourceObject =
-  | { type: 'github'; repo: string; ref?: string }
-  | { type: 'url'; url: string; ref?: string }
-  | { type: 'git-subdir'; url: string; path: string; ref?: string };
+  | { source: 'github'; repo: string; ref?: string; sha?: string }
+  | { source: 'url'; url: string; ref?: string; sha?: string }
+  | { source: 'git-subdir'; url: string; path: string; ref?: string; sha?: string };
 
 type RawSource = string | RawSourceObject;
 
@@ -121,7 +121,7 @@ export class PluginCatalogFetcher {
       };
     }
 
-    switch (source.type) {
+    switch (source.source) {
       case 'github':
         return {
           type: 'github',

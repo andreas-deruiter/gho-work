@@ -53,8 +53,8 @@ export interface CatalogEntry {
   name: string;
   /** Human-readable description of what the plugin does. */
   description: string;
-  /** Semver version string of the latest published release. */
-  version: string;
+  /** Semver version string of the latest published release. May be undefined if the catalog entry omits it. */
+  version?: string;
   /** Plugin author information. */
   author?: {
     name: string;
