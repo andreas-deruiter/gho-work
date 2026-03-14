@@ -335,19 +335,9 @@ export class Workbench extends Disposable {
     // Click routing
     this._register(this._statusBar.onDidClickItem((itemId) => {
       if (itemId === 'connectors') {
-        // Navigate to settings panel (connectors are under Settings)
+        // Navigate to settings panel — setActiveItem fires onDidSelectItem
+        // which triggers the existing handler that manages panel visibility
         this._activityBar.setActiveItem('settings');
-        this._sidebarWrapperEl.style.display = 'none';
-        this._sidebar.getDomNode().style.display = 'none';
-        this._chatPanelEl.style.display = 'none';
-
-        if (!this._settingsPanel) {
-          this._settingsPanel = this._register(new SettingsPanel(this._ipc, this._themeService));
-        }
-        this._settingsPanel.getDomNode().style.display = '';
-        if (!this._mainEl.contains(this._settingsPanel.getDomNode())) {
-          this._mainEl.appendChild(this._settingsPanel.getDomNode());
-        }
       }
     }));
   }
