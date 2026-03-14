@@ -1,0 +1,132 @@
+<h2>Settings Panel Layout</h2>
+<p class="subtitle">Where should the settings UI live when you click the gear icon?</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #1a1a2e;">
+      <!-- Sidebar mockup -->
+      <div style="display: flex; height: 200px; gap: 2px; font-size: 11px; color: #ccc;">
+        <!-- Activity bar -->
+        <div style="width: 36px; background: #16162a; display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 10px;">
+          <div style="width: 20px; height: 20px; background: #333; border-radius: 4px;"></div>
+          <div style="width: 20px; height: 20px; background: #333; border-radius: 4px;"></div>
+          <div style="width: 20px; height: 20px; background: #6366f1; border-radius: 4px;"></div>
+        </div>
+        <!-- Settings sidebar -->
+        <div style="width: 160px; background: #1e1e3a; padding: 8px; overflow: hidden;">
+          <div style="font-size: 10px; font-weight: 600; margin-bottom: 8px; color: #999;">SETTINGS</div>
+          <div style="padding: 4px 6px; background: #6366f1; border-radius: 3px; margin-bottom: 3px; font-size: 9px;">Appearance</div>
+          <div style="padding: 4px 6px; margin-bottom: 3px; font-size: 9px; color: #888;">Skills</div>
+          <div style="padding: 4px 6px; margin-bottom: 3px; font-size: 9px; color: #888;">Models</div>
+          <div style="border-top: 1px solid #333; margin-top: 8px; padding-top: 8px;">
+            <div style="font-size: 9px; color: #888;">Theme</div>
+            <div style="display: flex; gap: 4px; margin-top: 4px;">
+              <div style="width: 28px; height: 20px; background: #fff; border-radius: 2px; border: 1px solid #555;"></div>
+              <div style="width: 28px; height: 20px; background: #1a1a2e; border-radius: 2px; border: 2px solid #6366f1;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Chat area (still visible) -->
+        <div style="flex: 1; background: #12122a; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="background: #1e1e3a; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; font-size: 9px; color: #888;">Chat message...</div>
+            <div style="background: #1e1e3a; border-radius: 6px; padding: 6px 8px; font-size: 9px; color: #888;">Response...</div>
+          </div>
+          <div style="background: #1e1e3a; border-radius: 6px; padding: 6px 8px; font-size: 9px; color: #666;">Type a message...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Sidebar Panel</h3>
+      <p>Settings lives in the sidebar like Connectors. Chat stays visible. Compact but cramped for complex forms and tables.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #1a1a2e;">
+      <!-- Full content area mockup -->
+      <div style="display: flex; height: 200px; gap: 2px; font-size: 11px; color: #ccc;">
+        <!-- Activity bar -->
+        <div style="width: 36px; background: #16162a; display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 10px;">
+          <div style="width: 20px; height: 20px; background: #333; border-radius: 4px;"></div>
+          <div style="width: 20px; height: 20px; background: #333; border-radius: 4px;"></div>
+          <div style="width: 20px; height: 20px; background: #6366f1; border-radius: 4px;"></div>
+        </div>
+        <!-- Full settings area -->
+        <div style="flex: 1; background: #12122a; display: flex;">
+          <!-- Settings nav -->
+          <div style="width: 120px; background: #1e1e3a; padding: 8px; border-right: 1px solid #333;">
+            <div style="font-size: 10px; font-weight: 600; margin-bottom: 8px; color: #999;">SETTINGS</div>
+            <div style="padding: 4px 6px; background: #6366f1; border-radius: 3px; margin-bottom: 3px; font-size: 9px;">Appearance</div>
+            <div style="padding: 4px 6px; margin-bottom: 3px; font-size: 9px; color: #888;">Skills</div>
+            <div style="padding: 4px 6px; margin-bottom: 3px; font-size: 9px; color: #888;">Models</div>
+            <div style="padding: 4px 6px; margin-bottom: 3px; font-size: 9px; color: #888;">Permissions</div>
+            <div style="padding: 4px 6px; margin-bottom: 3px; font-size: 9px; color: #888;">Account</div>
+          </div>
+          <!-- Settings content -->
+          <div style="flex: 1; padding: 16px;">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Appearance</div>
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 9px; color: #888; margin-bottom: 6px;">Theme</div>
+              <div style="display: flex; gap: 8px;">
+                <div style="width: 60px; height: 40px; background: #fff; border-radius: 4px; border: 1px solid #555; display: flex; align-items: end; padding: 3px;"><span style="font-size: 8px; color: #333;">Light</span></div>
+                <div style="width: 60px; height: 40px; background: #1a1a2e; border-radius: 4px; border: 2px solid #6366f1; display: flex; align-items: end; padding: 3px;"><span style="font-size: 8px;">Dark</span></div>
+                <div style="width: 60px; height: 40px; background: linear-gradient(135deg, #fff 50%, #1a1a2e 50%); border-radius: 4px; border: 1px solid #555; display: flex; align-items: end; padding: 3px;"><span style="font-size: 8px; color: #999;">System</span></div>
+              </div>
+            </div>
+            <div style="margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid #333;">
+                <div><div style="font-size: 10px;">Font size</div><div style="font-size: 8px; color: #888;">Base font size for the UI</div></div>
+                <div style="background: #1e1e3a; padding: 3px 8px; border-radius: 3px; font-size: 9px; border: 1px solid #333;">14px</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Full Content Area</h3>
+      <p>Gear icon replaces chat with a full-width settings view. Plenty of room for forms, tables, and theme previews. Chat is hidden while settings is open.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #1a1a2e;">
+      <!-- Hybrid mockup -->
+      <div style="display: flex; height: 200px; gap: 2px; font-size: 11px; color: #ccc;">
+        <!-- Activity bar -->
+        <div style="width: 36px; background: #16162a; display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 10px;">
+          <div style="width: 20px; height: 20px; background: #333; border-radius: 4px;"></div>
+          <div style="width: 20px; height: 20px; background: #333; border-radius: 4px;"></div>
+          <div style="width: 20px; height: 20px; background: #6366f1; border-radius: 4px;"></div>
+        </div>
+        <!-- Settings sidebar (quick) -->
+        <div style="width: 140px; background: #1e1e3a; padding: 8px;">
+          <div style="font-size: 10px; font-weight: 600; margin-bottom: 8px; color: #999;">QUICK SETTINGS</div>
+          <div style="margin-bottom: 6px;">
+            <div style="font-size: 9px; color: #888;">Theme</div>
+            <div style="display: flex; gap: 3px; margin-top: 3px;">
+              <div style="width: 24px; height: 16px; background: #fff; border-radius: 2px;"></div>
+              <div style="width: 24px; height: 16px; background: #1a1a2e; border-radius: 2px; border: 2px solid #6366f1;"></div>
+            </div>
+          </div>
+          <div style="border-top: 1px solid #333; margin-top: 8px; padding-top: 6px;">
+            <div style="padding: 3px 6px; font-size: 9px; color: #6366f1; cursor: pointer;">Open full settings →</div>
+          </div>
+        </div>
+        <!-- Chat area -->
+        <div style="flex: 1; background: #12122a; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="background: #1e1e3a; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; font-size: 9px; color: #888;">Chat message...</div>
+            <div style="background: #1e1e3a; border-radius: 6px; padding: 6px 8px; font-size: 9px; color: #888;">Response...</div>
+          </div>
+          <div style="background: #1e1e3a; border-radius: 6px; padding: 6px 8px; font-size: 9px; color: #666;">Type a message...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Hybrid</h3>
+      <p>Quick settings in sidebar (theme toggle, etc.) with a link to expand into full content area for complex pages. Best of both but more complex to build.</p>
+    </div>
+  </div>
+</div>

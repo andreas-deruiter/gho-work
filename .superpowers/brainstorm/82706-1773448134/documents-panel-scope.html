@@ -1,0 +1,40 @@
+<h2>Documents Panel: What should it show?</h2>
+<p class="subtitle">The Documents panel lives in the sidebar. What role does it play for the user?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Full Explorer Clone</h3>
+      <p>Show every file and folder in the workspace — no filtering. The user treats GHO Work like a file manager. Familiar to VS Code users, but may surface noise (dotfiles, build artifacts, node_modules) that isn't relevant to office work.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Familiar VS Code behavior</li><li>Nothing hidden, full transparency</li><li>Simplest to implement</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Noisy for non-developer users</li><li>Dotfiles and build artifacts clutter the view</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Smart Explorer (Recommended)</h3>
+      <p>Show the full tree but with sensible defaults: auto-hide dotfiles and build artifacts (.git, node_modules, etc.), surface office-relevant files more prominently. Users can toggle "Show All Files" to see everything.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Clean default view for office users</li><li>Full power available via toggle</li><li>Best of both worlds</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Slightly more complex (filter logic)</li><li>Users might not find hidden files initially</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Document-Focused View</h3>
+      <p>Only show files the agent created or the user explicitly added. A curated, minimal view — more like a "Recent Documents" panel than a file explorer.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Very clean, zero noise</li><li>Focused on agent output</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Can't browse existing files</li><li>Limits discoverability</li><li>Different mental model from Explorer</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

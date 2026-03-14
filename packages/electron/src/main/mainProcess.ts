@@ -21,6 +21,7 @@ import {
   ISecureStorageService,
   SqliteStorageService,
   NodeFileService,
+  SkillToggleRequestSchema,
 } from '@gho-work/platform';
 import type {
   SendMessageRequest,
@@ -200,7 +201,7 @@ export function createMainProcess(
 
   // --- Agent service (runs in main process for now, will move to utility process later) ---
   const useMock = options?.useMockSDK === true;
-  const sdk = new CopilotSDKImpl({ cwd: process.cwd(), useMock });
+  const sdk = new CopilotSDKImpl({ cwd: os.homedir(), useMock });
 
   // Start SDK async — store promise so IPC handlers can await readiness.
   // - If --mock flag: start in mock mode immediately
@@ -269,7 +270,8 @@ export function createMainProcess(
       const additionalPaths: string[] = JSON.parse(additionalPathsRaw);
       for (let i = 0; i < additionalPaths.length; i++) {
         if (fs.existsSync(additionalPaths[i])) {
-          skillSources.push({ id: `additional-${i + 1}`, priority: 20, basePath: additionalPaths[i] });
+          const dirName = path.basename(additionalPaths[i]);
+          skillSources.push({ id: dirName, priority: 20, basePath: additionalPaths[i] });
         }
       }
     } catch (err) {
@@ -278,11 +280,24 @@ export function createMainProcess(
   }
 
   const skillRegistry = new SkillRegistryImpl(skillSources);
+
+  function listSkillsWithDisabledState(): import('@gho-work/platform/common').SkillEntryDTO[] {
+    const disabledIds: string[] = JSON.parse(storageService?.getSetting('skills.disabled') ?? '[]');
+    return skillRegistry.list().map(s => ({
+      ...s,
+      disabled: disabledIds.includes(s.id),
+    }));
+  }
+
   // Fire scan as non-blocking — skills load in background; agent works immediately.
   void skillRegistry.scan().catch((err) => {
     console.error('[main] Skill registry scan failed:', err instanceof Error ? err.message : String(err));
   });
-  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry);
+  const getDisabledSkills = (): string[] => {
+    const raw = storageService?.getSetting('skills.disabled');
+    return raw ? JSON.parse(raw) : [];
+  };
+  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, undefined, getDisabledSkills);
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
@@ -823,7 +838,7 @@ export function createMainProcess(
 
   // --- Skill handlers ---
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_LIST, async () => {
-    return skillRegistry.list();
+    return listSkillsWithDisabledState();
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_SOURCES, async () => {
@@ -851,7 +866,7 @@ export function createMainProcess(
     skillSources.push({ id: `additional-${paths.length}`, priority: 20, basePath: newPath });
     await skillRegistry.refresh();
 
-    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, skillRegistry.list());
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, listSkillsWithDisabledState());
     return { ok: true as const };
   });
 
@@ -869,12 +884,54 @@ export function createMainProcess(
     }
     await skillRegistry.refresh();
 
-    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, skillRegistry.list());
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, listSkillsWithDisabledState());
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_RESCAN, async () => {
     await skillRegistry.refresh();
-    return skillRegistry.list();
+    return listSkillsWithDisabledState();
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_TOGGLE, async (...args: unknown[]) => {
+    const { skillId, enabled } = SkillToggleRequestSchema.parse(args[0]);
+    const raw = storageService?.getSetting('skills.disabled');
+    const disabled: string[] = raw ? JSON.parse(raw) : [];
+
+    if (enabled) {
+      const filtered = disabled.filter(id => id !== skillId);
+      storageService?.setSetting('skills.disabled', JSON.stringify(filtered));
+    } else {
+      if (!disabled.includes(skillId)) {
+        disabled.push(skillId);
+        storageService?.setSetting('skills.disabled', JSON.stringify(disabled));
+      }
+    }
+
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, listSkillsWithDisabledState());
+    return { ok: true as const };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_DISABLED_LIST, async () => {
+    const raw = storageService?.getSetting('skills.disabled');
+    return raw ? JSON.parse(raw) : [];
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.DIALOG_OPEN_FOLDER, async () => {
+    const { dialog } = await import('electron');
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: 'Select skill directory',
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+    return { path: result.filePaths[0] };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_OPEN_FILE, async (_evt: unknown, args: unknown) => {
+    const { filePath: fp } = args as { filePath: string };
+    const { shell } = await import('electron');
+    await shell.openPath(fp);
   });
 
   // --- File IPC handlers ---

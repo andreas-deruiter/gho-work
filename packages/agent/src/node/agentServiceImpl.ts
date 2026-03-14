@@ -30,6 +30,7 @@ export class AgentServiceImpl implements IAgentService {
     private readonly _conversationService: IConversationService | null,
     private readonly _skillRegistry: ISkillRegistry,
     private readonly _readContextFiles?: () => Promise<string>,
+    private readonly _getDisabledSkills?: () => string[],
   ) {}
 
   async *executeTask(prompt: string, context: AgentContext, mcpServers?: Record<string, MCPServerConfig>): AsyncIterable<AgentEvent> {
@@ -57,6 +58,8 @@ export class AgentServiceImpl implements IAgentService {
           systemContent = setupOverrides.systemContent + (systemContent ? '\n\n' + systemContent : '');
         }
 
+        const disabledSkills = this._getDisabledSkills?.() ?? [];
+
         session = await this._sdk.createSession({
           model: context.model ?? 'gpt-4o',
           sessionId: context.conversationId,
@@ -65,6 +68,7 @@ export class AgentServiceImpl implements IAgentService {
           mcpServers,
           workingDirectory: setupOverrides?.workingDirectory,
           excludedTools: setupOverrides?.excludedTools,
+          disabledSkills: disabledSkills.length > 0 ? disabledSkills : undefined,
         });
         this._sessions.set(context.conversationId, session);
       }
@@ -137,6 +141,11 @@ export class AgentServiceImpl implements IAgentService {
   }
 
   private async _loadSkill(category: string, toolId: string): Promise<string | undefined> {
+    const skillId = `${category}/${toolId}`;
+    const disabled = this._getDisabledSkills?.() ?? [];
+    if (disabled.includes(skillId)) {
+      return undefined;
+    }
     return this._skillRegistry.getSkill(category, toolId);
   }
 

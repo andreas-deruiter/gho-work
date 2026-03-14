@@ -8,7 +8,9 @@ export class SkillsPage extends Widget {
   private readonly _sourceListEl: HTMLElement;
   private readonly _skillListEl: HTMLElement;
   private readonly _inputEl: HTMLInputElement;
+  private readonly _addBtn: HTMLButtonElement;
   private readonly _errorEl: HTMLElement;
+  private _disclaimerShown = false;
 
   constructor(private readonly _ipc: IIPCRenderer) {
     const layout = h('div.settings-page-skills', [
@@ -44,15 +46,24 @@ export class SkillsPage extends Widget {
     this._inputEl = document.createElement('input');
     this._inputEl.type = 'text';
     this._inputEl.className = 'skill-path-input';
-    this._inputEl.placeholder = 'Add additional skill path...';
+    this._inputEl.placeholder = 'Enter path or use Browse...';
     this._inputEl.setAttribute('aria-label', 'Additional skill path');
+    this.listen(this._inputEl, 'input', () => this._updateAddButtonState());
     inputRow.appendChild(this._inputEl);
 
-    const addBtn = document.createElement('button');
-    addBtn.className = 'skill-path-add-btn';
-    addBtn.textContent = 'Add';
-    this.listen(addBtn, 'click', () => void this._addPath());
-    inputRow.appendChild(addBtn);
+    const browseBtn = document.createElement('button');
+    browseBtn.className = 'skill-path-browse-btn';
+    browseBtn.textContent = 'Browse';
+    browseBtn.setAttribute('aria-label', 'Browse for skill directory');
+    this.listen(browseBtn, 'click', () => void this._browsePath());
+    inputRow.appendChild(browseBtn);
+
+    this._addBtn = document.createElement('button');
+    this._addBtn.className = 'skill-path-add-btn';
+    this._addBtn.textContent = 'Add';
+    this._addBtn.disabled = true;
+    this.listen(this._addBtn, 'click', () => void this._addPath());
+    inputRow.appendChild(this._addBtn);
 
     layout.sourcesSection.appendChild(inputRow);
 
@@ -184,8 +195,9 @@ export class SkillsPage extends Widget {
       groupEl.className = 'skill-list-group';
 
       for (const entry of entries) {
+        const isDisabled = entry.disabled === true;
         const item = document.createElement('div');
-        item.className = 'skill-item';
+        item.className = 'skill-item' + (isDisabled ? ' disabled' : '');
 
         const entryInfo = document.createElement('div');
         entryInfo.className = 'skill-item-info';
@@ -200,17 +212,120 @@ export class SkillsPage extends Widget {
         desc.textContent = entry.description;
         entryInfo.appendChild(desc);
 
+        const pathRow = document.createElement('div');
+        pathRow.className = 'skill-item-path';
+
+        const pathText = document.createElement('span');
+        pathText.className = 'skill-item-path-text';
+        pathText.textContent = entry.filePath;
+        pathText.title = entry.filePath;
+        pathRow.appendChild(pathText);
+
+        const openBtn = document.createElement('button');
+        openBtn.className = 'skill-item-open-btn';
+        openBtn.textContent = 'Open';
+        openBtn.setAttribute('aria-label', `Open ${entry.name} in editor`);
+        this.listen(openBtn, 'click', () => {
+          void this._ipc.invoke(IPC_CHANNELS.SKILL_OPEN_FILE, { filePath: entry.filePath });
+        });
+        pathRow.appendChild(openBtn);
+
+        entryInfo.appendChild(pathRow);
         item.appendChild(entryInfo);
+
+        const actions = document.createElement('div');
+        actions.className = 'skill-item-actions';
 
         const source = document.createElement('div');
         source.className = 'skill-item-source';
         source.textContent = entry.sourceId;
-        item.appendChild(source);
+        actions.appendChild(source);
 
+        // Toggle switch
+        const toggle = document.createElement('div');
+        toggle.className = 'skill-toggle';
+        toggle.setAttribute('role', 'switch');
+        toggle.setAttribute('aria-checked', String(!isDisabled));
+        toggle.setAttribute('aria-label', `Enable ${entry.name}`);
+        toggle.setAttribute('tabindex', '0');
+
+        const knob = document.createElement('div');
+        knob.className = 'skill-toggle-knob';
+        toggle.appendChild(knob);
+
+        const handleToggle = () => {
+          const currentlyEnabled = toggle.getAttribute('aria-checked') === 'true';
+          void this._toggleSkill(entry.id, !currentlyEnabled);
+        };
+        this.listen(toggle, 'click', handleToggle);
+        this.listen(toggle, 'keydown', (e: Event) => {
+          const ke = e as KeyboardEvent;
+          if (ke.key === 'Enter' || ke.key === ' ') {
+            ke.preventDefault();
+            handleToggle();
+          }
+        });
+
+        actions.appendChild(toggle);
+        item.appendChild(actions);
         groupEl.appendChild(item);
       }
 
       this._skillListEl.appendChild(groupEl);
+    }
+  }
+
+  private async _toggleSkill(skillId: string, enabled: boolean): Promise<void> {
+    try {
+      await this._ipc.invoke(IPC_CHANNELS.SKILL_TOGGLE, { skillId, enabled });
+      if (!this._disclaimerShown) {
+        this._disclaimerShown = true;
+        this._showDisclaimer();
+      }
+    } catch (err) {
+      console.error('[SkillsPage] Failed to toggle skill:', err);
+    }
+  }
+
+  private _showDisclaimer(): void {
+    const existing = this.getDomNode().querySelector('.skill-toggle-disclaimer');
+    if (existing) { return; }
+    const disclaimer = document.createElement('div');
+    disclaimer.className = 'skill-toggle-disclaimer';
+
+    const icon = document.createElement('span');
+    icon.className = 'skill-toggle-disclaimer-icon';
+    icon.textContent = '\u26A0';
+    disclaimer.appendChild(icon);
+
+    const text = document.createElement('span');
+    text.textContent = 'Changes apply to new conversations only. Existing conversations keep their current skill settings.';
+    disclaimer.appendChild(text);
+
+    // Insert at the top of the page, after the subtitle
+    const subtitle = this.getDomNode().querySelector('.settings-page-subtitle');
+    if (subtitle?.nextSibling) {
+      this.getDomNode().insertBefore(disclaimer, subtitle.nextSibling);
+    } else {
+      this.getDomNode().appendChild(disclaimer);
+    }
+  }
+
+  private _updateAddButtonState(): void {
+    this._addBtn.disabled = this._inputEl.value.trim().length === 0;
+  }
+
+  private async _browsePath(): Promise<void> {
+    try {
+      const result = await this._ipc.invoke<{ canceled?: boolean; path?: string }>(
+        IPC_CHANNELS.DIALOG_OPEN_FOLDER,
+      );
+      if (!result.canceled && result.path) {
+        this._inputEl.value = result.path;
+        this._updateAddButtonState();
+      }
+    } catch (err) {
+      console.error('[SkillsPage] Failed to open folder dialog:', err);
     }
   }
 
@@ -233,6 +348,7 @@ export class SkillsPage extends Widget {
       }
 
       this._inputEl.value = '';
+      this._updateAddButtonState();
       await this.load();
     } catch (err) {
       this._errorEl.textContent = 'Failed to add path';

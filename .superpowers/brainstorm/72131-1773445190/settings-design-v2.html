@@ -1,0 +1,171 @@
+<h2>Settings Panel Design — Updated Architecture</h2>
+<p class="subtitle">Shell + separate page widgets. Visual design unchanged.</p>
+
+<!-- Architecture overview -->
+<div class="section">
+  <h3>Component Structure</h3>
+  <div class="mockup">
+    <div class="mockup-header">File Layout &amp; Ownership</div>
+    <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 12px; line-height: 2;">
+      <div style="color: #888;">packages/ui/src/browser/settings/</div>
+      <div style="padding-left: 20px;">
+        <div style="color: #f59e0b;"><strong>settingsPanel.ts</strong> <span style="color: #666;">— Shell widget: nav list + content container</span></div>
+        <div style="color: #666; padding-left: 20px;">• Owns the nav ↔ page mapping</div>
+        <div style="color: #666; padding-left: 20px;">• Mounts/unmounts page widgets on nav click</div>
+        <div style="color: #666; padding-left: 20px;">• Disposes previous page, creates new one</div>
+      </div>
+      <div style="padding-left: 20px; margin-top: 8px;">
+        <div style="color: #f59e0b;"><strong>appearancePage.ts</strong> <span style="color: #666;">— Theme card selector</span></div>
+        <div style="color: #666; padding-left: 20px;">• Receives IThemeService via constructor</div>
+        <div style="color: #666; padding-left: 20px;">• Renders theme cards, handles selection</div>
+        <div style="color: #666; padding-left: 20px;">• Self-contained, independently testable</div>
+      </div>
+      <div style="padding-left: 20px; margin-top: 8px;">
+        <div style="color: #f59e0b;"><strong>skillsPage.ts</strong> <span style="color: #666;">— Skill browser + path config</span></div>
+        <div style="color: #666; padding-left: 20px;">• Receives IIPCRenderer via constructor</div>
+        <div style="color: #666; padding-left: 20px;">• Fetches skill list &amp; paths via IPC</div>
+        <div style="color: #666; padding-left: 20px;">• Add/remove paths, rescan, grouped list</div>
+      </div>
+      <div style="padding-left: 20px; margin-top: 8px;">
+        <div style="color: #888;"><strong>settingsPage.ts</strong> <span style="color: #666;">— Base interface for all pages</span></div>
+        <div style="color: #666; padding-left: 20px;">• interface ISettingsPage extends IDisposable { getDomNode(): HTMLElement }</div>
+        <div style="color: #666; padding-left: 20px;">• Future pages (Models, Permissions, etc.) implement same interface</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Shell + page interaction -->
+<div class="section">
+  <h3>Shell ↔ Page Interaction</h3>
+  <div class="mockup">
+    <div class="mockup-header">How SettingsPanel manages pages</div>
+    <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 11px; line-height: 2; color: #ccc;">
+      <div><span style="color: #6366f1;">Nav click "Appearance":</span></div>
+      <div style="padding-left: 16px;">1. If activePage exists → activePage.dispose()</div>
+      <div style="padding-left: 16px;">2. Create new AppearancePage(themeService)</div>
+      <div style="padding-left: 16px;">3. Append page.getDomNode() to content container</div>
+      <div style="padding-left: 16px;">4. Store as activePage</div>
+      <div style="margin-top: 12px;"><span style="color: #6366f1;">Nav click "Skills":</span></div>
+      <div style="padding-left: 16px;">1. activePage.dispose() → removes AppearancePage</div>
+      <div style="padding-left: 16px;">2. Create new SkillsPage(ipc)</div>
+      <div style="padding-left: 16px;">3. SkillsPage.constructor fetches data via IPC</div>
+      <div style="padding-left: 16px;">4. Append to content container, store as activePage</div>
+      <div style="margin-top: 12px;"><span style="color: #6366f1;">Settings panel disposed (user clicks away):</span></div>
+      <div style="padding-left: 16px;">activePage.dispose() + shell cleanup via DisposableStore</div>
+    </div>
+  </div>
+</div>
+
+<!-- Appearance page mockup (unchanged) -->
+<div class="section">
+  <h3>Appearance Page</h3>
+  <div class="mockup">
+    <div class="mockup-header">Settings → Appearance</div>
+    <div class="mockup-body" style="display: flex; height: 260px; background: #0f0f23;">
+      <div style="width: 160px; background: #1a1a35; padding: 16px; border-right: 1px solid #2a2a4a;">
+        <div style="font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Settings</div>
+        <div style="padding: 6px 10px; background: #6366f1; border-radius: 6px; font-size: 13px; color: #fff; margin-bottom: 4px;">Appearance</div>
+        <div style="padding: 6px 10px; font-size: 13px; color: #888; border-radius: 6px;">Skills</div>
+      </div>
+      <div style="flex: 1; padding: 24px;">
+        <div style="font-size: 18px; font-weight: 600; color: #e0e0e0; margin-bottom: 4px;">Appearance</div>
+        <div style="font-size: 13px; color: #888; margin-bottom: 24px;">Customize the look and feel of the application</div>
+        <div style="font-size: 14px; font-weight: 500; color: #ccc; margin-bottom: 12px;">Theme</div>
+        <div style="display: flex; gap: 12px;">
+          <div style="width: 100px; border-radius: 8px; border: 2px solid #333; overflow: hidden; cursor: pointer;">
+            <div style="height: 60px; background: #f5f5f5; padding: 8px;">
+              <div style="background: #fff; border-radius: 3px; height: 8px; margin-bottom: 4px; width: 70%;"></div>
+              <div style="background: #e5e5e5; border-radius: 3px; height: 8px; width: 50%;"></div>
+            </div>
+            <div style="padding: 6px 8px; font-size: 11px; color: #888; text-align: center;">Light</div>
+          </div>
+          <div style="width: 100px; border-radius: 8px; border: 2px solid #6366f1; overflow: hidden; cursor: pointer;">
+            <div style="height: 60px; background: #1a1a2e; padding: 8px;">
+              <div style="background: #2a2a4a; border-radius: 3px; height: 8px; margin-bottom: 4px; width: 70%;"></div>
+              <div style="background: #2a2a4a; border-radius: 3px; height: 8px; width: 50%;"></div>
+            </div>
+            <div style="padding: 6px 8px; font-size: 11px; color: #ccc; text-align: center; background: rgba(99,102,241,0.1);">Dark ✓</div>
+          </div>
+          <div style="width: 100px; border-radius: 8px; border: 2px solid #333; overflow: hidden; cursor: pointer;">
+            <div style="height: 60px; background: linear-gradient(135deg, #f5f5f5 50%, #1a1a2e 50%); padding: 8px;"></div>
+            <div style="padding: 6px 8px; font-size: 11px; color: #888; text-align: center;">System</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Skills page mockup (unchanged) -->
+<div class="section">
+  <h3>Skills Page</h3>
+  <div class="mockup">
+    <div class="mockup-header">Settings → Skills</div>
+    <div class="mockup-body" style="display: flex; height: 360px; background: #0f0f23;">
+      <div style="width: 160px; background: #1a1a35; padding: 16px; border-right: 1px solid #2a2a4a;">
+        <div style="font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Settings</div>
+        <div style="padding: 6px 10px; font-size: 13px; color: #888; border-radius: 6px; margin-bottom: 4px;">Appearance</div>
+        <div style="padding: 6px 10px; background: #6366f1; border-radius: 6px; font-size: 13px; color: #fff;">Skills</div>
+      </div>
+      <div style="flex: 1; padding: 24px; overflow-y: auto;">
+        <div style="font-size: 18px; font-weight: 600; color: #e0e0e0; margin-bottom: 4px;">Skills</div>
+        <div style="font-size: 13px; color: #888; margin-bottom: 24px;">Manage agent skills and skill source directories</div>
+
+        <div style="margin-bottom: 24px;">
+          <div style="font-size: 14px; font-weight: 500; color: #ccc; margin-bottom: 8px;">Skill Sources</div>
+          <div style="font-size: 12px; color: #888; margin-bottom: 12px;">Directories where skills are loaded from</div>
+          <div style="background: #1a1a35; border-radius: 8px; border: 1px solid #2a2a4a; padding: 12px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <div style="font-size: 12px; color: #ccc;">skills/</div>
+                <div style="font-size: 11px; color: #666;">Built-in (bundled with app)</div>
+              </div>
+              <div style="font-size: 10px; color: #666; background: #2a2a4a; padding: 2px 8px; border-radius: 4px;">default</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 12px; color: #ccc;">~/.gho-work/skills/</div>
+                <div style="font-size: 11px; color: #666;">User skills directory</div>
+              </div>
+              <div style="font-size: 10px; color: #f59e0b; background: rgba(245,158,11,0.1); padding: 2px 8px; border-radius: 4px;">user</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input style="flex: 1; background: #1a1a35; border: 1px solid #2a2a4a; border-radius: 6px; padding: 6px 10px; color: #ccc; font-size: 12px;" placeholder="Add additional skill path..." />
+            <button style="background: #6366f1; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;">Add</button>
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 14px; font-weight: 500; color: #ccc;">Installed Skills</div>
+            <button style="background: transparent; border: 1px solid #2a2a4a; color: #888; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer;">↻ Rescan</button>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">install</div>
+            <div style="background: #1a1a35; border-radius: 6px; border: 1px solid #2a2a4a;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #2a2a4a;">
+                <div><div style="font-size: 12px; color: #ccc;">gh</div><div style="font-size: 11px; color: #666;">Install and configure GitHub CLI</div></div>
+                <div style="font-size: 10px; color: #666;">skills/</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px;">
+                <div><div style="font-size: 12px; color: #ccc;">mgc</div><div style="font-size: 11px; color: #666;">Install Microsoft Graph CLI</div></div>
+                <div style="font-size: 10px; color: #666;">skills/</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">auth</div>
+            <div style="background: #1a1a35; border-radius: 6px; border: 1px solid #2a2a4a;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px;">
+                <div><div style="font-size: 12px; color: #ccc;">gh</div><div style="font-size: 11px; color: #666;">Authenticate with GitHub</div></div>
+                <div style="font-size: 10px; color: #666;">skills/</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

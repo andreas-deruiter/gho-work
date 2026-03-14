@@ -295,6 +295,13 @@ html, body {
   display: flex;
 }
 
+.workbench-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
 /* Chat Panel */
 .chat-panel {
   flex: 1;
@@ -681,23 +688,23 @@ html, body {
 }
 
 .chat-collapsible {
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--bg-secondary);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--border-secondary);
   overflow: hidden;
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 .collapsible-button {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
-  padding: 6px 10px;
+  padding: 3px 8px;
   background: none;
   border: none;
   color: var(--fg-secondary);
-  font-size: var(--font-size-sm);
+  font-size: 11px;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -709,15 +716,15 @@ html, body {
 
 .collapsible-chevron {
   display: inline-block;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
   transition: transform 0.15s ease;
 }
 
 .collapsible-chevron::before {
   content: '▶';
-  font-size: 10px;
+  font-size: 8px;
   display: inline-block;
   transition: transform 0.15s ease;
 }
@@ -728,8 +735,8 @@ html, body {
 
 .collapsible-icon {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
 }
 
 .collapsible-title-label {
@@ -740,8 +747,8 @@ html, body {
 }
 
 .collapsible-content {
-  padding: 0 10px 8px;
-  font-size: var(--font-size-sm);
+  padding: 0 8px 4px;
+  font-size: 11px;
 }
 
 .chat-collapsible.collapsed .collapsible-content {
@@ -774,6 +781,7 @@ html, body {
 .thinking-text {
   color: var(--fg-muted);
   font-family: var(--font-mono);
+  line-height: 1.35;
   font-size: 10px;
   line-height: 1.4;
   max-height: 200px;
@@ -791,7 +799,7 @@ html, body {
 .thinking-tool-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   margin-top: 4px;
   padding-left: 2px;
   border-left: 2px solid var(--border-primary);
@@ -806,30 +814,30 @@ html, body {
 .chat-tool-call-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
-  font-size: var(--font-size-sm);
+  gap: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
   color: var(--fg-secondary);
 }
 
 .tool-call-status-icon {
   flex-shrink: 0;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .tool-call-type-icon {
   flex-shrink: 0;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .tool-call-label {
@@ -938,6 +946,7 @@ html, body {
 .chat-input-area {
   padding: 12px 24px 16px;
   border-top: 1px solid var(--border-secondary);
+  flex-shrink: 0;
 }
 
 .chat-input-wrapper {
@@ -2055,3 +2064,5 @@ html, body {
   justify-content: space-between;
   align-items: center;
 }
+
+/* Skill toggle styles moved to settings.css */

@@ -7,6 +7,7 @@ export interface SessionConfig {
   workingDirectory?: string;
   availableTools?: string[];
   excludedTools?: string[];
+  disabledSkills?: string[];
 }
 
 export type SystemMessageConfig =

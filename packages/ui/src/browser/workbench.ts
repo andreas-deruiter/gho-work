@@ -28,6 +28,7 @@ export class Workbench extends Disposable {
   private _settingsPanel: SettingsPanel | undefined;
   private _themeService!: ThemeService;
   private _mainEl!: HTMLElement;
+  private _sidebarWrapperEl!: HTMLElement;
 
   constructor(
     private readonly _container: HTMLElement,
@@ -56,6 +57,7 @@ export class Workbench extends Disposable {
     layout.activityBar.appendChild(this._activityBar.getDomNode());
 
     // Sidebar with panel switching
+    this._sidebarWrapperEl = layout.sidebar;
     layout.sidebar.appendChild(this._sidebar.getDomNode());
 
     // Resize handle
@@ -142,6 +144,7 @@ export class Workbench extends Disposable {
     // Wire activity bar to sidebar/settings panel switching
     this._register(this._activityBar.onDidSelectItem(async (item) => {
       if (item === 'settings') {
+        this._sidebarWrapperEl.style.display = 'none';
         this._sidebar.getDomNode().style.display = 'none';
         this._chatPanelEl.style.display = 'none';
 
@@ -153,6 +156,7 @@ export class Workbench extends Disposable {
           this._mainEl.appendChild(this._settingsPanel.getDomNode());
         }
       } else {
+        this._sidebarWrapperEl.style.display = '';
         this._sidebar.getDomNode().style.display = '';
         this._chatPanelEl.style.display = '';
         if (this._settingsPanel) {

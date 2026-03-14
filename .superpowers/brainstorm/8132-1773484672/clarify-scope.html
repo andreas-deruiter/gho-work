@@ -1,0 +1,33 @@
+<h2>What should excludedTools control?</h2>
+<p class="subtitle">The codebase has two distinct mechanisms. Let's clarify which one(s) the UI should cover.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>SDK Tools Only</h3>
+      <p>Control which tools the Copilot SDK agent can use (bash, file_read, file_write, etc.). Power-user setting. Per-skill toggles are a separate feature.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Skills Only</h3>
+      <p>Enable/disable individual skills (markdown system prompts) from the skill browser. The SDK tool list stays untouched.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Both — Unified UI</h3>
+      <p>One settings page that lets users control both SDK tools and skills. Two sections on the same page.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Both — Separate Pages</h3>
+      <p>Skills toggles on the existing Skills page. SDK tools on a new "Agent" or "Tools" settings page.</p>
+    </div>
+  </div>
+</div>

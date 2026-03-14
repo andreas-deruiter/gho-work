@@ -22,11 +22,10 @@ describe('SkillRegistryImpl', () => {
   describe('scan', () => {
     it('discovers skills from category directories', () => {
       const all = registry.list();
-      expect(all.length).toBeGreaterThanOrEqual(3);
+      expect(all.length).toBeGreaterThanOrEqual(2);
       const ids = all.map(e => e.id);
       expect(ids).toContain('install/gh');
       expect(ids).toContain('auth/gh');
-      expect(ids).toContain('install/no-frontmatter');
     });
 
     it('extracts description from frontmatter', () => {
@@ -35,10 +34,9 @@ describe('SkillRegistryImpl', () => {
       expect(entry!.description).toBe('Install GitHub CLI');
     });
 
-    it('handles missing frontmatter gracefully', () => {
+    it('excludes files without frontmatter description', () => {
       const entry = registry.getEntry('install', 'no-frontmatter');
-      expect(entry).toBeDefined();
-      expect(entry!.description).toBe('');
+      expect(entry).toBeUndefined();
     });
 
     it('skips non-existent source paths silently', async () => {
@@ -69,7 +67,7 @@ describe('SkillRegistryImpl', () => {
     it('filters by category', () => {
       const installSkills = registry.list('install');
       expect(installSkills.every(e => e.category === 'install')).toBe(true);
-      expect(installSkills.length).toBeGreaterThanOrEqual(2);
+      expect(installSkills.length).toBeGreaterThanOrEqual(1);
 
       const authSkills = registry.list('auth');
       expect(authSkills.every(e => e.category === 'auth')).toBe(true);
@@ -111,12 +109,12 @@ describe('SkillRegistryImpl', () => {
       await registry.refresh();
 
       expect(fired.length).toBe(1);
-      expect(fired[0].length).toBeGreaterThanOrEqual(3);
+      expect(fired[0].length).toBeGreaterThanOrEqual(2);
     });
 
     it('concurrent refresh calls do not race', async () => {
       await Promise.all([registry.refresh(), registry.refresh()]);
-      expect(registry.list().length).toBeGreaterThanOrEqual(3);
+      expect(registry.list().length).toBeGreaterThanOrEqual(2);
     });
   });
 });

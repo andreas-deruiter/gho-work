@@ -1,0 +1,190 @@
+<h2>Documents Panel — Sidebar Mockup</h2>
+<p class="subtitle">How the panel looks in the sidebar. Click a file row to see the attach interaction.</p>
+
+<div class="split">
+  <!-- Default view -->
+  <div class="mockup">
+    <div class="mockup-header">Default View (hidden files filtered)</div>
+    <div class="mockup-body" style="padding: 0; width: 260px; background: #1e1e1e; font-size: 13px;">
+      <!-- Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #333;">
+        <span style="font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa;">Documents</span>
+        <div style="display: flex; gap: 6px;">
+          <span title="New file" style="cursor: pointer; color: #888; font-size: 16px;">+</span>
+          <span title="Toggle hidden files" style="cursor: pointer; color: #888; font-size: 14px;">👁</span>
+          <span title="Refresh" style="cursor: pointer; color: #888; font-size: 14px;">↻</span>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div style="padding: 6px 12px; border-bottom: 1px solid #2a2a2a;">
+        <div style="background: #2a2a2a; border-radius: 4px; padding: 5px 8px; color: #666; font-size: 12px;">Filter files...</div>
+      </div>
+
+      <!-- Tree -->
+      <div style="padding: 4px 0;">
+        <!-- Workspace root -->
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+          <span style="color: #febc2e;">📁</span> ~/Projects/sales-reports
+        </div>
+
+        <!-- Folder: reports (expanded) -->
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 20px; cursor: pointer;" onmouseover="this.style.background='#2a2d2e'" onmouseout="this.style.background='transparent'">
+          <span style="color: #888; font-size: 10px;">▼</span>
+          <span style="color: #febc2e;">📁</span>
+          <span style="flex: 1; color: #ccc;">reports</span>
+        </div>
+
+        <!-- File: weekly-report.md (selected/active) -->
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 40px; background: #094771; cursor: pointer;">
+          <span style="color: #6b9ff4;">📄</span>
+          <span style="flex: 1; color: #fff;">weekly-report.md</span>
+          <span style="color: #888; font-size: 11px;">2m</span>
+          <span title="Attach to message" style="color: #6b9ff4; font-size: 14px; cursor: pointer; opacity: 1;">📎</span>
+        </div>
+
+        <!-- File: q1-summary.docx -->
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 40px; cursor: pointer;" onmouseover="this.style.background='#2a2d2e';this.querySelector('.attach').style.opacity='1'" onmouseout="this.style.background='transparent';this.querySelector('.attach').style.opacity='0'">
+          <span style="color: #4285f4;">📄</span>
+          <span style="flex: 1; color: #ccc;">q1-summary.docx</span>
+          <span style="color: #888; font-size: 11px;">1h</span>
+          <span class="attach" title="Attach to message" style="color: #6b9ff4; font-size: 14px; cursor: pointer; opacity: 0; transition: opacity 0.15s;">📎</span>
+        </div>
+
+        <!-- Folder: data (collapsed) -->
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 20px; cursor: pointer;" onmouseover="this.style.background='#2a2d2e'" onmouseout="this.style.background='transparent'">
+          <span style="color: #888; font-size: 10px;">▶</span>
+          <span style="color: #febc2e;">📁</span>
+          <span style="flex: 1; color: #ccc;">data</span>
+        </div>
+
+        <!-- File: meeting-notes.md -->
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 20px; cursor: pointer;" onmouseover="this.style.background='#2a2d2e';this.querySelector('.attach').style.opacity='1'" onmouseout="this.style.background='transparent';this.querySelector('.attach').style.opacity='0'">
+          <span style="color: #6b9ff4;">📄</span>
+          <span style="flex: 1; color: #ccc;">meeting-notes.md</span>
+          <span style="color: #888; font-size: 11px;">3d</span>
+          <span class="attach" title="Attach to message" style="color: #6b9ff4; font-size: 14px; cursor: pointer; opacity: 0; transition: opacity 0.15s;">📎</span>
+        </div>
+
+        <!-- File: README.md -->
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 20px; cursor: pointer;" onmouseover="this.style.background='#2a2d2e';this.querySelector('.attach').style.opacity='1'" onmouseout="this.style.background='transparent';this.querySelector('.attach').style.opacity='0'">
+          <span style="color: #6b9ff4;">📄</span>
+          <span style="flex: 1; color: #ccc;">README.md</span>
+          <span style="color: #888; font-size: 11px;">5d</span>
+          <span class="attach" title="Attach to message" style="color: #6b9ff4; font-size: 14px; cursor: pointer; opacity: 0; transition: opacity 0.15s;">📎</span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding: 6px 12px; border-top: 1px solid #333; font-size: 11px; color: #666;">
+        5 files, 1 folder · Right-click for actions
+      </div>
+    </div>
+  </div>
+
+  <!-- Context menu view -->
+  <div class="mockup">
+    <div class="mockup-header">Right-Click Context Menu</div>
+    <div class="mockup-body" style="padding: 0; width: 260px; background: #1e1e1e; font-size: 13px;">
+      <!-- Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #333;">
+        <span style="font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa;">Documents</span>
+        <div style="display: flex; gap: 6px;">
+          <span style="color: #888; font-size: 16px;">+</span>
+          <span style="color: #888; font-size: 14px;">👁</span>
+          <span style="color: #888; font-size: 14px;">↻</span>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div style="padding: 6px 12px; border-bottom: 1px solid #2a2a2a;">
+        <div style="background: #2a2a2a; border-radius: 4px; padding: 5px 8px; color: #666; font-size: 12px;">Filter files...</div>
+      </div>
+
+      <!-- Tree with context menu -->
+      <div style="padding: 4px 0; position: relative;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+          <span style="color: #febc2e;">📁</span> ~/Projects/sales-reports
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 20px;">
+          <span style="color: #888; font-size: 10px;">▼</span>
+          <span style="color: #febc2e;">📁</span>
+          <span style="flex: 1; color: #ccc;">reports</span>
+        </div>
+
+        <!-- Right-clicked file -->
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 40px; background: #094771;">
+          <span style="color: #6b9ff4;">📄</span>
+          <span style="flex: 1; color: #fff;">weekly-report.md</span>
+        </div>
+
+        <!-- Context menu overlay -->
+        <div style="position: absolute; top: 72px; left: 100px; background: #2d2d2d; border: 1px solid #454545; border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); padding: 4px 0; min-width: 180px; z-index: 10;">
+          <div style="padding: 6px 16px; color: #ccc; cursor: pointer;" onmouseover="this.style.background='#094771'" onmouseout="this.style.background='transparent'">
+            📎 Attach to Message
+          </div>
+          <div style="border-top: 1px solid #3a3a3a; margin: 4px 0;"></div>
+          <div style="padding: 6px 16px; color: #ccc; cursor: pointer;" onmouseover="this.style.background='#094771'" onmouseout="this.style.background='transparent'">
+            ✏️ Rename
+          </div>
+          <div style="padding: 6px 16px; color: #ccc; cursor: pointer;" onmouseover="this.style.background='#094771'" onmouseout="this.style.background='transparent'">
+            🗑 Delete
+          </div>
+          <div style="border-top: 1px solid #3a3a3a; margin: 4px 0;"></div>
+          <div style="padding: 6px 16px; color: #ccc; cursor: pointer;" onmouseover="this.style.background='#094771'" onmouseout="this.style.background='transparent'">
+            📂 Reveal in Finder
+          </div>
+          <div style="padding: 6px 16px; color: #ccc; cursor: pointer;" onmouseover="this.style.background='#094771'" onmouseout="this.style.background='transparent'">
+            📋 Copy Path
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 40px;">
+          <span style="color: #4285f4;">📄</span>
+          <span style="flex: 1; color: #ccc;">q1-summary.docx</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; padding-left: 20px;">
+          <span style="color: #888; font-size: 10px;">▶</span>
+          <span style="color: #febc2e;">📁</span>
+          <span style="flex: 1; color: #ccc;">data</span>
+        </div>
+      </div>
+
+      <div style="padding: 6px 12px; border-top: 1px solid #333; font-size: 11px; color: #666;">
+        5 files, 1 folder
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attachment chips mockup -->
+<h3 style="margin-top: 32px;">Chat Input with Attachment Chips</h3>
+<p class="subtitle">After clicking the attach button, a chip appears above the text input</p>
+
+<div class="mockup">
+  <div class="mockup-header">Chat Input — With Attachments</div>
+  <div class="mockup-body" style="padding: 16px; background: #1e1e1e;">
+    <!-- Attachment chips -->
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+      <div style="display: inline-flex; align-items: center; gap: 6px; background: #2a2d2e; border: 1px solid #3a3a3a; border-radius: 16px; padding: 4px 10px; font-size: 12px; color: #ccc;">
+        <span style="color: #6b9ff4;">📄</span>
+        weekly-report.md
+        <span style="color: #888; cursor: pointer; font-size: 14px; margin-left: 2px;" title="Remove">×</span>
+      </div>
+      <div style="display: inline-flex; align-items: center; gap: 6px; background: #2a2d2e; border: 1px solid #3a3a3a; border-radius: 16px; padding: 4px 10px; font-size: 12px; color: #ccc;">
+        <span style="color: #0f9d58;">📄</span>
+        sales-march.xlsx
+        <span style="color: #888; cursor: pointer; font-size: 14px; margin-left: 2px;" title="Remove">×</span>
+      </div>
+    </div>
+    <!-- Text input -->
+    <div style="background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 10px 12px; color: #ccc; font-size: 13px;">
+      Summarize the weekly report and compare it against the March sales data
+    </div>
+    <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+      <div style="background: #0e639c; color: #fff; padding: 6px 16px; border-radius: 6px; font-size: 12px; cursor: pointer;">Send</div>
+    </div>
+  </div>
+</div>

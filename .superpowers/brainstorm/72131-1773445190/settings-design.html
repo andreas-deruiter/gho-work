@@ -1,0 +1,183 @@
+<h2>Settings Panel Design</h2>
+<p class="subtitle">Full content area with left nav and two sub-pages. Review each section below.</p>
+
+<!-- Architecture overview -->
+<div class="section">
+  <h3>Architecture</h3>
+  <div class="mockup">
+    <div class="mockup-header">Component Structure</div>
+    <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 12px; line-height: 1.8;">
+      <div style="color: #6366f1;">Workbench</div>
+      <div style="padding-left: 20px;">
+        <div style="color: #888;">├─ ActivityBar <span style="color: #666;">(existing — gear icon already defined)</span></div>
+        <div style="color: #888;">├─ Sidebar <span style="color: #666;">(existing — connectors, etc.)</span></div>
+        <div style="color: #888;">├─ ChatPanel <span style="color: #666;">(existing — hidden when settings active)</span></div>
+        <div style="color: #f59e0b;">└─ <strong>SettingsPanel</strong> <span style="color: #666;">(NEW — shown when gear clicked)</span></div>
+        <div style="padding-left: 24px; color: #f59e0b;">
+          <div>├─ settings-nav <span style="color: #666;">(left navigation list)</span></div>
+          <div>├─ settings-content <span style="color: #666;">(right content area)</span></div>
+          <div>│&nbsp;&nbsp; ├─ renderAppearancePage() <span style="color: #666;">(theme cards)</span></div>
+          <div>│&nbsp;&nbsp; └─ renderSkillsPage() <span style="color: #666;">(skill list + path config)</span></div>
+          <div>└─ Events: onDidChangeSetting</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Appearance page mockup -->
+<div class="section">
+  <h3>Appearance Page</h3>
+  <div class="mockup">
+    <div class="mockup-header">Settings → Appearance</div>
+    <div class="mockup-body" style="display: flex; height: 280px; background: #0f0f23;">
+      <!-- Nav -->
+      <div style="width: 160px; background: #1a1a35; padding: 16px; border-right: 1px solid #2a2a4a;">
+        <div style="font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Settings</div>
+        <div style="padding: 6px 10px; background: #6366f1; border-radius: 6px; font-size: 13px; color: #fff; margin-bottom: 4px;">Appearance</div>
+        <div style="padding: 6px 10px; font-size: 13px; color: #888; border-radius: 6px;">Skills</div>
+      </div>
+      <!-- Content -->
+      <div style="flex: 1; padding: 24px; overflow-y: auto;">
+        <div style="font-size: 18px; font-weight: 600; color: #e0e0e0; margin-bottom: 4px;">Appearance</div>
+        <div style="font-size: 13px; color: #888; margin-bottom: 24px;">Customize the look and feel of the application</div>
+
+        <div style="font-size: 14px; font-weight: 500; color: #ccc; margin-bottom: 12px;">Theme</div>
+        <div style="display: flex; gap: 12px;">
+          <!-- Light card -->
+          <div style="width: 100px; border-radius: 8px; border: 2px solid #333; overflow: hidden; cursor: pointer;">
+            <div style="height: 60px; background: #f5f5f5; padding: 8px;">
+              <div style="background: #fff; border-radius: 3px; height: 8px; margin-bottom: 4px; width: 70%;"></div>
+              <div style="background: #e5e5e5; border-radius: 3px; height: 8px; width: 50%;"></div>
+            </div>
+            <div style="padding: 6px 8px; font-size: 11px; color: #888; text-align: center;">Light</div>
+          </div>
+          <!-- Dark card (selected) -->
+          <div style="width: 100px; border-radius: 8px; border: 2px solid #6366f1; overflow: hidden; cursor: pointer;">
+            <div style="height: 60px; background: #1a1a2e; padding: 8px;">
+              <div style="background: #2a2a4a; border-radius: 3px; height: 8px; margin-bottom: 4px; width: 70%;"></div>
+              <div style="background: #2a2a4a; border-radius: 3px; height: 8px; width: 50%;"></div>
+            </div>
+            <div style="padding: 6px 8px; font-size: 11px; color: #ccc; text-align: center; background: rgba(99,102,241,0.1);">Dark ✓</div>
+          </div>
+          <!-- System card -->
+          <div style="width: 100px; border-radius: 8px; border: 2px solid #333; overflow: hidden; cursor: pointer;">
+            <div style="height: 60px; background: linear-gradient(135deg, #f5f5f5 50%, #1a1a2e 50%); padding: 8px;"></div>
+            <div style="padding: 6px 8px; font-size: 11px; color: #888; text-align: center;">System</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Skills page mockup -->
+<div class="section">
+  <h3>Skills Page</h3>
+  <div class="mockup">
+    <div class="mockup-header">Settings → Skills</div>
+    <div class="mockup-body" style="display: flex; height: 360px; background: #0f0f23;">
+      <!-- Nav -->
+      <div style="width: 160px; background: #1a1a35; padding: 16px; border-right: 1px solid #2a2a4a;">
+        <div style="font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Settings</div>
+        <div style="padding: 6px 10px; font-size: 13px; color: #888; border-radius: 6px; margin-bottom: 4px;">Appearance</div>
+        <div style="padding: 6px 10px; background: #6366f1; border-radius: 6px; font-size: 13px; color: #fff;">Skills</div>
+      </div>
+      <!-- Content -->
+      <div style="flex: 1; padding: 24px; overflow-y: auto;">
+        <div style="font-size: 18px; font-weight: 600; color: #e0e0e0; margin-bottom: 4px;">Skills</div>
+        <div style="font-size: 13px; color: #888; margin-bottom: 24px;">Manage agent skills and skill source directories</div>
+
+        <!-- Skill paths section -->
+        <div style="margin-bottom: 24px;">
+          <div style="font-size: 14px; font-weight: 500; color: #ccc; margin-bottom: 8px;">Skill Sources</div>
+          <div style="font-size: 12px; color: #888; margin-bottom: 12px;">Directories where skills are loaded from</div>
+
+          <div style="background: #1a1a35; border-radius: 8px; border: 1px solid #2a2a4a; padding: 12px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <div style="font-size: 12px; color: #ccc;">skills/</div>
+                <div style="font-size: 11px; color: #666;">Built-in (bundled with app)</div>
+              </div>
+              <div style="font-size: 10px; color: #666; background: #2a2a4a; padding: 2px 8px; border-radius: 4px;">default</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <div style="font-size: 12px; color: #ccc;">~/.gho-work/skills/</div>
+                <div style="font-size: 11px; color: #666;">User skills directory</div>
+              </div>
+              <div style="font-size: 10px; color: #f59e0b; background: rgba(245,158,11,0.1); padding: 2px 8px; border-radius: 4px;">user</div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <input style="flex: 1; background: #1a1a35; border: 1px solid #2a2a4a; border-radius: 6px; padding: 6px 10px; color: #ccc; font-size: 12px;" placeholder="Add additional skill path..." />
+            <button style="background: #6366f1; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;">Add</button>
+          </div>
+        </div>
+
+        <!-- Installed skills list -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 14px; font-weight: 500; color: #ccc;">Installed Skills</div>
+            <button style="background: transparent; border: 1px solid #2a2a4a; color: #888; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer;">↻ Rescan</button>
+          </div>
+
+          <!-- Category: install -->
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">install</div>
+            <div style="background: #1a1a35; border-radius: 6px; border: 1px solid #2a2a4a;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #2a2a4a;">
+                <div>
+                  <div style="font-size: 12px; color: #ccc;">gh</div>
+                  <div style="font-size: 11px; color: #666;">Install and configure GitHub CLI</div>
+                </div>
+                <div style="font-size: 10px; color: #666;">skills/</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px;">
+                <div>
+                  <div style="font-size: 12px; color: #ccc;">mgc</div>
+                  <div style="font-size: 11px; color: #666;">Install Microsoft Graph CLI</div>
+                </div>
+                <div style="font-size: 10px; color: #666;">skills/</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category: auth -->
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">auth</div>
+            <div style="background: #1a1a35; border-radius: 6px; border: 1px solid #2a2a4a;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px;">
+                <div>
+                  <div style="font-size: 12px; color: #ccc;">gh</div>
+                  <div style="font-size: 11px; color: #666;">Authenticate with GitHub</div>
+                </div>
+                <div style="font-size: 10px; color: #666;">skills/</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data flow -->
+<div class="section">
+  <h3>Data Flow</h3>
+  <div class="mockup">
+    <div class="mockup-header">How settings are read and persisted</div>
+    <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 11px; line-height: 2; color: #ccc;">
+      <div><span style="color: #6366f1;">Appearance:</span></div>
+      <div style="padding-left: 16px;">User clicks theme card → SettingsPanel calls IThemeService.setTheme()</div>
+      <div style="padding-left: 16px;">ThemeService applies data-theme attr + persists via IPC → IStorageService.setSetting('theme', value)</div>
+      <div style="padding-left: 16px;">On load: ThemeService reads stored theme via IPC → applies on startup</div>
+      <div style="margin-top: 12px;"><span style="color: #6366f1;">Skills:</span></div>
+      <div style="padding-left: 16px;">SettingsPanel requests skill list via IPC → main process calls ISkillRegistry.list()</div>
+      <div style="padding-left: 16px;">User adds path → IPC → IStorageService.setSetting('skills.additionalPaths', JSON.stringify([...]))</div>
+      <div style="padding-left: 16px;">Main process calls ISkillRegistry.refresh() → emits onDidChangeSkills</div>
+      <div style="padding-left: 16px;">SettingsPanel listens via IPC event → re-renders skill list</div>
+    </div>
+  </div>
+</div>

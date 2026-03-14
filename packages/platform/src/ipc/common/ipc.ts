@@ -42,6 +42,11 @@ export const IPC_CHANNELS = {
   SKILL_REMOVE_PATH: 'skill:remove-path',
   SKILL_RESCAN: 'skill:rescan',
   SKILL_CHANGED: 'skill:changed',
+  SKILL_TOGGLE: 'skill:toggle',
+  SKILL_DISABLED_LIST: 'skill:disabled-list',
+  SKILL_OPEN_FILE: 'skill:open-file',
+  // Dialog channels
+  DIALOG_OPEN_FOLDER: 'dialog:open-folder',
   // File channels
   FILES_READ_DIR: 'files:read-dir',
   FILES_STAT: 'files:stat',
@@ -262,6 +267,7 @@ export const SkillEntryDTOSchema = z.object({
   description: z.string(),
   sourceId: z.string(),
   filePath: z.string(),
+  disabled: z.boolean().optional(),
 });
 export type SkillEntryDTO = z.infer<typeof SkillEntryDTOSchema>;
 
@@ -283,6 +289,12 @@ export type SkillAddPathResponse = z.infer<typeof SkillAddPathResponseSchema>;
 
 export const SkillRemovePathRequestSchema = z.object({ path: z.string() });
 export type SkillRemovePathRequest = z.infer<typeof SkillRemovePathRequestSchema>;
+
+export const SkillToggleRequestSchema = z.object({
+  skillId: z.string(),
+  enabled: z.boolean(),
+});
+export type SkillToggleRequest = z.infer<typeof SkillToggleRequestSchema>;
 
 // --- File schemas ---
 

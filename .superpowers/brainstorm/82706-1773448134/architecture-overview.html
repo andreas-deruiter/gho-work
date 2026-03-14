@@ -1,0 +1,110 @@
+<h2>Documents Panel — Architecture Overview</h2>
+<p class="subtitle">How the pieces fit together across the monorepo</p>
+
+<div class="mockup">
+  <div class="mockup-header">Component Architecture</div>
+  <div class="mockup-body" style="padding: 24px; font-family: monospace; font-size: 13px; line-height: 1.8;">
+    <div style="display: flex; gap: 32px; flex-wrap: wrap;">
+
+      <!-- Renderer side -->
+      <div style="flex: 1; min-width: 300px;">
+        <div style="font-weight: bold; color: #6b9ff4; margin-bottom: 8px; font-family: system-ui;">RENDERER (packages/ui + apps/desktop)</div>
+        <div style="border: 1px solid #6b9ff4; border-radius: 8px; padding: 16px; background: rgba(107,159,244,0.05);">
+          <div style="border: 1px dashed #555; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+            <strong>DocumentsPanel</strong> extends Widget<br>
+            &nbsp;&nbsp;├─ header (title + refresh + new file btn)<br>
+            &nbsp;&nbsp;├─ filter input<br>
+            &nbsp;&nbsp;├─ <strong>TreeWidget&lt;FileNode&gt;</strong><br>
+            &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├─ recursive expand/collapse<br>
+            &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├─ file-type icons (by extension)<br>
+            &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├─ attach button per row<br>
+            &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├─ right-click → context menu<br>
+            &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└─ click → info popover<br>
+            &nbsp;&nbsp;└─ status footer (file count)
+          </div>
+          <div style="border: 1px dashed #555; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+            <strong>TreeWidget&lt;T&gt;</strong> (new, reusable)<br>
+            &nbsp;&nbsp;├─ ITreeDataSource&lt;T&gt;<br>
+            &nbsp;&nbsp;├─ ITreeRenderer&lt;T&gt;<br>
+            &nbsp;&nbsp;├─ expand/collapse state<br>
+            &nbsp;&nbsp;├─ keyboard nav (↑↓←→Enter)<br>
+            &nbsp;&nbsp;└─ onDidSelect / onContextMenu events
+          </div>
+          <div style="border: 1px dashed #555; border-radius: 4px; padding: 8px;">
+            <strong>ChatInput</strong> (existing, modified)<br>
+            &nbsp;&nbsp;└─ attachment chips area<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ file icon + name + remove btn<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ sent with message payload
+          </div>
+        </div>
+      </div>
+
+      <!-- Main process side -->
+      <div style="flex: 1; min-width: 300px;">
+        <div style="font-weight: bold; color: #0f9d58; margin-bottom: 8px; font-family: system-ui;">MAIN PROCESS (packages/platform + electron)</div>
+        <div style="border: 1px solid #0f9d58; border-radius: 8px; padding: 16px; background: rgba(15,157,88,0.05);">
+          <div style="border: 1px dashed #555; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+            <strong>IFileService</strong> (existing interface, new impl)<br>
+            &nbsp;&nbsp;├─ readDir(path) → FileEntry[]<br>
+            &nbsp;&nbsp;├─ stat(path) → FileStat<br>
+            &nbsp;&nbsp;├─ createFile / createDir<br>
+            &nbsp;&nbsp;├─ rename(old, new)<br>
+            &nbsp;&nbsp;├─ delete(path)<br>
+            &nbsp;&nbsp;└─ watch(path) → file change events
+          </div>
+          <div style="border: 1px dashed #555; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+            <strong>NodeFileService</strong> implements IFileService<br>
+            &nbsp;&nbsp;└─ Node.js fs/promises + chokidar watcher
+          </div>
+          <div style="border: 1px dashed #555; border-radius: 4px; padding: 8px;">
+            <strong>IPC Handlers</strong> (new channels)<br>
+            &nbsp;&nbsp;├─ files:readDir<br>
+            &nbsp;&nbsp;├─ files:stat<br>
+            &nbsp;&nbsp;├─ files:create<br>
+            &nbsp;&nbsp;├─ files:rename<br>
+            &nbsp;&nbsp;├─ files:delete<br>
+            &nbsp;&nbsp;├─ files:watch / files:unwatch<br>
+            &nbsp;&nbsp;└─ files:changed (main→renderer)
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Data flow -->
+    <div style="margin-top: 24px; border-top: 1px solid #333; padding-top: 16px;">
+      <div style="font-weight: bold; color: #febc2e; margin-bottom: 8px; font-family: system-ui;">DATA FLOW</div>
+      <div style="color: #aaa; font-family: system-ui; font-size: 13px; line-height: 1.8;">
+        1. User clicks Documents icon → <code>DocumentsPanel</code> renders with workspace root<br>
+        2. Panel calls <code>window.ghoWorkIPC.invoke('files:readDir', path)</code><br>
+        3. Main process <code>NodeFileService</code> reads directory, returns <code>FileEntry[]</code><br>
+        4. <code>TreeWidget</code> renders entries; expanding a folder triggers another <code>files:readDir</code><br>
+        5. File watcher sends <code>files:changed</code> events → tree auto-refreshes affected subtree<br>
+        6. User clicks attach button → file reference added as chip in <code>ChatInput</code><br>
+        7. Message sent with attached file paths → agent reads file content via SDK tools
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <h3>Key Design Decisions</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 8px; padding: 16px;">
+      <h4 style="margin: 0 0 8px; color: #6b9ff4;">Lightweight TreeWidget</h4>
+      <p style="margin: 0; color: #aaa; font-size: 13px;">~500-800 lines, purpose-built. Recursive DOM, no virtualization. Expand/collapse, keyboard nav, events. Reusable for other tree UIs later.</p>
+    </div>
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 8px; padding: 16px;">
+      <h4 style="margin: 0 0 8px; color: #0f9d58;">Lazy loading</h4>
+      <p style="margin: 0; color: #aaa; font-size: 13px;">Children loaded on expand, not upfront. Keeps initial render fast for large workspaces. Cached until file watcher invalidates.</p>
+    </div>
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 8px; padding: 16px;">
+      <h4 style="margin: 0 0 8px; color: #febc2e;">Smart defaults</h4>
+      <p style="margin: 0; color: #aaa; font-size: 13px;">Hide dotfiles and build artifacts by default. "Show all files" toggle in header. Filter patterns configurable in settings later.</p>
+    </div>
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 8px; padding: 16px;">
+      <h4 style="margin: 0 0 8px; color: #e06c75;">Attach, don't open</h4>
+      <p style="margin: 0; color: #aaa; font-size: 13px;">v1 has no document preview. Clicking attach adds a chip to ChatInput. Clicking the file name shows info (size, modified, reveal in Finder). Preview comes later.</p>
+    </div>
+  </div>
+</div>
