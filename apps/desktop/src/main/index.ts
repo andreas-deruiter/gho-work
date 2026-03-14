@@ -20,6 +20,15 @@ if (useMockSDK) {
 const skillsPathIdx = process.argv.indexOf('--skills-path');
 const skillsPath = skillsPathIdx !== -1 ? process.argv[skillsPathIdx + 1] : undefined;
 
+// Parse --plugin-dir flags for local plugin testing
+const pluginDirs: string[] = [];
+for (let i = 0; i < process.argv.length; i++) {
+  if (process.argv[i] === '--plugin-dir' && process.argv[i + 1]) {
+    pluginDirs.push(process.argv[i + 1]);
+    i++;
+  }
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
@@ -44,6 +53,7 @@ function createWindow(): void {
     useMockSDK,
     userDataPath: app.getPath('userData'),
     skillsPath,
+    pluginDirs: pluginDirs.length > 0 ? pluginDirs : undefined,
   });
 
   // Open external links in browser

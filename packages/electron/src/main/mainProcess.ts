@@ -48,6 +48,7 @@ import {
   PluginAgentRegistryImpl,
   HookServiceImpl,
 } from '@gho-work/agent';
+import { expandPluginRoot, expandPluginRootInRecord } from '@gho-work/base';
 import * as os from 'node:os';
 import type { AgentContext } from '@gho-work/base';
 import {
@@ -86,6 +87,8 @@ export interface MainProcessOptions {
   userDataPath?: string;
   /** Override skill loading path — only this path is scanned (for testing). */
   skillsPath?: string;
+  /** Local plugin directories to load on startup (ephemeral, not persisted). */
+  pluginDirs?: string[];
 }
 
 export function createMainProcess(
@@ -421,6 +424,59 @@ export function createMainProcess(
   app.on('will-quit', () => {
     pluginService.dispose();
   });
+
+  // --- Local plugins from --plugin-dir CLI flags (ephemeral, not persisted) ---
+  if (options?.pluginDirs && options.pluginDirs.length > 0) {
+    void (async () => {
+      for (const dir of options.pluginDirs!) {
+        try {
+          const manifest = await pluginInstaller.parseManifest(dir);
+          const name = manifest.name;
+
+          // Register skills
+          if (manifest.skills) {
+            const skillPath = path.join(dir, typeof manifest.skills === 'string' ? manifest.skills : 'skills');
+            skillRegistry.addSource({ id: `plugin:${name}`, basePath: skillPath, priority: 10 });
+          }
+
+          // Register commands
+          if (manifest.commands) {
+            const cmdPath = path.join(dir, typeof manifest.commands === 'string' ? manifest.commands : 'commands');
+            skillRegistry.addSource({ id: `plugin:${name}:commands`, basePath: cmdPath, priority: 10 });
+          }
+
+          // Register agents
+          const agents = await pluginInstaller.parseAgentFiles(dir, name, manifest.agents);
+          for (const agent of agents) {
+            pluginAgentRegistry.register(agent);
+          }
+
+          // Register hooks
+          const hooks = await pluginInstaller.parseHooks(dir, manifest.hooks);
+          if (hooks) {
+            hookService.registerHooks(name, dir, hooks);
+          }
+
+          // Register MCP servers
+          const mcpServers = await pluginInstaller.parseMcpServers(dir, manifest.mcpServers);
+          for (const [serverName, config] of mcpServers) {
+            await configStore.addServer(`plugin:${name}:${serverName}`, {
+              type: 'stdio',
+              command: expandPluginRoot(config.command, dir),
+              args: config.args?.map(a => expandPluginRoot(a, dir)),
+              env: config.env ? expandPluginRootInRecord(config.env, dir) : undefined,
+              cwd: config.cwd ? expandPluginRoot(config.cwd, dir) : undefined,
+              source: `plugin:${name}`,
+            });
+          }
+
+          console.log(`[Plugins] Loaded local plugin: ${name} from ${dir}`);
+        } catch (err) {
+          console.warn(`[Plugins] Failed to load local plugin from ${dir}:`, err);
+        }
+      }
+    })();
+  }
 
   // --- Marketplace Registry ---
   function createFetcher(source: MarketplaceSource): { fetch(): Promise<import('@gho-work/base').CatalogEntry[]> } {
