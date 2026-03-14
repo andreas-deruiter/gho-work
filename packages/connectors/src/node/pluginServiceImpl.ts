@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Disposable, Emitter, expandPluginRoot, expandPluginRootInRecord } from '@gho-work/base';
 import type { CatalogEntry, InstalledPlugin, MCPServerConfig } from '@gho-work/base';
@@ -78,6 +79,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       | 'parseMcpServers'
       | 'countSkills'
       | 'countAgents'
+      | 'countCommands'
       | 'deleteCache'
     >,
     private readonly _skillRegistration: PluginSkillRegistration,
@@ -206,9 +208,10 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       throw err;
     }
 
-    // Count skills and agents
+    // Count skills, agents, and commands
     const skillCount = await this._installer.countSkills(pluginRoot, manifest.skills);
     const agentCount = await this._installer.countAgents(pluginRoot, manifest.agents);
+    const commandCount = await this._installer.countCommands(pluginRoot, manifest.commands);
 
     // Parse MCP servers
     const mcpServerMap = await this._installer.parseMcpServers(pluginRoot, manifest.mcpServers);
@@ -227,6 +230,14 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
         this._skillRegistration.addSource({ id: sourceId, path: skillPath, priority: 10 });
         registeredSourceIds.push(sourceId);
         await this._skillRegistration.refresh();
+      }
+
+      // Register commands source
+      const commandPath = this._resolveComponentPath(pluginRoot, manifest.commands, 'commands');
+      if (commandPath !== undefined && fs.existsSync(commandPath)) {
+        const commandSourceId = `plugin:${name}:commands`;
+        this._skillRegistration.addSource({ id: commandSourceId, path: commandPath, priority: 10 });
+        registeredSourceIds.push(commandSourceId);
       }
 
       // Register MCP servers
@@ -262,7 +273,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
         skillCount,
         agentCount,
         mcpServerNames,
-        commandCount: 0,
+        commandCount,
         agentIds: [],
         hookCount: 0,
       };
@@ -301,8 +312,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       throw new Error(`Plugin "${name}" is not installed.`);
     }
 
-    // Deregister skill source
+    // Deregister skill and commands sources
     this._skillRegistration.removeSource(`plugin:${name}`);
+    this._skillRegistration.removeSource(`plugin:${name}:commands`);
     await this._skillRegistration.refresh();
 
     // Remove MCP servers registered by this plugin
@@ -338,17 +350,24 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
 
     const pluginRoot = this._resolvePluginRoot(plugin.cachePath, plugin.catalogMeta.location);
 
-    // Re-register skill source
+    // Re-register skill and commands sources
+    const manifest = await this._installer.parseManifest(pluginRoot);
     if (plugin.skillCount > 0) {
-      const manifest = await this._installer.parseManifest(pluginRoot);
       const skillPath = this._resolveSkillPath(pluginRoot, manifest.skills);
       this._skillRegistration.addSource({ id: `plugin:${name}`, path: skillPath, priority: 10 });
       await this._skillRegistration.refresh();
     }
 
+    // Re-register commands source
+    if (plugin.commandCount > 0) {
+      const commandPath = this._resolveComponentPath(pluginRoot, manifest.commands, 'commands');
+      if (commandPath !== undefined && fs.existsSync(commandPath)) {
+        this._skillRegistration.addSource({ id: `plugin:${name}:commands`, path: commandPath, priority: 10 });
+      }
+    }
+
     // Re-register MCP servers
-    const enableManifest = await this._installer.parseManifest(pluginRoot);
-    const enableServers = await this._installer.parseMcpServers(pluginRoot, enableManifest.mcpServers);
+    const enableServers = await this._installer.parseMcpServers(pluginRoot, manifest.mcpServers);
     for (const serverName of plugin.mcpServerNames) {
       const serverConfig = enableServers.get(serverName);
       if (serverConfig !== undefined) {
@@ -384,8 +403,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       return; // already disabled
     }
 
-    // Deregister skill source
+    // Deregister skill and commands sources
     this._skillRegistration.removeSource(`plugin:${name}`);
+    this._skillRegistration.removeSource(`plugin:${name}:commands`);
     await this._skillRegistration.refresh();
 
     // Deregister MCP servers
@@ -456,6 +476,25 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     }
     const first = Array.isArray(skills) ? skills[0] : skills;
     return path.join(cachePath, first.replace(/\/$/, ''));
+  }
+
+  /**
+   * Resolves a component source path from the manifest field.
+   * Returns undefined if `field` is undefined and the `defaultDir` doesn't exist.
+   * If a single string ending in '/', treats it as a directory relative to pluginRoot.
+   * If an array, uses the first entry.
+   */
+  private _resolveComponentPath(
+    pluginRoot: string,
+    field: string | string[] | undefined,
+    defaultDir: string,
+  ): string | undefined {
+    if (field === undefined) {
+      const defaultPath = path.join(pluginRoot, defaultDir);
+      return fs.existsSync(defaultPath) ? defaultPath : undefined;
+    }
+    const first = Array.isArray(field) ? field[0] : field;
+    return path.join(pluginRoot, first.replace(/\/$/, ''));
   }
 
   /**

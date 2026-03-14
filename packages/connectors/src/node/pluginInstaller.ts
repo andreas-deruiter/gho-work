@@ -200,6 +200,13 @@ export class PluginInstaller {
       }
     }
 
+    if (manifest.commands === undefined) {
+      const commandsDir = path.join(pluginDir, 'commands');
+      if (fs.existsSync(commandsDir) && fs.statSync(commandsDir).isDirectory()) {
+        manifest.commands = 'commands/';
+      }
+    }
+
     if (manifest.mcpServers === undefined) {
       const mcpJsonPath = path.join(pluginDir, '.mcp.json');
       if (fs.existsSync(mcpJsonPath)) {
@@ -260,14 +267,8 @@ export class PluginInstaller {
    * Otherwise, defaults to looking in the `skills/` directory.
    */
   async countSkills(pluginDir: string, skillPaths?: string | string[]): Promise<number> {
-    const dirs = this._resolveSkillDirs(pluginDir, skillPaths);
-    let count = 0;
-
-    for (const dir of dirs) {
-      count += this._countMdFilesRecursive(dir);
-    }
-
-    return count;
+    const dirs = this._resolveDirs(pluginDir, skillPaths, 'skills');
+    return dirs.reduce((sum, dir) => sum + this._countMdFilesRecursive(dir), 0);
   }
 
   /**
@@ -277,14 +278,19 @@ export class PluginInstaller {
    * Otherwise, defaults to looking in the `agents/` directory.
    */
   async countAgents(pluginDir: string, agentPaths?: string | string[]): Promise<number> {
-    const dirs = this._resolveAgentDirs(pluginDir, agentPaths);
-    let count = 0;
+    const dirs = this._resolveDirs(pluginDir, agentPaths, 'agents');
+    return dirs.reduce((sum, dir) => sum + this._countMdFilesRecursive(dir), 0);
+  }
 
-    for (const dir of dirs) {
-      count += this._countMdFilesRecursive(dir);
-    }
-
-    return count;
+  /**
+   * Counts the number of command files (.md) in the plugin's command directories.
+   *
+   * If `commandPaths` is specified, counts .md files in those directories (relative to pluginDir).
+   * Otherwise, defaults to looking in the `commands/` directory.
+   */
+  async countCommands(pluginDir: string, commandPaths?: string | string[]): Promise<number> {
+    const dirs = this._resolveDirs(pluginDir, commandPaths, 'commands');
+    return dirs.reduce((sum, dir) => sum + this._countMdFilesRecursive(dir), 0);
   }
 
   // -------------------------------------------------------------------------
@@ -365,24 +371,17 @@ export class PluginInstaller {
   }
 
   /**
-   * Resolves the list of skill directories to search.
+   * Resolves the list of component directories to search.
+   * If `paths` is undefined, defaults to `<pluginDir>/<defaultDir>` (only if it exists).
+   * If `paths` is a string or string[], resolves each relative to `pluginDir`.
    */
-  private _resolveSkillDirs(pluginDir: string, skillPaths?: string | string[]): string[] {
-    if (skillPaths === undefined) {
-      return [path.join(pluginDir, 'skills')];
+  private _resolveDirs(pluginDir: string, paths: string | string[] | undefined, defaultDir: string): string[] {
+    if (paths === undefined) {
+      const defaultPath = path.join(pluginDir, defaultDir);
+      return fs.existsSync(defaultPath) ? [defaultPath] : [];
     }
-
-    const paths = Array.isArray(skillPaths) ? skillPaths : [skillPaths];
-    return paths.map((p) => path.join(pluginDir, p.replace(/\/$/, '')));
-  }
-
-  private _resolveAgentDirs(pluginDir: string, agentPaths?: string | string[]): string[] {
-    if (agentPaths === undefined) {
-      return [path.join(pluginDir, 'agents')];
-    }
-
-    const paths = Array.isArray(agentPaths) ? agentPaths : [agentPaths];
-    return paths.map((p) => path.join(pluginDir, p.replace(/\/$/, '')));
+    const pathArray = Array.isArray(paths) ? paths : [paths];
+    return pathArray.map((p) => path.join(pluginDir, p.replace(/\/$/, '')));
   }
 
   /**

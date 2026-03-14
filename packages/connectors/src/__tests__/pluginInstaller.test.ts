@@ -127,6 +127,15 @@ describe('PluginInstaller', () => {
       expect(manifest.mcpServers).toBeUndefined();
     });
 
+    it('auto-discovers commands/ directory when no manifest exists', async () => {
+      const pluginDir = path.join(tempDir, 'plugin-with-commands');
+      fs.mkdirSync(path.join(pluginDir, 'commands'), { recursive: true });
+      fs.writeFileSync(path.join(pluginDir, 'commands', 'draft.md'), '# Draft');
+
+      const manifest = await installer.parseManifest(pluginDir);
+      expect(manifest.commands).toBe('commands/');
+    });
+
     it('auto-discovers both skills/ and .mcp.json when present', async () => {
       const pluginDir = path.join(tempDir, 'full-plugin');
       fs.mkdirSync(path.join(pluginDir, 'skills'), { recursive: true });
@@ -275,6 +284,48 @@ describe('PluginInstaller', () => {
       writeFile(path.join(pluginDir, 'skills', 'not-a-skill.json'), '{}');
 
       const count = await installer.countSkills(pluginDir);
+      expect(count).toBe(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // countCommands
+  // -------------------------------------------------------------------------
+
+  describe('countCommands', () => {
+    it('counts .md files in commands directory', async () => {
+      const pluginDir = path.join(tempDir, 'cmd-plugin');
+      const cmdDir = path.join(pluginDir, 'commands');
+      fs.mkdirSync(cmdDir, { recursive: true });
+      fs.writeFileSync(path.join(cmdDir, 'draft.md'), '# Draft');
+      fs.writeFileSync(path.join(cmdDir, 'review.md'), '# Review');
+      const count = await installer.countCommands(pluginDir);
+      expect(count).toBe(2);
+    });
+
+    it('returns 0 when no commands directory', async () => {
+      const pluginDir = path.join(tempDir, 'no-cmd');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      const count = await installer.countCommands(pluginDir);
+      expect(count).toBe(0);
+    });
+
+    it('counts .md files when commandPaths is specified as a string', async () => {
+      const pluginDir = path.join(tempDir, 'custom-cmd-plugin');
+      const cmdDir = path.join(pluginDir, 'slash-commands');
+      fs.mkdirSync(cmdDir, { recursive: true });
+      fs.writeFileSync(path.join(cmdDir, 'fix.md'), '# Fix');
+      const count = await installer.countCommands(pluginDir, 'slash-commands/');
+      expect(count).toBe(1);
+    });
+
+    it('does not count non-.md files', async () => {
+      const pluginDir = path.join(tempDir, 'mixed-cmd-plugin');
+      const cmdDir = path.join(pluginDir, 'commands');
+      fs.mkdirSync(cmdDir, { recursive: true });
+      fs.writeFileSync(path.join(cmdDir, 'cmd.md'), '# Cmd');
+      fs.writeFileSync(path.join(cmdDir, 'cmd.ts'), 'export {};');
+      const count = await installer.countCommands(pluginDir);
       expect(count).toBe(1);
     });
   });

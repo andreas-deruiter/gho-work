@@ -20,6 +20,9 @@ function makeCatalogEntry(overrides?: Partial<CatalogEntry>): CatalogEntry {
     location: 'https://github.com/test/test-plugin',
     hasSkills: true,
     hasMcpServers: false,
+    hasCommands: false,
+    hasAgents: false,
+    hasHooks: false,
     ...overrides,
   };
 }
@@ -71,6 +74,7 @@ function makeInstaller() {
     parseMcpServers: vi.fn().mockResolvedValue(new Map()),
     countSkills: vi.fn().mockResolvedValue(3),
     countAgents: vi.fn().mockResolvedValue(0),
+    countCommands: vi.fn().mockResolvedValue(0),
     deleteCache: vi.fn().mockResolvedValue(undefined),
   };
 }
