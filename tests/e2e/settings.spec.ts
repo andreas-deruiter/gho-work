@@ -72,8 +72,8 @@ test.describe('Settings panel', () => {
 
   test('sidebar is hidden when settings is open', async () => {
     await openSettings();
-    // The inner sidebar widget (.sidebar inside .workbench-sidebar) is hidden via display:none
-    const sidebarDisplay = await page.locator('.workbench-sidebar .sidebar').evaluate(
+    // The sidebar wrapper (.workbench-sidebar) is hidden via display:none
+    const sidebarDisplay = await page.locator('.workbench-sidebar').evaluate(
       el => (el as HTMLElement).style.display,
     );
     expect(sidebarDisplay).toBe('none');
