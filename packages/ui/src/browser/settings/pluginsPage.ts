@@ -49,6 +49,12 @@ interface LogEntry {
   level: 'info' | 'error';
 }
 
+interface PluginUpdateInfo {
+  name: string;
+  installed: string;
+  available: string;
+}
+
 export class PluginsPage extends Widget {
   private readonly _ipc: IIPCRenderer;
   private _catalog: CatalogEntryDTO[] = [];
@@ -59,6 +65,7 @@ export class PluginsPage extends Widget {
   private _activeMarketplace = 'All';
   private _installing = new Map<string, string>(); // name → progress message
   private _installErrors = new Map<string, string>(); // name → error message
+  private _updatesAvailable = new Map<string, PluginUpdateInfo>(); // name → update info
   private _logs: LogEntry[] = [];
   private _marketplaces: MarketplaceEntryDTO[] = [];
 
@@ -159,6 +166,20 @@ export class PluginsPage extends Widget {
     };
     this._ipc.on(IPC_CHANNELS.PLUGIN_INSTALL_PROGRESS, onProgress);
     this._register({ dispose: () => this._ipc.removeListener(IPC_CHANNELS.PLUGIN_INSTALL_PROGRESS, onProgress) });
+
+    // IPC: plugin updates available (pushed from main on startup)
+    const onUpdatesAvailable = (...args: unknown[]) => {
+      const updates = args[0] as PluginUpdateInfo[];
+      this._updatesAvailable.clear();
+      for (const update of updates) {
+        this._updatesAvailable.set(update.name, update);
+      }
+      if (this._activeTab === 'installed') {
+        this._renderInstalled();
+      }
+    };
+    this._ipc.on(IPC_CHANNELS.PLUGIN_UPDATES_AVAILABLE, onUpdatesAvailable);
+    this._register({ dispose: () => this._ipc.removeListener(IPC_CHANNELS.PLUGIN_UPDATES_AVAILABLE, onUpdatesAvailable) });
   }
 
   async load(): Promise<void> {
@@ -581,8 +602,31 @@ export class PluginsPage extends Widget {
 
       item.appendChild(info);
 
+      // Update badge in header (if update available)
+      const updateInfo = this._updatesAvailable.get(plugin.name);
+      if (updateInfo) {
+        const updateBadge = document.createElement('span');
+        updateBadge.className = 'plugin-badge update';
+        updateBadge.title = `Update available: v${updateInfo.available}`;
+        updateBadge.textContent = `Update v${updateInfo.available}`;
+        header.appendChild(updateBadge);
+      }
+
       const actions = document.createElement('div');
       actions.className = 'plugin-installed-actions';
+
+      // Update button (shown when update is available)
+      if (updateInfo) {
+        const updateBtn = document.createElement('button');
+        updateBtn.className = 'plugin-card-install-btn plugin-update-btn';
+        updateBtn.textContent = `Update to v${updateInfo.available}`;
+        updateBtn.setAttribute('aria-label', `Update ${plugin.name} to version ${updateInfo.available}`);
+        this.listen(updateBtn, 'click', () => {
+          this._updatesAvailable.delete(plugin.name);
+          void this._updatePlugin(plugin.name);
+        });
+        actions.appendChild(updateBtn);
+      }
 
       // Enable/disable toggle
       const toggle = document.createElement('div');
@@ -922,6 +966,18 @@ export class PluginsPage extends Widget {
       const message = err instanceof Error ? err.message : String(err);
       console.error('[PluginsPage] Uninstall failed:', err);
       this._addLog(name, `Uninstall failed: ${message}`, 'error');
+    }
+  }
+
+  private async _updatePlugin(name: string): Promise<void> {
+    try {
+      this._addLog(name, 'Update started', 'info');
+      await this._ipc.invoke(IPC_CHANNELS.PLUGIN_UPDATE, { name });
+      this._addLog(name, 'Updated successfully', 'info');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[PluginsPage] Update failed:', err);
+      this._addLog(name, `Update failed: ${message}`, 'error');
     }
   }
 

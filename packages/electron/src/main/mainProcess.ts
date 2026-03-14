@@ -420,6 +420,14 @@ export function createMainProcess(
     ipcMainAdapter.sendToRenderer(IPC_CHANNELS.PLUGIN_INSTALL_PROGRESS, progress);
   });
 
+  // Check for plugin updates in background (non-blocking)
+  pluginService.checkForUpdates().then(updates => {
+    if (updates.length > 0) {
+      console.warn(`[Plugins] Updates available:`, updates.map(u => `${u.name} ${u.installed} \u2192 ${u.available}`));
+      ipcMainAdapter.sendToRenderer(IPC_CHANNELS.PLUGIN_UPDATES_AVAILABLE, updates);
+    }
+  }).catch(err => console.warn('[Plugins] Update check failed:', err));
+
   // Dispose plugin service on app quit
   app.on('will-quit', () => {
     pluginService.dispose();

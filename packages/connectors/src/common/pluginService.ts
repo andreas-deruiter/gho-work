@@ -86,6 +86,12 @@ export interface IPluginService extends IDisposable {
   /** Install the latest version of an already-installed plugin. */
   update(pluginName: string): Promise<void>;
 
+  /**
+   * Compare installed plugin versions against the catalog and return plugins
+   * that have a newer version available.
+   */
+  checkForUpdates(): Promise<Array<{ name: string; installed: string; available: string }>>;
+
   /** Returns a snapshot of all installed plugins. */
   getInstalled(): InstalledPlugin[];
 

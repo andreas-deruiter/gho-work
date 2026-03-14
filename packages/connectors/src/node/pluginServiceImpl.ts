@@ -150,6 +150,23 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     return this._installQueue;
   }
 
+  async checkForUpdates(): Promise<Array<{ name: string; installed: string; available: string }>> {
+    const updates: Array<{ name: string; installed: string; available: string }> = [];
+    const catalog = await this.fetchCatalog();
+
+    for (const plugin of this.getInstalled()) {
+      const catalogEntry = catalog.find(e => e.name === plugin.name);
+      if (catalogEntry?.version && plugin.version && catalogEntry.version !== plugin.version) {
+        updates.push({
+          name: plugin.name,
+          installed: plugin.version,
+          available: catalogEntry.version,
+        });
+      }
+    }
+    return updates;
+  }
+
   // -------------------------------------------------------------------------
   // Getters
   // -------------------------------------------------------------------------
