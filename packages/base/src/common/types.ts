@@ -100,6 +100,7 @@ export interface MCPServerConfig {
   cwd?: string;                        // stdio
   url?: string;                        // http
   headers?: Record<string, string>;    // http
+  source?: string;                     // undefined = user-added, "plugin:<name>" = plugin-managed
 }
 
 /** Runtime state — held in memory only. */
