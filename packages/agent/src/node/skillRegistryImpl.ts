@@ -29,6 +29,10 @@ export class SkillRegistryImpl extends Disposable implements ISkillRegistry {
     super();
   }
 
+  getSources(): SkillSource[] {
+    return [...this._sources];
+  }
+
   addSource(source: SkillSource): void {
     const duplicate = this._sources.some(s => s.id === source.id);
     if (duplicate) {

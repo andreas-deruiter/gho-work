@@ -911,7 +911,7 @@ export function createMainProcess(
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_SOURCES, async () => {
-    return skillSources;
+    return skillRegistry.getSources();
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_ADD_PATH, async (...args: unknown[]) => {

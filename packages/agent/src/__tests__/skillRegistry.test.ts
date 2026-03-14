@@ -148,6 +148,21 @@ describe('SkillRegistryImpl', () => {
       expect(entry!.description).toBe('Plugin skill');
     });
 
+    it('getSources returns initial and dynamically added sources', () => {
+      const before = registry.getSources();
+      expect(before).toHaveLength(1);
+      expect(before[0].id).toBe('test');
+
+      registry.addSource({ id: 'plugin-source', priority: 10, basePath: tmpDir });
+      const after = registry.getSources();
+      expect(after).toHaveLength(2);
+      expect(after.map(s => s.id)).toContain('plugin-source');
+
+      // Returned array is a copy, not a reference
+      after.push({ id: 'fake', priority: 99, basePath: '/fake' });
+      expect(registry.getSources()).toHaveLength(2);
+    });
+
     it('addSource with duplicate ID does not create duplicates', async () => {
       registry.addSource({ id: 'plugin-source', priority: 10, basePath: tmpDir });
       registry.addSource({ id: 'plugin-source', priority: 10, basePath: tmpDir });

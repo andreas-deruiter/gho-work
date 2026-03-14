@@ -171,6 +171,10 @@
   background: var(--bg-tertiary);
   color: var(--fg-muted);
 }
+.skill-source-badge.plugin {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--fg-accent);
+}
 .skill-source-badge.user {
   background: rgba(245, 158, 11, 0.1);
   color: var(--fg-warning);
