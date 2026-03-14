@@ -194,6 +194,7 @@ describe('InstalledPlugin', () => {
       installedAt: '2026-03-14T00:00:00.000Z',
       catalogMeta: catalogEntry,
       skillCount: 3,
+      agentCount: 0,
       mcpServerNames: ['server-a', 'server-b'],
     };
 
@@ -221,6 +222,7 @@ describe('InstalledPlugin', () => {
       installedAt: '2026-01-01T00:00:00.000Z',
       catalogMeta: catalogEntry,
       skillCount: 0,
+      agentCount: 0,
       mcpServerNames: [],
     };
 

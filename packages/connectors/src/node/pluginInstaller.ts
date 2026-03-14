@@ -22,6 +22,7 @@ export interface PluginManifest {
   version?: string;
   description?: string;
   skills?: string | string[];
+  agents?: string | string[];
   mcpServers?: string | Record<string, MCPServerInlineConfig>;
 }
 
@@ -142,6 +143,11 @@ export class PluginInstaller {
       manifest.skills = 'skills/';
     }
 
+    const agentsDir = path.join(pluginDir, 'agents');
+    if (fs.existsSync(agentsDir) && fs.statSync(agentsDir).isDirectory()) {
+      manifest.agents = 'agents/';
+    }
+
     const mcpJsonPath = path.join(pluginDir, '.mcp.json');
     if (fs.existsSync(mcpJsonPath)) {
       manifest.mcpServers = '.mcp.json';
@@ -201,6 +207,23 @@ export class PluginInstaller {
    */
   async countSkills(pluginDir: string, skillPaths?: string | string[]): Promise<number> {
     const dirs = this._resolveSkillDirs(pluginDir, skillPaths);
+    let count = 0;
+
+    for (const dir of dirs) {
+      count += this._countMdFilesRecursive(dir);
+    }
+
+    return count;
+  }
+
+  /**
+   * Counts the number of agent files (.md) in the plugin's agent directories.
+   *
+   * If `agentPaths` is specified, counts .md files in those directories (relative to pluginDir).
+   * Otherwise, defaults to looking in the `agents/` directory.
+   */
+  async countAgents(pluginDir: string, agentPaths?: string | string[]): Promise<number> {
+    const dirs = this._resolveAgentDirs(pluginDir, agentPaths);
     let count = 0;
 
     for (const dir of dirs) {
@@ -283,6 +306,15 @@ export class PluginInstaller {
     }
 
     const paths = Array.isArray(skillPaths) ? skillPaths : [skillPaths];
+    return paths.map((p) => path.join(pluginDir, p.replace(/\/$/, '')));
+  }
+
+  private _resolveAgentDirs(pluginDir: string, agentPaths?: string | string[]): string[] {
+    if (agentPaths === undefined) {
+      return [path.join(pluginDir, 'agents')];
+    }
+
+    const paths = Array.isArray(agentPaths) ? agentPaths : [agentPaths];
     return paths.map((p) => path.join(pluginDir, p.replace(/\/$/, '')));
   }
 

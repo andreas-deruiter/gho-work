@@ -617,6 +617,10 @@
   background: rgba(59, 130, 246, 0.1);
   color: var(--brand-primary);
 }
+.plugin-badge.agents {
+  background: rgba(168, 85, 247, 0.1);
+  color: var(--fg-accent);
+}
 
 /* Install button */
 .plugin-card-install-btn {

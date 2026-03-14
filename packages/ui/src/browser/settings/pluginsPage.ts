@@ -20,6 +20,7 @@ interface InstalledPluginDTO {
   version: string;
   enabled: boolean;
   skillCount: number;
+  agentCount: number;
   mcpServerNames: string[];
 }
 
@@ -462,11 +463,28 @@ export class PluginsPage extends Widget {
         header.appendChild(skillsBadge);
       }
 
+      if (plugin.agentCount > 0) {
+        const agentsBadge = document.createElement('span');
+        agentsBadge.className = 'plugin-badge agents';
+        agentsBadge.textContent = 'Agents';
+        header.appendChild(agentsBadge);
+      }
+
       info.appendChild(header);
 
       const details = document.createElement('div');
       details.className = 'plugin-installed-details';
-      details.textContent = `${plugin.skillCount} skills \u00b7 ${plugin.mcpServerNames.length} MCP servers`;
+      const detailParts: string[] = [];
+      if (plugin.skillCount > 0) {
+        detailParts.push(`${plugin.skillCount} skill${plugin.skillCount !== 1 ? 's' : ''}`);
+      }
+      if (plugin.agentCount > 0) {
+        detailParts.push(`${plugin.agentCount} agent${plugin.agentCount !== 1 ? 's' : ''}`);
+      }
+      if (plugin.mcpServerNames.length > 0) {
+        detailParts.push(`${plugin.mcpServerNames.length} MCP server${plugin.mcpServerNames.length !== 1 ? 's' : ''}`);
+      }
+      details.textContent = detailParts.length > 0 ? detailParts.join(' \u00b7 ') : 'No registered resources';
       info.appendChild(details);
 
       item.appendChild(info);

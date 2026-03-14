@@ -66,6 +66,7 @@ function makeInstaller() {
     parseManifest: vi.fn().mockResolvedValue({ name: 'test', version: '1.0.0' }),
     parseMcpServers: vi.fn().mockResolvedValue(new Map()),
     countSkills: vi.fn().mockResolvedValue(3),
+    countAgents: vi.fn().mockResolvedValue(0),
     deleteCache: vi.fn().mockResolvedValue(undefined),
   };
 }

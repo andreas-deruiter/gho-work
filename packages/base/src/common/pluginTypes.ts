@@ -96,6 +96,8 @@ export interface InstalledPlugin {
   catalogMeta: CatalogEntry;
   /** Number of skill files contributed by this plugin. */
   skillCount: number;
+  /** Number of agent definition files contributed by this plugin. */
+  agentCount: number;
   /** Names of MCP servers registered by this plugin. */
   mcpServerNames: string[];
 }

@@ -77,6 +77,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       | 'parseManifest'
       | 'parseMcpServers'
       | 'countSkills'
+      | 'countAgents'
       | 'deleteCache'
     >,
     private readonly _skillRegistration: PluginSkillRegistration,
@@ -202,8 +203,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       throw err;
     }
 
-    // Count skills
+    // Count skills and agents
     const skillCount = await this._installer.countSkills(cachePath, manifest.skills);
+    const agentCount = await this._installer.countAgents(cachePath, manifest.agents);
 
     // Parse MCP servers
     const mcpServerMap = await this._installer.parseMcpServers(cachePath, manifest.mcpServers);
@@ -249,6 +251,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
         installedAt: new Date().toISOString(),
         catalogMeta: entry,
         skillCount,
+        agentCount,
         mcpServerNames,
       };
 
