@@ -7,6 +7,7 @@ export type {
   InstallProgress,
   PluginSkillRegistration,
   PluginAgentRegistration,
+  PluginHookRegistration,
   PluginSettingsStore,
 } from './common/pluginService.js';
 export * from './common/pluginTypes.js';

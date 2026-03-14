@@ -416,6 +416,99 @@ describe('PluginInstaller', () => {
   });
 
   // -------------------------------------------------------------------------
+  // parseHooks
+  // -------------------------------------------------------------------------
+
+  describe('parseHooks', () => {
+    it('parses hooks/hooks.json file', async () => {
+      const pluginDir = path.join(tempDir, 'hooks-plugin');
+      const hooksDir = path.join(pluginDir, 'hooks');
+      fs.mkdirSync(hooksDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(hooksDir, 'hooks.json'),
+        JSON.stringify({
+          hooks: {
+            PostToolUse: [
+              {
+                matcher: 'Write',
+                hooks: [{ type: 'command', command: './lint.sh' }],
+              },
+            ],
+          },
+        }),
+      );
+
+      const hooks = await installer.parseHooks(pluginDir);
+      expect(hooks).toBeDefined();
+      expect(hooks!.PostToolUse).toHaveLength(1);
+    });
+
+    it('returns undefined when no hooks file', async () => {
+      const pluginDir = path.join(tempDir, 'no-hooks');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      const hooks = await installer.parseHooks(pluginDir);
+      expect(hooks).toBeUndefined();
+    });
+
+    it('parses inline hooks from manifest', async () => {
+      const hooksObj = {
+        PostToolUse: [{ hooks: [{ type: 'command', command: 'lint.sh' }] }],
+      };
+      const result = await installer.parseHooks(path.join(tempDir, 'x'), hooksObj);
+      expect(result).toEqual(hooksObj);
+    });
+
+    it('parses a custom hooks file path (string)', async () => {
+      const pluginDir = path.join(tempDir, 'custom-hooks');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(pluginDir, 'custom-hooks.json'),
+        JSON.stringify({
+          PreToolUse: [{ hooks: [{ type: 'command', command: 'check.sh' }] }],
+        }),
+      );
+
+      const result = await installer.parseHooks(pluginDir, 'custom-hooks.json');
+      expect(result).toBeDefined();
+      expect(result!.PreToolUse).toHaveLength(1);
+    });
+
+    it('returns undefined when custom hooks file does not exist', async () => {
+      const pluginDir = path.join(tempDir, 'missing-hooks');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      const result = await installer.parseHooks(pluginDir, 'nonexistent.json');
+      expect(result).toBeUndefined();
+    });
+
+    it('returns undefined when hooks file contains invalid JSON', async () => {
+      const pluginDir = path.join(tempDir, 'bad-hooks');
+      const hooksDir = path.join(pluginDir, 'hooks');
+      fs.mkdirSync(hooksDir, { recursive: true });
+      fs.writeFileSync(path.join(hooksDir, 'hooks.json'), 'not-valid-json{{{');
+
+      const result = await installer.parseHooks(pluginDir);
+      expect(result).toBeUndefined();
+    });
+
+    it('handles hooks file without wrapping "hooks" key', async () => {
+      const pluginDir = path.join(tempDir, 'flat-hooks');
+      const hooksDir = path.join(pluginDir, 'hooks');
+      fs.mkdirSync(hooksDir, { recursive: true });
+      // File has the hooks map directly (no "hooks" wrapper)
+      fs.writeFileSync(
+        path.join(hooksDir, 'hooks.json'),
+        JSON.stringify({
+          PostToolUse: [{ hooks: [{ type: 'command', command: 'run.sh' }] }],
+        }),
+      );
+
+      const result = await installer.parseHooks(pluginDir);
+      expect(result).toBeDefined();
+      expect(result!.PostToolUse).toHaveLength(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // checkGitAvailable
   // -------------------------------------------------------------------------
 

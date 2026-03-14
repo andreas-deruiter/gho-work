@@ -7,6 +7,7 @@ import type {
   InstallProgress,
   PluginSkillRegistration,
   PluginAgentRegistration,
+  PluginHookRegistration,
   PluginSettingsStore,
 } from '../common/pluginService.js';
 import type { PluginCatalogFetcher } from './pluginCatalogFetcher.js';
@@ -78,6 +79,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       | 'clonePlugin'
       | 'parseManifest'
       | 'parseMcpServers'
+      | 'parseHooks'
       | 'countSkills'
       | 'countAgents'
       | 'countCommands'
@@ -86,6 +88,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     >,
     private readonly _skillRegistration: PluginSkillRegistration,
     private readonly _agentRegistration: PluginAgentRegistration,
+    private readonly _hookRegistration: PluginHookRegistration,
     private readonly _configStore: IConnectorConfigStore,
     private readonly _settings: PluginSettingsStore,
   ) {
@@ -222,6 +225,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     // Parse MCP servers
     const mcpServerMap = await this._installer.parseMcpServers(pluginRoot, manifest.mcpServers);
 
+    // Parse hooks
+    const hooks = await this._installer.parseHooks(pluginRoot, manifest.hooks);
+
     // Register
     this._emitProgress(name, 'registering', 'Registering skills and MCP servers…');
 
@@ -229,6 +235,14 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     const registeredServerNames: string[] = [];
 
     try {
+      // Register hooks
+      if (hooks) {
+        this._hookRegistration.registerHooks(name, pluginRoot, hooks);
+      }
+      const hookCount = hooks
+        ? Object.values(hooks).flat().reduce((sum, m: any) => sum + (m.hooks?.length ?? 0), 0)
+        : 0;
+
       // Register agents
       for (const agent of agentDefs) {
         this._agentRegistration.register(agent);
@@ -287,7 +301,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
         mcpServerNames,
         commandCount,
         agentIds,
-        hookCount: 0,
+        hookCount,
       };
 
       this._installed.set(name, plugin);
@@ -323,6 +337,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     if (plugin === undefined) {
       throw new Error(`Plugin "${name}" is not installed.`);
     }
+
+    // Deregister hooks
+    this._hookRegistration.unregisterHooks(name);
 
     // Deregister agents
     this._agentRegistration.unregisterPlugin(name);
@@ -410,6 +427,12 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       }
     }
 
+    // Re-register hooks
+    const hooks = await this._installer.parseHooks(pluginRoot, manifest.hooks);
+    if (hooks) {
+      this._hookRegistration.registerHooks(name, pluginRoot, hooks);
+    }
+
     this._installed.set(name, { ...plugin, enabled: true });
     this._saveToSettings();
     this._onDidChangePlugins.fire(this.getInstalled());
@@ -423,6 +446,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     if (!plugin.enabled) {
       return; // already disabled
     }
+
+    // Deregister hooks
+    this._hookRegistration.unregisterHooks(name);
 
     // Deregister agents
     this._agentRegistration.unregisterPlugin(name);

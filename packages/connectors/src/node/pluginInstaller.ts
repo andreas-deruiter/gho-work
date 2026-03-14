@@ -214,6 +214,12 @@ export class PluginInstaller {
       }
     }
 
+    if (manifest.hooks === undefined) {
+      if (fs.existsSync(path.join(pluginDir, 'hooks', 'hooks.json'))) {
+        manifest.hooks = 'hooks/hooks.json';
+      }
+    }
+
     return manifest;
   }
 
@@ -254,6 +260,43 @@ export class PluginInstaller {
 
     // Inline Record config
     return new Map(Object.entries(mcpServers));
+  }
+
+  /**
+   * Parses hooks from a plugin manifest.
+   *
+   * Handles:
+   * - `inlineHooks` is an object → returns it directly as the hooks map
+   * - `inlineHooks` is a string → treats as a file path relative to pluginDir
+   * - `inlineHooks` is undefined → looks for `hooks/hooks.json` in pluginDir
+   *
+   * The returned object maps hook event names to arrays of hook definitions.
+   * Returns `undefined` if no hooks are found or the file cannot be parsed.
+   */
+  async parseHooks(
+    pluginDir: string,
+    inlineHooks?: string | Record<string, unknown>,
+  ): Promise<Record<string, any[]> | undefined> {
+    // Inline hooks from manifest take precedence
+    if (inlineHooks && typeof inlineHooks === 'object') {
+      return inlineHooks as Record<string, any[]>;
+    }
+
+    // Check for hooks/hooks.json file
+    const hooksPath =
+      typeof inlineHooks === 'string'
+        ? path.join(pluginDir, inlineHooks)
+        : path.join(pluginDir, 'hooks', 'hooks.json');
+
+    if (!fs.existsSync(hooksPath)) return undefined;
+
+    try {
+      const content = JSON.parse(fs.readFileSync(hooksPath, 'utf-8'));
+      return content.hooks ?? content;
+    } catch (err) {
+      console.warn(`[PluginInstaller] Failed to parse hooks at ${hooksPath}:`, err);
+      return undefined;
+    }
   }
 
   // -------------------------------------------------------------------------

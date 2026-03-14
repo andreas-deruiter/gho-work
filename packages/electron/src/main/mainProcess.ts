@@ -46,6 +46,7 @@ import {
   buildSkillSources,
   toSdkMcpConfig,
   PluginAgentRegistryImpl,
+  HookServiceImpl,
 } from '@gho-work/agent';
 import * as os from 'node:os';
 import type { AgentContext } from '@gho-work/base';
@@ -61,7 +62,7 @@ import {
   PluginCatalogFetcher,
   PluginInstaller,
 } from '@gho-work/connectors';
-import type { PluginSettingsStore, PluginAgentRegistration } from '@gho-work/connectors';
+import type { PluginSettingsStore, PluginAgentRegistration, PluginHookRegistration } from '@gho-work/connectors';
 import type {
   ConnectorRemoveRequest,
   ConnectorConnectRequest,
@@ -377,11 +378,20 @@ export function createMainProcess(
     unregisterPlugin: (name) => pluginAgentRegistry.unregisterPlugin(name),
   };
 
+  const hookService = new HookServiceImpl();
+
+  const hookRegistration: PluginHookRegistration = {
+    registerHooks: (pluginName, pluginRoot, hooks) =>
+      hookService.registerHooks(pluginName, pluginRoot, hooks as Parameters<typeof hookService.registerHooks>[2]),
+    unregisterHooks: (pluginName) => hookService.unregisterHooks(pluginName),
+  };
+
   const pluginService = new PluginServiceImpl(
     pluginFetcher,
     pluginInstaller,
     skillRegistration,
     agentRegistration,
+    hookRegistration,
     configStore,
     pluginSettings,
   );

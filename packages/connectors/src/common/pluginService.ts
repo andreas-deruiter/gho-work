@@ -38,6 +38,17 @@ export interface PluginAgentRegistration {
 }
 
 // ---------------------------------------------------------------------------
+// Hook registration interface (connectors-side)
+// Agent package cannot be imported from connectors (wrong direction).
+// The main process satisfies this by passing the IHookService.
+// ---------------------------------------------------------------------------
+
+export interface PluginHookRegistration {
+  registerHooks(pluginName: string, pluginRoot: string, hooks: Record<string, unknown[]>): void;
+  unregisterHooks(pluginName: string): void;
+}
+
+// ---------------------------------------------------------------------------
 // Settings store interface
 // ---------------------------------------------------------------------------
 
