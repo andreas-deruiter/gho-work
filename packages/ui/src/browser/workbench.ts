@@ -193,6 +193,19 @@ export class Workbench extends Disposable {
       this._infoPanel.handleEvent(event);
     });
 
+    // Feed user attachments into InfoPanel Input section when a message is sent
+    this._chatPanel.onDidSendMessage(evt => {
+      if (evt.attachments && evt.attachments.length > 0) {
+        for (const att of evt.attachments) {
+          this._infoPanel.handleEvent({
+            type: 'attachment_added',
+            attachment: { name: att.name, path: att.path },
+            messageId: '',
+          });
+        }
+      }
+    });
+
     // Wire InfoPanel events
     this._infoPanel.onDidRequestScrollToMessage(msgId => this._chatPanel.scrollToMessage(msgId));
     this._infoPanel.onDidRequestRevealFile(filePath => {

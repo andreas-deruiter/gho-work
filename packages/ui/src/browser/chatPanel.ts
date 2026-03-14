@@ -24,6 +24,7 @@ export interface SendMessageEvent {
   conversationId: string;
   content: string;
   model: string;
+  attachments?: Array<{ name: string; path: string }>;
 }
 
 export class ChatPanel extends Disposable {
@@ -383,11 +384,15 @@ export class ChatPanel extends Disposable {
     }
     thinkingSection.setActive(true);
 
-    // Fire the event
+    // Fire the event (capture attachments before they're cleared)
+    const currentAttachments = this._attachments.length > 0
+      ? this._attachments.map(a => ({ name: a.displayName, path: a.path }))
+      : undefined;
     this._onDidSendMessage.fire({
       conversationId: this._conversationId,
       content,
       model: this._model,
+      attachments: currentAttachments,
     });
 
     // Send to main process

@@ -174,12 +174,32 @@ export class AgentServiceImpl implements IAgentService {
         };
       case 'tool.execution_complete': {
         const result = (data.result as { content?: string }) ?? {};
+        const fileMeta = data.fileMeta as { path: string; size: number; action: 'created' | 'modified' } | undefined;
         return {
           type: 'tool_call_result',
           toolCallId: data.toolCallId as string,
           result: { success: (data.success as boolean) ?? true, content: result.content ?? '' },
+          ...(fileMeta ? { fileMeta } : {}),
         };
       }
+      case 'plan.created': {
+        const steps = (data.steps as Array<{ id: string; label: string }>) ?? [];
+        return {
+          type: 'plan_created',
+          plan: { id: (data.planId as string) ?? generateUUID(), steps },
+        };
+      }
+      case 'plan.step_updated':
+        return {
+          type: 'plan_step_updated',
+          planId: data.planId as string,
+          stepId: data.stepId as string,
+          state: data.state as string,
+          messageId: (data.messageId as string) ?? undefined,
+          startedAt: data.state === 'running' ? Date.now() : undefined,
+          completedAt: data.state === 'completed' ? Date.now() : undefined,
+          error: (data.error as string) ?? undefined,
+        };
       case 'session.idle':
         return { type: 'done', messageId: generateUUID() };
       case 'session.error':
