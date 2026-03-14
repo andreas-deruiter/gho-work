@@ -106,6 +106,9 @@ function mapModelInfo(sdkModel: import('@github/copilot-sdk').ModelInfo): ModelI
 
 /**
  * Maps our SessionConfig to the SDK's SessionConfig, adding onPermissionRequest.
+ * Defaults workingDirectory to the user's home folder so the agent can access
+ * documents across the home directory (and avoids picking up dev-time skills
+ * from the project folder).
  */
 function mapSessionConfig(
 	config: SessionConfig,
@@ -116,7 +119,7 @@ function mapSessionConfig(
 		model: config.model,
 		systemMessage: config.systemMessage,
 		streaming: config.streaming,
-		workingDirectory: config.workingDirectory,
+		workingDirectory: config.workingDirectory ?? require('node:os').homedir(),
 		availableTools: config.availableTools,
 		excludedTools: config.excludedTools,
 		mcpServers: config.mcpServers as import('@github/copilot-sdk').SessionConfig['mcpServers'],

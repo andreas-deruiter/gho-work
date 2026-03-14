@@ -199,7 +199,7 @@ export function createMainProcess(
 
   // --- Agent service (runs in main process for now, will move to utility process later) ---
   const useMock = options?.useMockSDK === true;
-  const sdk = new CopilotSDKImpl({ cwd: process.cwd(), useMock });
+  const sdk = new CopilotSDKImpl({ cwd: os.homedir(), useMock });
 
   // Start SDK async — store promise so IPC handlers can await readiness.
   // - If --mock flag: start in mock mode immediately
