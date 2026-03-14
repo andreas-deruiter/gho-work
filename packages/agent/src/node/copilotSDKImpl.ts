@@ -122,6 +122,7 @@ function mapSessionConfig(
 		workingDirectory: config.workingDirectory ?? require('node:os').homedir(),
 		availableTools: config.availableTools,
 		excludedTools: config.excludedTools,
+		disabledSkills: config.disabledSkills,
 		mcpServers: config.mcpServers as import('@github/copilot-sdk').SessionConfig['mcpServers'],
 		onPermissionRequest: approveAll,
 	};
@@ -223,6 +224,7 @@ export class CopilotSDKImpl implements ICopilotSDK {
 			...(config?.workingDirectory ? { workingDirectory: config.workingDirectory } : {}),
 			...(config?.availableTools ? { availableTools: config.availableTools } : {}),
 			...(config?.excludedTools ? { excludedTools: config.excludedTools } : {}),
+			...(config?.disabledSkills ? { disabledSkills: config.disabledSkills } : {}),
 			...(config?.mcpServers ? { mcpServers: config.mcpServers as import('@github/copilot-sdk').SessionConfig['mcpServers'] } : {}),
 			onPermissionRequest: this._sdk.approveAll,
 		};
