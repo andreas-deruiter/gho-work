@@ -3,8 +3,9 @@
  * Creates SDK sessions, injects context, maps SDK events to AgentEvents via AsyncQueue.
  */
 import * as os from 'node:os';
-import { generateUUID } from '@gho-work/base';
-import type { AgentContext, AgentEvent } from '@gho-work/base';
+import { generateUUID, Emitter } from '@gho-work/base';
+import type { AgentContext, AgentEvent, Event } from '@gho-work/base';
+import type { AgentState } from '../common/agent.js';
 import type { IAgentService } from '../common/agent.js';
 import type { IConversationService } from '../common/conversation.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
@@ -25,6 +26,9 @@ export class AgentServiceImpl implements IAgentService {
   /** Cached sessions keyed by conversationId — enables multi-turn conversations. */
   private readonly _sessions = new Map<string, ISDKSession>();
 
+  private readonly _onDidChangeAgentState = new Emitter<{ state: AgentState }>();
+  readonly onDidChangeAgentState: Event<{ state: AgentState }> = this._onDidChangeAgentState.event;
+
   constructor(
     private readonly _sdk: ICopilotSDK,
     private readonly _conversationService: IConversationService | null,
@@ -36,6 +40,7 @@ export class AgentServiceImpl implements IAgentService {
   async *executeTask(prompt: string, context: AgentContext, mcpServers?: Record<string, MCPServerConfig>, attachments?: MessageOptions['attachments']): AsyncIterable<AgentEvent> {
     const taskId = generateUUID();
     this._activeTaskId = taskId;
+    this._onDidChangeAgentState.fire({ state: 'working' });
 
     const queue = new AsyncQueue<AgentEvent>();
 
@@ -105,6 +110,7 @@ export class AgentServiceImpl implements IAgentService {
     } finally {
       this._activeTaskId = null;
       this._activeSession = null;
+      this._onDidChangeAgentState.fire({ state: 'idle' });
     }
   }
 
