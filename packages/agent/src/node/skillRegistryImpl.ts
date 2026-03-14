@@ -139,6 +139,11 @@ export class SkillRegistryImpl extends Disposable implements ISkillRegistry {
           console.warn(`[skills] Could not read ${filePath}:`, err instanceof Error ? err.message : String(err));
         }
 
+        // Only register files that have valid skill frontmatter (--- block with description:)
+        if (!description) {
+          continue;
+        }
+
         this._skills.set(id, {
           id,
           category,

@@ -269,7 +269,8 @@ export function createMainProcess(
       const additionalPaths: string[] = JSON.parse(additionalPathsRaw);
       for (let i = 0; i < additionalPaths.length; i++) {
         if (fs.existsSync(additionalPaths[i])) {
-          skillSources.push({ id: `additional-${i + 1}`, priority: 20, basePath: additionalPaths[i] });
+          const dirName = path.basename(additionalPaths[i]);
+          skillSources.push({ id: dirName, priority: 20, basePath: additionalPaths[i] });
         }
       }
     } catch (err) {
@@ -924,6 +925,12 @@ export function createMainProcess(
       return { canceled: true };
     }
     return { path: result.filePaths[0] };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_OPEN_FILE, async (_evt: unknown, args: unknown) => {
+    const { filePath: fp } = args as { filePath: string };
+    const { shell } = await import('electron');
+    await shell.openPath(fp);
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {

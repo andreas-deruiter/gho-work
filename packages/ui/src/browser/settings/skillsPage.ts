@@ -212,6 +212,25 @@ export class SkillsPage extends Widget {
         desc.textContent = entry.description;
         entryInfo.appendChild(desc);
 
+        const pathRow = document.createElement('div');
+        pathRow.className = 'skill-item-path';
+
+        const pathText = document.createElement('span');
+        pathText.className = 'skill-item-path-text';
+        pathText.textContent = entry.filePath;
+        pathText.title = entry.filePath;
+        pathRow.appendChild(pathText);
+
+        const openBtn = document.createElement('button');
+        openBtn.className = 'skill-item-open-btn';
+        openBtn.textContent = 'Open';
+        openBtn.setAttribute('aria-label', `Open ${entry.name} in editor`);
+        this.listen(openBtn, 'click', () => {
+          void this._ipc.invoke(IPC_CHANNELS.SKILL_OPEN_FILE, { filePath: entry.filePath });
+        });
+        pathRow.appendChild(openBtn);
+
+        entryInfo.appendChild(pathRow);
         item.appendChild(entryInfo);
 
         const actions = document.createElement('div');
@@ -273,9 +292,23 @@ export class SkillsPage extends Widget {
     if (existing) { return; }
     const disclaimer = document.createElement('div');
     disclaimer.className = 'skill-toggle-disclaimer';
-    disclaimer.textContent = 'Changes apply to new conversations. Existing conversations keep their current settings.';
-    // Insert before the skill list container
-    this._skillListEl.parentElement?.insertBefore(disclaimer, this._skillListEl);
+
+    const icon = document.createElement('span');
+    icon.className = 'skill-toggle-disclaimer-icon';
+    icon.textContent = '\u26A0';
+    disclaimer.appendChild(icon);
+
+    const text = document.createElement('span');
+    text.textContent = 'Changes apply to new conversations only. Existing conversations keep their current skill settings.';
+    disclaimer.appendChild(text);
+
+    // Insert at the top of the page, after the subtitle
+    const subtitle = this.getDomNode().querySelector('.settings-page-subtitle');
+    if (subtitle?.nextSibling) {
+      this.getDomNode().insertBefore(disclaimer, subtitle.nextSibling);
+    } else {
+      this.getDomNode().appendChild(disclaimer);
+    }
   }
 
   private _updateAddButtonState(): void {
