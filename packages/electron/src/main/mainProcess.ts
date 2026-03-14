@@ -20,6 +20,7 @@ import {
   IAuthService,
   ISecureStorageService,
   SqliteStorageService,
+  SkillToggleRequestSchema,
 } from '@gho-work/platform';
 import type {
   SendMessageRequest,
@@ -277,6 +278,15 @@ export function createMainProcess(
   }
 
   const skillRegistry = new SkillRegistryImpl(skillSources);
+
+  function listSkillsWithDisabledState(): import('@gho-work/platform/common').SkillEntryDTO[] {
+    const disabledIds: string[] = JSON.parse(storageService?.getSetting('skills.disabled') ?? '[]');
+    return skillRegistry.list().map(s => ({
+      ...s,
+      disabled: disabledIds.includes(s.id),
+    }));
+  }
+
   // Fire scan as non-blocking — skills load in background; agent works immediately.
   void skillRegistry.scan().catch((err) => {
     console.error('[main] Skill registry scan failed:', err instanceof Error ? err.message : String(err));
@@ -822,7 +832,7 @@ export function createMainProcess(
 
   // --- Skill handlers ---
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_LIST, async () => {
-    return skillRegistry.list();
+    return listSkillsWithDisabledState();
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_SOURCES, async () => {
@@ -850,7 +860,7 @@ export function createMainProcess(
     skillSources.push({ id: `additional-${paths.length}`, priority: 20, basePath: newPath });
     await skillRegistry.refresh();
 
-    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, skillRegistry.list());
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, listSkillsWithDisabledState());
     return { ok: true as const };
   });
 
@@ -868,12 +878,36 @@ export function createMainProcess(
     }
     await skillRegistry.refresh();
 
-    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, skillRegistry.list());
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, listSkillsWithDisabledState());
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_RESCAN, async () => {
     await skillRegistry.refresh();
-    return skillRegistry.list();
+    return listSkillsWithDisabledState();
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_TOGGLE, async (...args: unknown[]) => {
+    const { skillId, enabled } = SkillToggleRequestSchema.parse(args[0]);
+    const raw = storageService?.getSetting('skills.disabled');
+    const disabled: string[] = raw ? JSON.parse(raw) : [];
+
+    if (enabled) {
+      const filtered = disabled.filter(id => id !== skillId);
+      storageService?.setSetting('skills.disabled', JSON.stringify(filtered));
+    } else {
+      if (!disabled.includes(skillId)) {
+        disabled.push(skillId);
+        storageService?.setSetting('skills.disabled', JSON.stringify(disabled));
+      }
+    }
+
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, listSkillsWithDisabledState());
+    return { ok: true as const };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_DISABLED_LIST, async () => {
+    const raw = storageService?.getSetting('skills.disabled');
+    return raw ? JSON.parse(raw) : [];
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {
