@@ -489,6 +489,19 @@ export function createMainProcess(
     return { modelId: request.modelId, success: true };
   });
 
+  // --- Storage handlers ---
+  ipcMainAdapter.handle(IPC_CHANNELS.STORAGE_GET, async (...args: unknown[]) => {
+    const { key } = args[0] as { key: string };
+    const value = storageService?.getSetting(key) ?? null;
+    return { value };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.STORAGE_SET, async (...args: unknown[]) => {
+    const { key, value } = args[0] as { key: string; value: string };
+    storageService?.setSetting(key, value);
+    return {};
+  });
+
   // Auth handlers
   ipcMainAdapter.handle(IPC_CHANNELS.AUTH_LOGIN, async () => {
     await authService.login();
