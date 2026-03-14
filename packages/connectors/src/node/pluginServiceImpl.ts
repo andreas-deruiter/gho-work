@@ -1,5 +1,5 @@
 import * as path from 'node:path';
-import { Disposable, Emitter } from '@gho-work/base';
+import { Disposable, Emitter, expandPluginRoot, expandPluginRootInRecord } from '@gho-work/base';
 import type { CatalogEntry, InstalledPlugin, MCPServerConfig } from '@gho-work/base';
 import type {
   IPluginService,
@@ -234,10 +234,16 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       for (const [serverKey, serverConfig] of mcpServerMap.entries()) {
         const mcpConfig: MCPServerConfig = {
           type: 'stdio',
-          command: serverConfig.command,
-          ...(serverConfig.args !== undefined && { args: serverConfig.args }),
-          ...(serverConfig.env !== undefined && { env: serverConfig.env }),
-          ...(serverConfig.cwd !== undefined && { cwd: serverConfig.cwd }),
+          command: expandPluginRoot(serverConfig.command, pluginRoot),
+          ...(serverConfig.args !== undefined && {
+            args: serverConfig.args.map((a) => expandPluginRoot(a, pluginRoot)),
+          }),
+          ...(serverConfig.env !== undefined && {
+            env: expandPluginRootInRecord(serverConfig.env, pluginRoot),
+          }),
+          ...(serverConfig.cwd !== undefined && {
+            cwd: expandPluginRoot(serverConfig.cwd, pluginRoot),
+          }),
           source: `plugin:${name}`,
         };
         await this._configStore.addServer(serverKey, mcpConfig);
@@ -348,10 +354,16 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       if (serverConfig !== undefined) {
         const mcpConfig: MCPServerConfig = {
           type: 'stdio',
-          command: serverConfig.command,
-          ...(serverConfig.args !== undefined && { args: serverConfig.args }),
-          ...(serverConfig.env !== undefined && { env: serverConfig.env }),
-          ...(serverConfig.cwd !== undefined && { cwd: serverConfig.cwd }),
+          command: expandPluginRoot(serverConfig.command, pluginRoot),
+          ...(serverConfig.args !== undefined && {
+            args: serverConfig.args.map((a) => expandPluginRoot(a, pluginRoot)),
+          }),
+          ...(serverConfig.env !== undefined && {
+            env: expandPluginRootInRecord(serverConfig.env, pluginRoot),
+          }),
+          ...(serverConfig.cwd !== undefined && {
+            cwd: expandPluginRoot(serverConfig.cwd, pluginRoot),
+          }),
           source: `plugin:${name}`,
         };
         await this._configStore.addServer(serverName, mcpConfig);

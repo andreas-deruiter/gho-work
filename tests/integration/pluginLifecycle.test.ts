@@ -70,6 +70,7 @@ function makeInstaller() {
     parseManifest: vi.fn().mockResolvedValue({ skills: 'skills/', mcpServers: undefined }),
     parseMcpServers: vi.fn().mockResolvedValue(new Map()),
     countSkills: vi.fn().mockResolvedValue(3),
+    countAgents: vi.fn().mockResolvedValue(0),
     deleteCache: vi.fn().mockResolvedValue(undefined),
   };
 }
@@ -283,5 +284,79 @@ describe('PluginServiceImpl — settings restoration', () => {
 
     expect(service.getInstalled()).toEqual([]);
     service.dispose();
+  });
+});
+
+describe('PluginServiceImpl — ${CLAUDE_PLUGIN_ROOT} expansion', () => {
+  let mockInstaller: ReturnType<typeof makeInstaller>;
+  let mockConfigStore: ReturnType<typeof makeConfigStore>;
+  let service: PluginServiceImpl;
+
+  const pluginCachePath = '/tmp/plugin-cache/test-plugin/1.0.0';
+
+  beforeEach(() => {
+    mockInstaller = makeInstaller();
+    mockInstaller.getCachePath.mockReturnValue(pluginCachePath);
+    mockInstaller.parseMcpServers.mockResolvedValue(
+      new Map([
+        [
+          'lint-server',
+          {
+            command: '${CLAUDE_PLUGIN_ROOT}/bin/lint-mcp',
+            args: ['--config', '${CLAUDE_PLUGIN_ROOT}/config.json'],
+            env: { PLUGIN_HOME: '${CLAUDE_PLUGIN_ROOT}' },
+            cwd: '${CLAUDE_PLUGIN_ROOT}',
+          },
+        ],
+      ]),
+    );
+
+    const settings = makeSettingsStore();
+    // Pre-load catalog so install() can find the plugin
+    settings.set(
+      'plugin.catalog',
+      JSON.stringify([makeCatalogEntry({ name: 'test-plugin', version: '1.0.0' })]),
+    );
+
+    mockConfigStore = makeConfigStore();
+    service = new PluginServiceImpl(
+      makeFetcher([]),
+      mockInstaller,
+      makeSkillRegistration(),
+      mockConfigStore,
+      settings,
+    );
+  });
+
+  afterEach(() => {
+    service.dispose();
+  });
+
+  it('expands ${CLAUDE_PLUGIN_ROOT} in MCP server command during install', async () => {
+    await service.install('test-plugin');
+
+    expect(mockConfigStore.addServer).toHaveBeenCalledOnce();
+    const [, config] = mockConfigStore.addServer.mock.calls[0];
+    expect(config.command).not.toContain('${CLAUDE_PLUGIN_ROOT}');
+    expect(config.command).toBe(`${pluginCachePath}/bin/lint-mcp`);
+  });
+
+  it('expands ${CLAUDE_PLUGIN_ROOT} in MCP server args during install', async () => {
+    await service.install('test-plugin');
+
+    const [, config] = mockConfigStore.addServer.mock.calls[0];
+    expect(config.args[0]).toBe('--config');
+    expect(config.args[1]).not.toContain('${CLAUDE_PLUGIN_ROOT}');
+    expect(config.args[1]).toBe(`${pluginCachePath}/config.json`);
+  });
+
+  it('expands ${CLAUDE_PLUGIN_ROOT} in MCP server env and cwd during install', async () => {
+    await service.install('test-plugin');
+
+    const [, config] = mockConfigStore.addServer.mock.calls[0];
+    expect(config.env.PLUGIN_HOME).not.toContain('${CLAUDE_PLUGIN_ROOT}');
+    expect(config.env.PLUGIN_HOME).toBe(pluginCachePath);
+    expect(config.cwd).not.toContain('${CLAUDE_PLUGIN_ROOT}');
+    expect(config.cwd).toBe(pluginCachePath);
   });
 });
