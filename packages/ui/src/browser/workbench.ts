@@ -58,6 +58,36 @@ export class Workbench extends Disposable {
     // Sidebar with panel switching
     layout.sidebar.appendChild(this._sidebar.getDomNode());
 
+    // Resize handle
+    const resizeHandle = document.createElement('div');
+    resizeHandle.classList.add('sidebar-resize-handle');
+    let startX = 0;
+    let startWidth = 0;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.max(160, Math.min(600, startWidth + (e.clientX - startX)));
+      layout.sidebar.style.width = `${newWidth}px`;
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = layout.sidebar.getBoundingClientRect().width;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    layout.sidebar.appendChild(resizeHandle);
+
     // Chat panel in sidebar (default)
     this._conversationList = this._register(new ConversationListPanel(this._ipc));
     const chatSidebarContainer = document.createElement('div');

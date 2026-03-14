@@ -218,6 +218,20 @@ html, body {
   width: 240px;
   display: flex;
   overflow: hidden;
+  position: relative;
+}
+.sidebar-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 10;
+}
+.sidebar-resize-handle:hover {
+  background: var(--brand-primary);
+  opacity: 0.5;
 }
 
 .sidebar {
