@@ -44,6 +44,7 @@ import {
   IAgentService,
   SkillRegistryImpl,
   buildSkillSources,
+  toSdkMcpConfig,
 } from '@gho-work/agent';
 import * as os from 'node:os';
 import type { AgentContext } from '@gho-work/base';
@@ -372,14 +373,13 @@ export function createMainProcess(
       let assistantContent = '';
       try {
         // Bridge connected MCP servers to SDK config
-        let mcpServers: Record<string, import('@gho-work/agent').MCPServerConfig> | undefined;
+        let mcpServers: Parameters<typeof agentService.executeTask>[2];
         try {
           const servers = configStore.getServers();
-          const connected: Record<string, import('@gho-work/agent').MCPServerConfig> = {};
+          const connected: NonNullable<Parameters<typeof agentService.executeTask>[2]> = {};
           for (const [name, cfg] of servers) {
             if (mcpClientManager.getServerStatus(name) === 'connected') {
-              // Map base MCPServerConfig to agent MCPServerConfig (adds tools: string[])
-              connected[name] = { ...cfg, tools: [] };
+              connected[name] = toSdkMcpConfig(cfg);
             }
           }
           if (Object.keys(connected).length > 0) {

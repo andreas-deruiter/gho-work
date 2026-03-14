@@ -1,8 +1,10 @@
+import type { SdkMcpServerConfig } from './mcpConfigMapping.js';
+
 export interface SessionConfig {
   model?: string;
   sessionId?: string;
   systemMessage?: SystemMessageConfig;
-  mcpServers?: Record<string, MCPServerConfig>;
+  mcpServers?: Record<string, SdkMcpServerConfig>;
   streaming?: boolean;
   workingDirectory?: string;
   availableTools?: string[];
@@ -23,20 +25,7 @@ export interface MessageOptions {
   mode?: 'enqueue' | 'immediate';
 }
 
-export interface MCPServerConfig {
-  type?: 'local' | 'stdio' | 'http' | 'sse';
-  // stdio/local fields
-  command?: string;
-  args?: string[];
-  env?: Record<string, string>;
-  cwd?: string;
-  // http/sse fields
-  url?: string;
-  headers?: Record<string, string>;
-  // common
-  tools: string[];
-  timeout?: number;
-}
+export type { MCPServerConfig } from '@gho-work/base';
 
 export interface SessionMetadata {
   sessionId: string;
