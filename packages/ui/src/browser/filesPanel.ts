@@ -262,13 +262,30 @@ export class FilesPanel extends Disposable {
     const filterRow = document.createElement('div');
     filterRow.classList.add('files-filter');
 
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('files-filter-wrapper');
+
     const input = document.createElement('input');
     input.type = 'text';
     input.classList.add('files-filter-input');
     input.setAttribute('placeholder', 'Search files...');
     input.setAttribute('aria-label', 'Search files');
+
+    const clearBtn = document.createElement('button');
+    clearBtn.classList.add('files-filter-clear');
+    clearBtn.setAttribute('aria-label', 'Clear search');
+    clearBtn.setAttribute('title', 'Clear search');
+    clearBtn.textContent = '\u00d7';
+    clearBtn.style.display = 'none';
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    });
+
     input.addEventListener('input', () => {
       this._filterText = input.value;
+      clearBtn.style.display = this._filterText ? '' : 'none';
       if (this._searchDebounceTimer) { clearTimeout(this._searchDebounceTimer); }
 
       if (!this._filterText) {
@@ -282,7 +299,10 @@ export class FilesPanel extends Disposable {
         void this._performSearch(this._filterText);
       }, 300);
     });
-    filterRow.appendChild(input);
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(clearBtn);
+    filterRow.appendChild(wrapper);
 
     return filterRow;
   }

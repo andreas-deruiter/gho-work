@@ -28,12 +28,17 @@
 .files-actions button:hover { background: var(--bg-hover); color: var(--fg-primary); }
 
 .files-filter { padding: 4px 12px; }
+.files-filter-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
 .files-filter-input {
   width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
-  padding: 4px 8px;
+  padding: 4px 24px 4px 8px;
   color: var(--fg-primary);
   font-size: var(--font-size-sm);
   font-family: var(--font-family);
@@ -41,6 +46,19 @@
 }
 .files-filter-input::placeholder { color: var(--fg-muted); }
 .files-filter-input:focus { outline: 1px solid var(--brand-primary); border-color: var(--brand-primary); }
+.files-filter-clear {
+  position: absolute;
+  right: 4px;
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+}
+.files-filter-clear:hover { color: var(--fg-primary); }
 
 .files-tree { flex: 1; overflow-y: auto; }
 
