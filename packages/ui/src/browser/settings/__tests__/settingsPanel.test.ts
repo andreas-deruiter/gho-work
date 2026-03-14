@@ -32,21 +32,23 @@ describe('SettingsPanel', () => {
     themeService = createMockThemeService();
   });
 
-  it('renders nav with Appearance and Skills items', () => {
+  it('renders nav with General, Skills, Plugins, and Connectors items', () => {
     const panel = new SettingsPanel(ipc, themeService);
     const dom = panel.getDomNode();
     const navItems = dom.querySelectorAll('.settings-nav-item');
-    expect(navItems.length).toBe(2);
-    expect(navItems[0].textContent).toBe('Appearance');
+    expect(navItems.length).toBe(4);
+    expect(navItems[0].textContent).toBe('General');
     expect(navItems[1].textContent).toBe('Skills');
+    expect(navItems[2].textContent).toBe('Plugins');
+    expect(navItems[3].textContent).toBe('Connectors');
     panel.dispose();
   });
 
-  it('defaults to Appearance page', () => {
+  it('defaults to General page', () => {
     const panel = new SettingsPanel(ipc, themeService);
     const dom = panel.getDomNode();
     const activeNav = dom.querySelector('.settings-nav-item.active');
-    expect(activeNav?.textContent).toBe('Appearance');
+    expect(activeNav?.textContent).toBe('General');
     const content = dom.querySelector('.settings-content');
     expect(content?.querySelector('.theme-card')).toBeTruthy();
     panel.dispose();

@@ -88,11 +88,11 @@ test.describe('Settings panel', () => {
     expect(chatDisplay).toBe('none');
   });
 
-  test('Appearance is the default active nav item', async () => {
+  test('General is the default active nav item', async () => {
     await openSettings();
     const activeNavItem = page.locator('.settings-nav-item.active');
     await expect(activeNavItem).toBeVisible({ timeout: 3000 });
-    await expect(activeNavItem).toHaveText('Appearance');
+    await expect(activeNavItem).toHaveText('General');
   });
 
   test('three theme cards are displayed', async () => {
@@ -132,7 +132,7 @@ test.describe('Settings panel', () => {
     await openSettings();
 
     // Ensure we're on the Appearance page (previous test may have left us on Skills)
-    const appearanceNav = page.locator('.settings-nav-item', { hasText: 'Appearance' });
+    const appearanceNav = page.locator('.settings-nav-item', { hasText: 'General' });
     await appearanceNav.click();
     await expect(page.locator('.theme-card')).toHaveCount(3, { timeout: 3000 });
 
