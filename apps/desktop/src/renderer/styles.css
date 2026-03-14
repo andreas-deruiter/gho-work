@@ -986,6 +986,15 @@ html, body {
   color: var(--fg-primary);
 }
 
+.chat-welcome-ascii {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--fg-primary);
+  white-space: pre;
+  text-align: left;
+}
+
 .chat-welcome p {
   color: var(--fg-secondary);
   max-width: 500px;
@@ -1242,18 +1251,20 @@ html, body {
 
 .conversation-new-btn {
   width: 100%;
-  padding: 8px;
+  padding: 6px 8px;
   margin-bottom: 8px;
-  background: var(--fg-accent);
-  color: #ffffff;
-  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  border: 1px dashed var(--border-subtle);
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
 }
 
 .conversation-new-btn:hover {
-  opacity: 0.9;
+  color: var(--fg-primary);
+  border-color: var(--fg-muted);
+  background: var(--bg-hover);
 }
 
 .conversation-list {
@@ -1286,15 +1297,19 @@ html, body {
 
 .conversation-group-heading {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--fg-muted);
+  font-weight: 700;
+  color: var(--fg-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 12px 8px 4px;
+  letter-spacing: 0.08em;
+  padding: 16px 8px 6px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .conversation-group-heading:first-child {
   padding-top: 4px;
+  margin-top: 0;
+  border-top: none;
 }
 
 .conversation-list-empty {
@@ -1806,6 +1821,17 @@ html, body {
   color: white;
   font-weight: 800;
   font-size: 28px;
+}
+
+.onb-ascii-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--fg-primary);
+  margin-bottom: 8px;
+  white-space: pre;
+  text-align: left;
+  display: inline-block;
 }
 
 .onb-welcome-content h2 {
@@ -2596,7 +2622,7 @@ html, body {
   width: 36px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-secondary);
   overflow: hidden;
   flex-shrink: 0;
 }

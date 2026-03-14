@@ -598,6 +598,17 @@
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.plugin-card-link {
+  font-size: 11px;
+  color: var(--fg-accent);
+  text-decoration: none;
+  margin-left: auto;
+}
+.plugin-card-link:hover {
+  text-decoration: underline;
 }
 
 /* Badges (shared) */

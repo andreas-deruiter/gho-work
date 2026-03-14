@@ -6,9 +6,9 @@ import { PluginCatalogFetcher } from '../node/pluginCatalogFetcher.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const MARKETPLACE_REPO_URL = 'https://github.com/anthropics/claude-plugins-official';
+const MARKETPLACE_REPO_URL = 'https://github.com/anthropics/knowledge-work-plugins';
 const DEFAULT_URL =
-  'https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json';
+  'https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/main/.claude-plugin/marketplace.json';
 
 function makeJsonResponse(body: unknown, status = 200): Response {
   return {
@@ -200,7 +200,7 @@ describe('PluginCatalogFetcher', () => {
     expect(loc.type).toBe('git-subdir');
     if (loc.type === 'git-subdir') {
       expect(loc.path).toBe('plugins/sentry');
-      expect(loc.url).toContain('anthropics/claude-plugins-official');
+      expect(loc.url).toContain('anthropics/knowledge-work-plugins');
     }
   });
 

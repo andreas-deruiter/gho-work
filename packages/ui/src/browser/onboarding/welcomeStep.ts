@@ -56,7 +56,16 @@ export class WelcomeStep extends Widget {
     ]);
 
     dom.logoMark.textContent = 'G';
-    dom.heading.textContent = 'Welcome to GHO Work';
+
+    const ascii = document.createElement('pre');
+    ascii.className = 'onb-ascii-title';
+    ascii.textContent =
+      '  __ _| |__   ___   __      _____  _ __| | __\n' +
+      ' / _` | \'_ \\ / _ \\  \\ \\ /\\ / / _ \\| \'__| |/ /\n' +
+      '| (_| | | | | (_) |  \\ V  V / (_) | |  |   < \n' +
+      ' \\__, |_| |_|\\___/    \\_/\\_/ \\___/|_|  |_|\\_\\\n' +
+      ' |___/';
+    dom.heading.replaceWith(ascii);
     dom.tagline.textContent = 'Your AI-powered office assistant, running locally on your machine.';
 
     dom.chatIcon.appendChild(createSvgIcon('M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'));

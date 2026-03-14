@@ -4,10 +4,10 @@ import type { CatalogEntry, PluginLocation } from '@gho-work/base';
 // Constants
 // ---------------------------------------------------------------------------
 
-const MARKETPLACE_REPO_URL = 'https://github.com/anthropics/claude-plugins-official';
+const MARKETPLACE_REPO_URL = 'https://github.com/anthropics/knowledge-work-plugins';
 
 const DEFAULT_CATALOG_URL =
-  'https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json';
+  'https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/main/.claude-plugin/marketplace.json';
 
 // ---------------------------------------------------------------------------
 // Raw types from marketplace.json
@@ -23,7 +23,7 @@ type RawSource = string | RawSourceObject;
 interface RawPlugin {
   name: string;
   description: string;
-  version: string;
+  version?: string;
   author?: { name: string; email?: string };
   source: RawSource;
   keywords?: string[];
@@ -35,6 +35,7 @@ interface RawPlugin {
 
 interface RawMarketplace {
   metadata?: { pluginRoot?: string };
+  owner?: { name: string };
   plugins: RawPlugin[];
 }
 
@@ -76,8 +77,9 @@ export class PluginCatalogFetcher {
 
     const raw = (await response.json()) as RawMarketplace;
     const pluginRoot = raw.metadata?.pluginRoot;
+    const defaultAuthor = raw.owner?.name;
 
-    return (raw.plugins ?? []).map((plugin) => this._toEntry(plugin, pluginRoot));
+    return (raw.plugins ?? []).map((plugin) => this._toEntry(plugin, pluginRoot, defaultAuthor));
   }
 
   // ---------------------------------------------------------------------------
@@ -85,15 +87,19 @@ export class PluginCatalogFetcher {
   // ---------------------------------------------------------------------------
 
   /** Maps a raw marketplace plugin entry to a CatalogEntry. */
-  _toEntry(plugin: RawPlugin, pluginRoot: string | undefined): CatalogEntry {
+  _toEntry(plugin: RawPlugin, pluginRoot: string | undefined, defaultAuthor?: string): CatalogEntry {
+    // Derive category from source path if not explicitly provided
+    const category = plugin.category ?? this._deriveCategory(plugin);
+    const author = plugin.author ?? (defaultAuthor ? { name: defaultAuthor } : undefined);
+
     return {
       name: plugin.name,
       description: plugin.description,
-      version: plugin.version,
-      ...(plugin.author !== undefined && { author: plugin.author }),
+      version: plugin.version ?? '0.0.0',
+      ...(author !== undefined && { author }),
       location: this._resolveLocation(plugin.source, pluginRoot),
       ...(plugin.keywords !== undefined && { keywords: plugin.keywords }),
-      ...(plugin.category !== undefined && { category: plugin.category }),
+      category,
       hasSkills:
         (Array.isArray(plugin.skills) && plugin.skills.length > 0) ||
         (Array.isArray(plugin.commands) && plugin.commands.length > 0),
@@ -102,6 +108,15 @@ export class PluginCatalogFetcher {
         plugin.mcpServers !== null &&
         Object.keys(plugin.mcpServers).length > 0,
     };
+  }
+
+  /** Derive a category from the plugin's source path and author. */
+  private _deriveCategory(plugin: RawPlugin): string {
+    const source = typeof plugin.source === 'string' ? plugin.source : '';
+    if (source.includes('partner-built')) {
+      return 'Partner';
+    }
+    return 'Anthropic';
   }
 
   /**

@@ -14,7 +14,7 @@ export interface ModelInfo {
 export class ModelSelector extends Disposable {
   private _container!: HTMLElement;
   private _models: ModelInfo[] = [];
-  private _selectedModel: string = 'gpt-4o';
+  private _selectedModel: string = '';
   private _triggerEl!: HTMLButtonElement;
   private _menuEl!: HTMLElement;
   private _isOpen = false;
@@ -56,6 +56,11 @@ export class ModelSelector extends Disposable {
 
   setModels(models: ModelInfo[]): void {
     this._models = models;
+    // Auto-select first model from server if none selected yet
+    if (!this._selectedModel && models.length > 0) {
+      this._selectedModel = models[0].id;
+      this._onDidSelect.fire(this._selectedModel);
+    }
     this._updateTrigger();
     this._buildMenu();
   }
@@ -87,7 +92,9 @@ export class ModelSelector extends Disposable {
   private _updateTrigger(): void {
     if (!this._triggerEl) { return; }
     const model = this._models.find(m => m.id === this._selectedModel);
-    const label = model?.name ?? (this._models.length === 0 ? 'Loading…' : this._selectedModel);
+    const label = !this._selectedModel
+      ? (this._models.length === 0 ? 'Loading…' : '')
+      : (model?.name ?? this._selectedModel);
 
     // Clear and rebuild
     this._triggerEl.textContent = '';

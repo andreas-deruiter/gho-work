@@ -57,7 +57,7 @@ export class ChatPanel extends Disposable {
 
   private _modelSelector!: ModelSelector;
   private _conversationId: string = generateUUID();
-  private _model: string = 'gpt-4o';
+  private _model: string = '';
 
   private _attachments: Array<{ type: 'file'; path: string; displayName: string }> = [];
   private _attachmentListEl!: HTMLElement;
@@ -385,12 +385,18 @@ export class ChatPanel extends Disposable {
     const welcome = document.createElement('div');
     welcome.className = 'chat-welcome';
 
-    const heading = document.createElement('h1');
-    heading.textContent = 'GHO Work';
-    welcome.appendChild(heading);
+    const ascii = document.createElement('pre');
+    ascii.className = 'chat-welcome-ascii';
+    ascii.textContent =
+      '  __ _| |__   ___   __      _____  _ __| | __\n' +
+      ' / _` | \'_ \\ / _ \\  \\ \\ /\\ / / _ \\| \'__| |/ /\n' +
+      '| (_| | | | | (_) |  \\ V  V / (_) | |  |   < \n' +
+      ' \\__, |_| |_|\\___/    \\_/\\_/ \\___/|_|  |_|\\_\\\n' +
+      ' |___/';
+    welcome.appendChild(ascii);
 
     const desc = document.createElement('p');
-    desc.textContent = 'Your AI-powered office assistant. This is a spike/proof of concept demonstrating the core architecture.';
+    desc.textContent = 'Your GitHub Copilot subscription just learned to do office work.';
     welcome.appendChild(desc);
 
     const suggestions = document.createElement('div');

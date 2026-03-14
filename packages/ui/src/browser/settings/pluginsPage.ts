@@ -4,11 +4,20 @@ import { Widget } from '../widget.js';
 import { h } from '../dom.js';
 
 // DTOs — defined locally to avoid pulling in Node.js code from @gho-work/platform
+interface PluginLocationDTO {
+  type: 'github' | 'url' | 'git-subdir';
+  url?: string;
+  repo?: string;
+  path?: string;
+  ref?: string;
+}
+
 interface CatalogEntryDTO {
   name: string;
   description: string;
   version?: string;
   author?: { name: string; email?: string };
+  location?: string | PluginLocationDTO;
   keywords?: string[];
   category?: string;
   hasSkills: boolean;
@@ -176,6 +185,7 @@ export class PluginsPage extends Widget {
       if (tab === 'installed') {
         this._renderInstalled();
       } else {
+        this._logTab.textContent = 'Log';
         this._renderLog();
       }
     }
@@ -407,9 +417,35 @@ export class PluginsPage extends Widget {
       badges.appendChild(skillsBadge);
     }
 
+    // "View on GitHub" link
+    const browseUrl = this._getPluginUrl(entry);
+    if (browseUrl) {
+      const link = document.createElement('a');
+      link.className = 'plugin-card-link';
+      link.textContent = 'View on GitHub \u2197';
+      link.href = browseUrl;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      badges.appendChild(link);
+    }
+
     card.appendChild(badges);
 
     return card;
+  }
+
+  private _getPluginUrl(entry: CatalogEntryDTO): string | undefined {
+    const loc = entry.location;
+    if (!loc || typeof loc === 'string') { return undefined; }
+    if (loc.type === 'git-subdir' && loc.url && loc.path) {
+      // Strip leading ./ from path
+      const cleanPath = loc.path.replace(/^\.\//, '');
+      return `${loc.url}/tree/main/${cleanPath}`;
+    }
+    if (loc.type === 'github' && loc.repo) {
+      return `https://github.com/${loc.repo}`;
+    }
+    return undefined;
   }
 
   // ---------------------------------------------------------------------------
@@ -595,7 +631,7 @@ export class PluginsPage extends Widget {
     this._logs.push({ timestamp, name, message, level });
     // Update log tab badge if not active
     if (this._activeTab !== 'log') {
-      this._logTab.textContent = `Log (\u2022)`;
+      this._logTab.textContent = `Log (${this._logs.length})`;
     }
   }
 
