@@ -14,6 +14,7 @@ import { ChatPanel } from './chatPanel.js';
 import { ConversationListPanel } from './conversationList.js';
 import { SettingsPanel } from './settings/settingsPanel.js';
 import { ThemeService } from './theme.js';
+import { DocumentsPanel } from './documentsPanel.js';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
@@ -71,6 +72,28 @@ export class Workbench extends Disposable {
       void this._createNewConversation();
     });
 
+    // Documents panel — lazy-loaded
+    let documentsPanel: DocumentsPanel | undefined;
+    let documentsLoaded = false;
+
+    void (async () => {
+      try {
+        const result = await this._ipc.invoke<{ path: string | null }>(IPC_CHANNELS.WORKSPACE_GET_ROOT, {});
+        const workspacePath = result?.path;
+        if (workspacePath) {
+          documentsPanel = this._register(new DocumentsPanel(workspacePath, this._ipc));
+          this._sidebar.addPanel('documents', documentsPanel.getDomNode());
+
+          // Wire attach event to chat
+          documentsPanel.onDidRequestAttach(file => {
+            this._chatPanel.addAttachment(file);
+          });
+        }
+      } catch (err) {
+        console.warn('[Workbench] Failed to initialize documents panel:', err);
+      }
+    })();
+
     // Theme service
     this._themeService = this._register(new ThemeService(this._ipc));
     void this._themeService.init();
@@ -104,6 +127,12 @@ export class Workbench extends Disposable {
         this._chatPanelEl.style.display = '';
         if (this._settingsPanel) {
           this._settingsPanel.getDomNode().style.display = 'none';
+        }
+
+        // Lazy-load documents panel on first activation
+        if (item === 'documents' && !documentsLoaded && documentsPanel) {
+          documentsLoaded = true;
+          void documentsPanel.load();
         }
 
         this._sidebar.showPanel(item);
