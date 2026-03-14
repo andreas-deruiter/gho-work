@@ -1173,6 +1173,11 @@ export function createMainProcess(
     await pluginService.update(name);
   });
 
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_VALIDATE, async (...args: unknown[]) => {
+    const { path: pluginPath } = args[0] as { path: string };
+    return pluginInstaller.validatePlugin(pluginPath);
+  });
+
   // --- Marketplace IPC handlers ---
 
   ipcMainAdapter.handle(IPC_CHANNELS.MARKETPLACE_LIST, async () => marketplaceRegistry.list());

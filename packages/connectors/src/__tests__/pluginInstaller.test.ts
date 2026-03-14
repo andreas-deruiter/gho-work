@@ -671,6 +671,64 @@ describe('PluginInstaller', () => {
   });
 
   // -------------------------------------------------------------------------
+  // validatePlugin
+  // -------------------------------------------------------------------------
+
+  describe('validatePlugin', () => {
+    it('reports errors for missing name in manifest', async () => {
+      const dir = path.join(tempDir, 'bad-plugin');
+      const pluginDir = path.join(dir, '.claude-plugin');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      fs.writeFileSync(path.join(pluginDir, 'plugin.json'), '{}');
+
+      const result = await installer.validatePlugin(dir);
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('name')]));
+    });
+
+    it('reports warnings for missing skills directory', async () => {
+      const dir = path.join(tempDir, 'warn-plugin');
+      const pluginDir = path.join(dir, '.claude-plugin');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({ name: 'test' }));
+
+      const result = await installer.validatePlugin(dir);
+      expect(result.warnings.length).toBeGreaterThan(0);
+    });
+
+    it('reports error for missing plugin.json', async () => {
+      const dir = path.join(tempDir, 'no-manifest-plugin');
+      fs.mkdirSync(dir, { recursive: true });
+
+      const result = await installer.validatePlugin(dir);
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('plugin.json')]));
+    });
+
+    it('reports error for invalid JSON in plugin.json', async () => {
+      const dir = path.join(tempDir, 'bad-json-plugin');
+      const pluginDir = path.join(dir, '.claude-plugin');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      fs.writeFileSync(path.join(pluginDir, 'plugin.json'), 'not-valid-json{{{');
+
+      const result = await installer.validatePlugin(dir);
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('Invalid JSON')]));
+    });
+
+    it('returns no errors for valid manifest with all directories', async () => {
+      const dir = path.join(tempDir, 'valid-plugin');
+      const pluginDir = path.join(dir, '.claude-plugin');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      fs.mkdirSync(path.join(dir, 'skills'), { recursive: true });
+      fs.mkdirSync(path.join(dir, 'commands'), { recursive: true });
+      fs.mkdirSync(path.join(dir, 'agents'), { recursive: true });
+      fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({ name: 'valid-plugin', version: '1.0.0' }));
+
+      const result = await installer.validatePlugin(dir);
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // clonePlugin — npm location type
   // -------------------------------------------------------------------------
 

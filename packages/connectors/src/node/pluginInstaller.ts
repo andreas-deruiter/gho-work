@@ -402,6 +402,50 @@ export class PluginInstaller {
   }
 
   // -------------------------------------------------------------------------
+  // Validation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Validates a local plugin directory for correctness.
+   *
+   * Checks:
+   * - `.claude-plugin/plugin.json` exists and is valid JSON (errors)
+   * - `name` field is present in the manifest (error)
+   * - `skills/`, `commands/`, and `agents/` directories exist (warnings)
+   *
+   * Returns an object with `errors` (blocking issues) and `warnings` (non-blocking suggestions).
+   */
+  async validatePlugin(pluginDir: string): Promise<{ errors: string[]; warnings: string[] }> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    const manifestPath = path.join(pluginDir, '.claude-plugin', 'plugin.json');
+    if (!fs.existsSync(manifestPath)) {
+      errors.push('Missing .claude-plugin/plugin.json');
+      return { errors, warnings };
+    }
+
+    let manifest: Record<string, unknown>;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    } catch {
+      errors.push('Invalid JSON in plugin.json');
+      return { errors, warnings };
+    }
+
+    if (!manifest.name) errors.push('Missing required field: name');
+
+    // Check declared directories exist
+    for (const dir of ['skills', 'commands', 'agents']) {
+      if (!fs.existsSync(path.join(pluginDir, dir))) {
+        warnings.push(`No ${dir}/ directory found`);
+      }
+    }
+
+    return { errors, warnings };
+  }
+
+  // -------------------------------------------------------------------------
   // Cache management
   // -------------------------------------------------------------------------
 
