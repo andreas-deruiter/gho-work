@@ -37,6 +37,14 @@ export default defineConfig({
     },
   },
   renderer: {
+    resolve: {
+      alias: {
+        '@gho-work/base': resolve(__dirname, '../../packages/base/src/index.ts'),
+        '@gho-work/platform/common': resolve(__dirname, '../../packages/platform/src/common.ts'),
+        '@gho-work/platform': resolve(__dirname, '../../packages/platform/src/index.ts'),
+        '@gho-work/ui': resolve(__dirname, '../../packages/ui/src/index.ts'),
+      },
+    },
     build: {
       rollupOptions: {
         input: {
