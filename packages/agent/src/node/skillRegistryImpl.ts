@@ -156,7 +156,9 @@ export class SkillRegistryImpl extends Disposable implements ISkillRegistry {
         }
         const name = file.name.slice(0, -3);
         const filePath = path.join(categoryPath, file.name);
-        const id = `${category}/${name}`;
+        const isPlugin = source.id.startsWith('plugin:');
+        const pluginName = isPlugin ? source.id.slice('plugin:'.length).split(':')[0] : '';
+        const id = isPlugin ? `${pluginName}:${category}/${name}` : `${category}/${name}`;
 
         let description = '';
         try {
