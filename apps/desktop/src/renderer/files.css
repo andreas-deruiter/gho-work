@@ -111,6 +111,42 @@
 }
 .tree-row:hover .tree-attach-btn { opacity: 1; }
 
+/* Search results */
+.files-search-results { flex: 1; overflow-y: auto; }
+
+.files-search-row {
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  gap: 6px;
+}
+.files-search-row:hover { background: var(--bg-hover); }
+.files-search-row:hover .tree-attach-btn { opacity: 1; }
+
+.files-search-name {
+  font-size: var(--font-size-sm);
+  color: var(--fg-primary);
+  flex-shrink: 0;
+}
+
+.files-search-path {
+  font-size: var(--font-size-sm);
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.files-search-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: var(--font-size-sm);
+}
+
 /* Context menu */
 .context-menu {
   background: var(--bg-secondary);

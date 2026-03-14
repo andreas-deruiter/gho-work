@@ -145,6 +145,8 @@ export class FilesPanel extends Disposable {
   private _filterText = '';
   private _watchDisposable: IDisposable | null = null;
   private _refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly _searchResults: HTMLElement;
+  private _searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly _onDidRequestAttachEmitter = this._register(new Emitter<FileEntry>());
   readonly onDidRequestAttach: Event<FileEntry> = this._onDidRequestAttachEmitter.event;
@@ -170,6 +172,12 @@ export class FilesPanel extends Disposable {
     this._treeContainer = document.createElement('div');
     this._treeContainer.classList.add('files-tree');
     this._container.appendChild(this._treeContainer);
+
+    // Search results container (hidden by default)
+    this._searchResults = document.createElement('div');
+    this._searchResults.classList.add('files-search-results');
+    this._searchResults.style.display = 'none';
+    this._container.appendChild(this._searchResults);
 
     // Footer
     const footer = this._buildFooter();
@@ -259,12 +267,22 @@ export class FilesPanel extends Disposable {
     const input = document.createElement('input');
     input.type = 'text';
     input.classList.add('files-filter-input');
-    input.setAttribute('placeholder', 'Filter files...');
-    input.setAttribute('aria-label', 'Filter files');
+    input.setAttribute('placeholder', 'Search files...');
+    input.setAttribute('aria-label', 'Search files');
     input.addEventListener('input', () => {
       this._filterText = input.value;
-      this._tree.setFilter((entry) => this._applyFilter(entry));
-      void this._tree.refresh();
+      if (this._searchDebounceTimer) { clearTimeout(this._searchDebounceTimer); }
+
+      if (!this._filterText) {
+        this._searchResults.style.display = 'none';
+        this._treeContainer.style.display = '';
+        return;
+      }
+
+      this._searchDebounceTimer = setTimeout(() => {
+        this._searchDebounceTimer = null;
+        void this._performSearch(this._filterText);
+      }, 300);
     });
     filterRow.appendChild(input);
 
@@ -285,17 +303,74 @@ export class FilesPanel extends Disposable {
   }
 
   private _applyFilter(entry: FileEntry): boolean {
-    // Hidden files filter
     if (!this._showHidden && isHiddenByDefault(entry)) {
       return false;
     }
-
-    // Text filter — all entries (including directories) must match when filter is active
-    if (this._filterText) {
-      return entry.name.toLowerCase().includes(this._filterText.toLowerCase());
-    }
-
     return true;
+  }
+
+  private async _performSearch(query: string): Promise<void> {
+    try {
+      const results = await this._ipc.invoke<FileEntry[]>(IPC_CHANNELS.FILES_SEARCH, {
+        rootPath: this._workspacePath,
+        query,
+        maxResults: 50,
+      });
+
+      this._treeContainer.style.display = 'none';
+      this._searchResults.style.display = '';
+
+      while (this._searchResults.firstChild) {
+        this._searchResults.removeChild(this._searchResults.firstChild);
+      }
+
+      if (results.length === 0) {
+        const empty = document.createElement('div');
+        empty.classList.add('files-search-empty');
+        empty.textContent = 'No files found';
+        this._searchResults.appendChild(empty);
+        return;
+      }
+
+      for (const entry of results) {
+        const row = document.createElement('div');
+        row.classList.add('files-search-row');
+
+        const icon = entry.type === 'directory'
+          ? getFolderIconSVG(false)
+          : createFileIconSVG(entry.name);
+        icon.classList.add('tree-icon');
+        row.appendChild(icon);
+
+        const nameSpan = document.createElement('span');
+        nameSpan.classList.add('files-search-name');
+        nameSpan.textContent = entry.name;
+        nameSpan.setAttribute('title', entry.path);
+        row.appendChild(nameSpan);
+
+        const pathSpan = document.createElement('span');
+        pathSpan.classList.add('files-search-path');
+        const relativePath = entry.path.replace(this._workspacePath + '/', '');
+        pathSpan.textContent = relativePath;
+        pathSpan.setAttribute('title', entry.path);
+        row.appendChild(pathSpan);
+
+        const attachBtn = document.createElement('button');
+        attachBtn.classList.add('tree-attach-btn');
+        attachBtn.setAttribute('aria-label', `Attach ${entry.name}`);
+        attachBtn.setAttribute('title', 'Attach to chat');
+        attachBtn.textContent = '+';
+        attachBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this._onDidRequestAttachEmitter.fire(entry);
+        });
+        row.appendChild(attachBtn);
+
+        this._searchResults.appendChild(row);
+      }
+    } catch (err) {
+      console.error('[FilesPanel] Search failed:', err);
+    }
   }
 
   private _sortEntries(a: FileEntry, b: FileEntry): number {
@@ -375,6 +450,7 @@ export class FilesPanel extends Disposable {
   }
 
   override dispose(): void {
+    if (this._searchDebounceTimer) { clearTimeout(this._searchDebounceTimer); }
     if (this._refreshTimer) { clearTimeout(this._refreshTimer); }
     this._watchDisposable?.dispose();
     super.dispose();
