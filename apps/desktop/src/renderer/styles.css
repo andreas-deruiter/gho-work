@@ -347,32 +347,57 @@ html, body {
 
 .chat-message {
   display: flex;
-  gap: 12px;
   max-width: 100%;
 }
 
-.chat-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+/* User messages: right-aligned bubble (Copilot Chat style) */
+.chat-message-user {
+  align-items: flex-end;
+}
+
+.chat-message-user .chat-message-body {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.chat-user-bubble {
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  padding: 8px 12px;
+  max-width: 90%;
+  width: fit-content;
+  line-height: 1.6;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+/* Attached context pills shown above user bubble */
+.chat-attached-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+  max-width: 90%;
+}
+
+.chat-attached-context-pill {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  flex-shrink: 0;
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  color: var(--fg-secondary);
+  background: var(--bg-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
-.chat-message-user .chat-avatar {
-  background: var(--fg-accent);
-  color: white;
-}
-
-.chat-message-assistant .chat-avatar {
-  background: var(--fg-success);
-  color: var(--bg-primary);
-}
-
+/* Assistant messages: left-aligned, no avatar */
 .chat-message-body {
   flex: 1;
   min-width: 0;

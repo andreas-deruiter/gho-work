@@ -17,6 +17,7 @@ interface ChatMessage {
   content: string;
   toolCalls?: Array<{ id: string; name: string; status: string }>;
   isStreaming?: boolean;
+  attachments?: Array<{ name: string; path: string }>;
 }
 
 export interface SendMessageEvent {
@@ -335,8 +336,11 @@ export class ChatPanel extends Disposable {
       welcome.remove();
     }
 
-    // Add user message
-    const userMsg: ChatMessage = { id: generateUUID(), role: 'user', content };
+    // Add user message (capture current attachments for display)
+    const msgAttachments = this._attachments.length > 0
+      ? this._attachments.map(a => ({ name: a.displayName, path: a.path }))
+      : undefined;
+    const userMsg: ChatMessage = { id: generateUUID(), role: 'user', content, attachments: msgAttachments };
     this._messages.push(userMsg);
     this._renderMessage(userMsg);
 
@@ -374,7 +378,9 @@ export class ChatPanel extends Disposable {
         conversationId: this._conversationId,
         content,
         model: this._model,
-        attachments: this._attachments.length > 0 ? this._attachments : undefined,
+        attachments: this._attachments.length > 0
+          ? this._attachments.map(a => ({ name: a.displayName, path: a.path, size: 0 }))
+          : undefined,
       });
       // Clear attachments after send
       this._attachments = [];
@@ -464,46 +470,59 @@ export class ChatPanel extends Disposable {
     el.className = `chat-message chat-message-${msg.role}`;
     el.id = `msg-${msg.id}`;
 
-    const avatar = document.createElement('div');
-    avatar.className = 'chat-avatar';
-    avatar.textContent = msg.role === 'user' ? 'U' : 'A';
-    el.appendChild(avatar);
-
     const body = document.createElement('div');
     body.className = 'chat-message-body';
 
-    const roleLabel = document.createElement('div');
-    roleLabel.className = 'chat-role-label';
-    roleLabel.textContent = msg.role === 'user' ? 'You' : 'GHO Work';
-    body.appendChild(roleLabel);
-
-    // Tool calls section
-    const toolCallsEl = document.createElement('div');
-    toolCallsEl.className = 'chat-tool-calls';
-    body.appendChild(toolCallsEl);
-
-    // Content
-    const contentEl = document.createElement('div');
-    contentEl.className = 'chat-message-content';
     if (msg.role === 'user') {
-      // User messages rendered as plain text (safe)
-      contentEl.textContent = msg.content;
-    } else if (msg.content) {
-      // Assistant messages rendered as sanitized markdown
-      // DOMPurify.sanitize() removes all XSS vectors before DOM insertion
-      this._setSanitizedMarkdown(contentEl, msg.content);
-    }
-    if (msg.isStreaming && !msg.content) {
-      const indicator = document.createElement('span');
-      indicator.className = 'chat-typing-indicator';
-      contentEl.appendChild(indicator);
-    }
-    body.appendChild(contentEl);
+      // User messages: show attached files above the bubble, right-aligned
+      if (msg.attachments && msg.attachments.length > 0) {
+        const attachedContext = document.createElement('div');
+        attachedContext.className = 'chat-attached-context';
+        for (const att of msg.attachments) {
+          const pill = document.createElement('span');
+          pill.className = 'chat-attached-context-pill';
+          pill.textContent = att.name;
+          pill.title = att.path;
+          attachedContext.appendChild(pill);
+        }
+        body.appendChild(attachedContext);
+      }
 
-    // Status
-    const statusEl = document.createElement('div');
-    statusEl.className = 'chat-message-status';
-    body.appendChild(statusEl);
+      // User content in a bubble
+      const bubbleEl = document.createElement('div');
+      bubbleEl.className = 'chat-user-bubble';
+      bubbleEl.textContent = msg.content;
+      body.appendChild(bubbleEl);
+    } else {
+      // Assistant messages: role label + tool calls + markdown content
+      const roleLabel = document.createElement('div');
+      roleLabel.className = 'chat-role-label';
+      roleLabel.textContent = 'GHO Work';
+      body.appendChild(roleLabel);
+
+      // Tool calls section
+      const toolCallsEl = document.createElement('div');
+      toolCallsEl.className = 'chat-tool-calls';
+      body.appendChild(toolCallsEl);
+
+      // Content
+      const contentEl = document.createElement('div');
+      contentEl.className = 'chat-message-content';
+      if (msg.content) {
+        this._setSanitizedMarkdown(contentEl, msg.content);
+      }
+      if (msg.isStreaming && !msg.content) {
+        const indicator = document.createElement('span');
+        indicator.className = 'chat-typing-indicator';
+        contentEl.appendChild(indicator);
+      }
+      body.appendChild(contentEl);
+
+      // Status
+      const statusEl = document.createElement('div');
+      statusEl.className = 'chat-message-status';
+      body.appendChild(statusEl);
+    }
 
     el.appendChild(body);
     this._messageListEl.appendChild(el);

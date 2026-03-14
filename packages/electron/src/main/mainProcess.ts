@@ -389,7 +389,14 @@ export function createMainProcess(
           console.warn('[main] Non-critical error building MCP server config:', err instanceof Error ? err.message : String(err));
         }
 
-        for await (const event of agentService.executeTask(request.content, context, mcpServers)) {
+        // Map IPC attachments to SDK format
+        const sdkAttachments = request.attachments?.map(a => ({
+          type: 'file' as const,
+          path: a.path,
+          displayName: a.name,
+        }));
+
+        for await (const event of agentService.executeTask(request.content, context, mcpServers, sdkAttachments)) {
           ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, event);
           // Accumulate assistant text for persistence
           if (event.type === 'text_delta') {

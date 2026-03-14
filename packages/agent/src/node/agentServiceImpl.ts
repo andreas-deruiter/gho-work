@@ -8,7 +8,7 @@ import type { AgentContext, AgentEvent } from '@gho-work/base';
 import type { IAgentService } from '../common/agent.js';
 import type { IConversationService } from '../common/conversation.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
-import type { MCPServerConfig, SessionEvent } from '../common/types.js';
+import type { MCPServerConfig, MessageOptions, SessionEvent } from '../common/types.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
 import type { ISkillRegistry } from '../common/skillRegistry.js';
 
@@ -33,7 +33,7 @@ export class AgentServiceImpl implements IAgentService {
     private readonly _getDisabledSkills?: () => string[],
   ) {}
 
-  async *executeTask(prompt: string, context: AgentContext, mcpServers?: Record<string, MCPServerConfig>): AsyncIterable<AgentEvent> {
+  async *executeTask(prompt: string, context: AgentContext, mcpServers?: Record<string, MCPServerConfig>, attachments?: MessageOptions['attachments']): AsyncIterable<AgentEvent> {
     const taskId = generateUUID();
     this._activeTaskId = taskId;
 
@@ -92,7 +92,7 @@ export class AgentServiceImpl implements IAgentService {
         queue.end();
       };
 
-      await session.send({ prompt });
+      await session.send({ prompt, attachments });
       yield* queue;
       unsubscribe();
     } catch (err) {
