@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as os from 'node:os';
 import { AgentServiceImpl } from '../node/agentServiceImpl.js';
 import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
 
@@ -19,9 +20,21 @@ function createMockConversationService() {
 	};
 }
 
-function createMockCopilotSDK() {
+function createMockSession() {
 	return {
-		createSession: vi.fn(() => ({ id: 'session-1' })),
+		sessionId: 'session-1',
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		on: vi.fn((_handler: (event: any) => void) => () => {}),
+		send: vi.fn(async () => ''),
+		abort: vi.fn(async () => {}),
+	};
+}
+
+function createMockCopilotSDK() {
+	const session = createMockSession();
+	return {
+		session,
+		createSession: vi.fn(() => session),
 	};
 }
 
@@ -33,7 +46,6 @@ describe('createSetupConversation', () => {
 
 	beforeEach(async () => {
 		const fs = await import('node:fs/promises');
-		const os = await import('node:os');
 		const path = await import('node:path');
 		tmpSkillsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skills-'));
 		await fs.mkdir(path.join(tmpSkillsDir, 'connectors'), { recursive: true });
@@ -85,6 +97,47 @@ describe('createSetupConversation', () => {
 		const convId = await agentService.createSetupConversation();
 		const context = agentService.getInstallContext(convId);
 		expect(context).toBe('');
+	});
+
+	it('passes workingDirectory to createSession for setup conversations', async () => {
+		const sdk = createMockCopilotSDK();
+		sdk.session.on.mockImplementation((handler: (event: any) => void) => {
+			setTimeout(() => handler({ type: 'session.idle', data: {} }), 10);
+			return () => {};
+		});
+		const svc = new AgentServiceImpl(
+			sdk as any,
+			conversationService as any,
+			registry,
+		);
+		const convId = await svc.createSetupConversation();
+		const events = [];
+		for await (const event of svc.executeTask('hello', { conversationId: convId, workspaceId: 'default' })) {
+			events.push(event);
+		}
+		expect(sdk.createSession).toHaveBeenCalledWith(
+			expect.objectContaining({ workingDirectory: os.homedir() }),
+		);
+	});
+
+	it('does not set workingDirectory for regular conversations', async () => {
+		const sdk = createMockCopilotSDK();
+		sdk.session.on.mockImplementation((handler: (event: any) => void) => {
+			setTimeout(() => handler({ type: 'session.idle', data: {} }), 10);
+			return () => {};
+		});
+		const svc = new AgentServiceImpl(
+			sdk as any,
+			conversationService as any,
+			registry,
+		);
+		const events = [];
+		for await (const event of svc.executeTask('hello', { conversationId: 'regular-conv', workspaceId: 'default' })) {
+			events.push(event);
+		}
+		expect(sdk.createSession).toHaveBeenCalledWith(
+			expect.objectContaining({ workingDirectory: undefined }),
+		);
 	});
 
 	it('throws when conversation service is not available', async () => {

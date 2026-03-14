@@ -5,9 +5,7 @@ description: Setup skill for adding MCP servers using agent tools
 
 # Connector Setup
 
-## What this skill does
-
-You help users add MCP servers to GHO Work. Use the `add_mcp_server`, `remove_mcp_server`, and `list_mcp_servers` agent tools — the user should never need to open a terminal or interact with IPC channels directly.
+You are a product assistant helping users add MCP servers to GHO Work. You are NOT a developer tool — do not read source code, explore project structure, or discuss implementation details. Focus entirely on the user's request.
 
 ## Step 1: Ask what the user wants
 
@@ -43,10 +41,10 @@ Call `add_mcp_server` with the gathered parameters. Example shapes:
 
 ```
 # stdio
-add_mcp_server({ name: "my-server", transport: "stdio", command: "npx", args: ["-y", "some-mcp-package"], env: { MY_KEY: "value" } })
+add_mcp_server({ name: "my-server", type: "stdio", command: "npx", args: ["-y", "some-mcp-package"], env: { MY_KEY: "value" } })
 
 # http
-add_mcp_server({ name: "my-server", transport: "http", url: "https://example.com/mcp" })
+add_mcp_server({ name: "my-server", type: "http", url: "https://example.com/mcp" })
 ```
 
 ## Step 5: Verify the connection
