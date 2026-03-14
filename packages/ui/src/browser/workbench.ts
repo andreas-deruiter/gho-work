@@ -21,6 +21,7 @@ export class Workbench extends Disposable {
   private readonly _shortcuts: KeyboardShortcuts;
   private readonly _sidebar: Sidebar;
   private _chatPanel!: ChatPanel;
+  private _chatPanelEl!: HTMLElement;
   private _conversationList!: ConversationListPanel;
   private _sidebarVisible = true;
   private _settingsPanel: SettingsPanel | undefined;
@@ -74,9 +75,13 @@ export class Workbench extends Disposable {
     this._themeService = this._register(new ThemeService(this._ipc));
     void this._themeService.init();
 
-    // Chat panel in main content
+    // Chat panel in main content — wrap in a container so we can hide/show it
+    const chatPanelContainer = document.createElement('div');
+    chatPanelContainer.className = 'workbench-chat-container';
+    layout.main.appendChild(chatPanelContainer);
+    this._chatPanelEl = chatPanelContainer;
     this._chatPanel = this._register(new ChatPanel(this._ipc));
-    this._chatPanel.render(layout.main);
+    this._chatPanel.render(chatPanelContainer);
 
     // Store reference to main element for settings panel injection
     this._mainEl = layout.main;
@@ -85,7 +90,7 @@ export class Workbench extends Disposable {
     this._register(this._activityBar.onDidSelectItem(async (item) => {
       if (item === 'settings') {
         this._sidebar.getDomNode().style.display = 'none';
-        this._chatPanel.getDomNode().style.display = 'none';
+        this._chatPanelEl.style.display = 'none';
 
         if (!this._settingsPanel) {
           this._settingsPanel = this._register(new SettingsPanel(this._ipc, this._themeService));
@@ -96,7 +101,7 @@ export class Workbench extends Disposable {
         }
       } else {
         this._sidebar.getDomNode().style.display = '';
-        this._chatPanel.getDomNode().style.display = '';
+        this._chatPanelEl.style.display = '';
         if (this._settingsPanel) {
           this._settingsPanel.getDomNode().style.display = 'none';
         }
