@@ -263,6 +263,24 @@ export class PluginInstaller {
   }
 
   /**
+   * Reads and parses `settings.json` from the plugin root directory.
+   *
+   * Returns the parsed settings object, or `undefined` if the file does not
+   * exist or cannot be parsed. Currently only the `agent` key is used by the
+   * caller; other keys are preserved for future use.
+   */
+  async parseSettings(pluginDir: string): Promise<Record<string, unknown> | undefined> {
+    const settingsPath = path.join(pluginDir, 'settings.json');
+    if (!fs.existsSync(settingsPath)) return undefined;
+    try {
+      return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    } catch (err) {
+      console.warn(`[PluginInstaller] Failed to parse settings.json at ${settingsPath}:`, err);
+      return undefined;
+    }
+  }
+
+  /**
    * Parses hooks from a plugin manifest.
    *
    * Handles:

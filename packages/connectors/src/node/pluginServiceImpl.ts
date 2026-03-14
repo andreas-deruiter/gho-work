@@ -80,6 +80,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       | 'parseManifest'
       | 'parseMcpServers'
       | 'parseHooks'
+      | 'parseSettings'
       | 'countSkills'
       | 'countAgents'
       | 'countCommands'
@@ -227,6 +228,12 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
 
     // Parse hooks
     const hooks = await this._installer.parseHooks(pluginRoot, manifest.hooks);
+
+    // Parse settings (currently only 'agent' key is supported — store for future use)
+    const settings = await this._installer.parseSettings(pluginRoot);
+    if (settings !== undefined) {
+      console.log(`[PluginService] ${name}: settings.json loaded (keys: ${Object.keys(settings).join(', ')})`);
+    }
 
     // Register
     this._emitProgress(name, 'registering', 'Registering skills and MCP servers…');
@@ -431,6 +438,12 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     const hooks = await this._installer.parseHooks(pluginRoot, manifest.hooks);
     if (hooks) {
       this._hookRegistration.registerHooks(name, pluginRoot, hooks);
+    }
+
+    // Re-parse settings (currently only 'agent' key is supported — store for future use)
+    const settings = await this._installer.parseSettings(pluginRoot);
+    if (settings !== undefined) {
+      console.log(`[PluginService] ${name}: settings.json loaded on enable (keys: ${Object.keys(settings).join(', ')})`);
     }
 
     this._installed.set(name, { ...plugin, enabled: true });

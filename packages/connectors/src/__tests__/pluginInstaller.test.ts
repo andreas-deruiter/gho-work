@@ -509,6 +509,35 @@ describe('PluginInstaller', () => {
   });
 
   // -------------------------------------------------------------------------
+  // parseSettings
+  // -------------------------------------------------------------------------
+
+  describe('parseSettings', () => {
+    it('reads settings.json from plugin root', async () => {
+      const pluginDir = path.join(tempDir, 'settings-plugin');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      fs.writeFileSync(path.join(pluginDir, 'settings.json'), JSON.stringify({ agent: 'my-agent' }));
+      const settings = await installer.parseSettings(pluginDir);
+      expect(settings).toEqual({ agent: 'my-agent' });
+    });
+
+    it('returns undefined when no settings.json', async () => {
+      const pluginDir = path.join(tempDir, 'no-settings');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      const settings = await installer.parseSettings(pluginDir);
+      expect(settings).toBeUndefined();
+    });
+
+    it('returns undefined on invalid JSON', async () => {
+      const pluginDir = path.join(tempDir, 'bad-settings');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      fs.writeFileSync(path.join(pluginDir, 'settings.json'), 'not json');
+      const settings = await installer.parseSettings(pluginDir);
+      expect(settings).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // checkGitAvailable
   // -------------------------------------------------------------------------
 
