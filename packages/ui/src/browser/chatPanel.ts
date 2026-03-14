@@ -2,13 +2,19 @@
  * Chat panel — the primary interaction UI.
  * VS Code-style direct DOM manipulation with event-driven updates.
  * Uses marked for markdown rendering and DOMPurify for XSS prevention.
+ *
+ * Assistant messages use a parts-based rendering model: an ordered sequence of
+ * text segments and inline tool-call widgets, similar to VS Code Copilot Chat.
+ * Tool calls appear between text segments so the user can see tool invocations
+ * in context as the response streams.
  */
-import { Disposable, Emitter, generateUUID, MutableDisposable } from '@gho-work/base';
+import { Disposable, DisposableStore, Emitter, generateUUID, MutableDisposable } from '@gho-work/base';
 import type { Event, AgentEvent } from '@gho-work/base';
 import type { IIPCRenderer, FileEntry } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { ModelSelector } from './modelSelector.js';
 import { ChatThinkingSection } from './chatThinkingSection.js';
+import { ChatToolCallItem } from './chatToolCallItem.js';
 import { renderChatMarkdown } from './chatMarkdownRenderer.js';
 
 interface ChatMessage {
@@ -19,6 +25,11 @@ interface ChatMessage {
   isStreaming?: boolean;
   attachments?: Array<{ name: string; path: string }>;
 }
+
+/** A content part in the assistant response stream. */
+type ContentPart =
+  | { type: 'text'; content: string }
+  | { type: 'tool_call'; toolCallId: string; toolName: string };
 
 export interface SendMessageEvent {
   conversationId: string;
@@ -35,6 +46,13 @@ export class ChatPanel extends Disposable {
   private _isProcessing = false;
   private _currentAssistantMessage: ChatMessage | null = null;
   private readonly _currentThinkingSection = this._register(new MutableDisposable<ChatThinkingSection>());
+
+  /** Ordered content parts for the current streaming assistant message. */
+  private _contentParts: ContentPart[] = [];
+  /** Inline tool call widgets keyed by toolCallId. */
+  private _inlineToolCalls = new Map<string, ChatToolCallItem>();
+  /** Disposable store for inline tool call widgets (cleared per message). */
+  private _inlineToolCallDisposables = this._register(new DisposableStore());
 
   private _modelSelector!: ModelSelector;
   private _conversationId: string = generateUUID();
@@ -344,6 +362,11 @@ export class ChatPanel extends Disposable {
     this._messages.push(userMsg);
     this._renderMessage(userMsg);
 
+    // Reset parts-based state for the new assistant message
+    this._contentParts = [];
+    this._inlineToolCallDisposables.clear();
+    this._inlineToolCalls.clear();
+
     // Create a placeholder assistant message for streaming
     this._currentAssistantMessage = {
       id: generateUUID(),
@@ -355,13 +378,13 @@ export class ChatPanel extends Disposable {
     this._messages.push(this._currentAssistantMessage);
     this._renderMessage(this._currentAssistantMessage);
 
-    // Create thinking section for this message
+    // Create thinking section for this message (for extended thinking text only)
     const thinkingSection = new ChatThinkingSection();
     this._currentThinkingSection.value = thinkingSection; // auto-disposes previous
     const msgEl = document.getElementById(`msg-${this._currentAssistantMessage.id}`);
-    const toolCallsEl = msgEl?.querySelector('.chat-tool-calls');
-    if (toolCallsEl) {
-      toolCallsEl.appendChild(thinkingSection.getDomNode());
+    const partsContainer = msgEl?.querySelector('.chat-message-parts');
+    if (partsContainer) {
+      partsContainer.appendChild(thinkingSection.getDomNode());
     }
     thinkingSection.setActive(true);
 
@@ -420,20 +443,28 @@ export class ChatPanel extends Disposable {
       }
       case 'text_delta': {
         this._currentAssistantMessage.content += event.content;
-        this._updateAssistantContent();
+        this._appendTextDelta(event.content);
         break;
       }
       case 'tool_call_start': {
+        // Also add to thinking section for the collapsed summary count
         this._currentThinkingSection.value?.addToolCall(
           event.toolCall.id,
           event.toolCall.toolName,
         );
+        // Add inline tool call widget in the message flow
+        this._addInlineToolCall(event.toolCall.id, event.toolCall.toolName);
         this._scrollToBottom();
         break;
       }
       case 'tool_call_result': {
         const state = event.result.success ? 'completed' : 'failed';
         this._currentThinkingSection.value?.updateToolCall(event.toolCallId, state);
+        // Update inline widget too
+        const inlineItem = this._inlineToolCalls.get(event.toolCallId);
+        if (inlineItem) {
+          inlineItem.setState(state);
+        }
         this._scrollToBottom();
         break;
       }
@@ -449,10 +480,102 @@ export class ChatPanel extends Disposable {
     }
   }
 
+  /**
+   * Appends a text delta to the current assistant message parts.
+   * If the last part is text, appends to it. Otherwise creates a new text part.
+   * Only re-renders the last text segment's DOM for efficiency.
+   */
+  private _appendTextDelta(delta: string): void {
+    const lastPart = this._contentParts[this._contentParts.length - 1];
+    if (lastPart && lastPart.type === 'text') {
+      lastPart.content += delta;
+    } else {
+      this._contentParts.push({ type: 'text', content: delta });
+      // Create a new text segment DOM element
+      this._appendTextPartDom();
+    }
+    this._updateLastTextPart();
+  }
+
+  /**
+   * Adds an inline tool call widget to the message flow.
+   * Creates a tool_call content part and inserts the widget DOM.
+   */
+  private _addInlineToolCall(toolCallId: string, toolName: string): void {
+    this._contentParts.push({ type: 'tool_call', toolCallId, toolName });
+
+    const item = new ChatToolCallItem(toolCallId, toolName, 'executing');
+    this._inlineToolCallDisposables.add(item);
+    this._inlineToolCalls.set(toolCallId, item);
+
+    // Wrap in an inline container for styling
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-inline-tool-call';
+    wrapper.dataset.toolCallId = toolCallId;
+    wrapper.appendChild(item.getDomNode());
+
+    const partsContainer = this._getPartsContainer();
+    if (partsContainer) {
+      partsContainer.appendChild(wrapper);
+    }
+  }
+
+  /** Creates a new empty text segment DOM element in the parts container. */
+  private _appendTextPartDom(): void {
+    const partsContainer = this._getPartsContainer();
+    if (!partsContainer) {
+      return;
+    }
+    const textEl = document.createElement('div');
+    textEl.className = 'chat-message-content';
+    partsContainer.appendChild(textEl);
+  }
+
+  /** Re-renders only the last text segment with updated markdown content. */
+  private _updateLastTextPart(): void {
+    const partsContainer = this._getPartsContainer();
+    if (!partsContainer) {
+      return;
+    }
+
+    // Find the last .chat-message-content element
+    const textEls = partsContainer.querySelectorAll('.chat-message-content');
+    const lastTextEl = textEls[textEls.length - 1];
+    if (!lastTextEl) {
+      return;
+    }
+
+    // Find the corresponding text part
+    const textParts = this._contentParts.filter(p => p.type === 'text');
+    const lastTextPart = textParts[textParts.length - 1];
+    if (!lastTextPart || lastTextPart.type !== 'text') {
+      return;
+    }
+
+    const isStreaming = this._currentAssistantMessage?.isStreaming ?? false;
+    renderChatMarkdown(lastTextEl, lastTextPart.content, { isStreaming });
+    if (isStreaming) {
+      const cursor = document.createElement('span');
+      cursor.className = 'chat-cursor';
+      lastTextEl.appendChild(cursor);
+    }
+    this._scrollToBottom();
+  }
+
+  /** Gets the parts container for the current assistant message. */
+  private _getPartsContainer(): HTMLElement | null {
+    if (!this._currentAssistantMessage) {
+      return null;
+    }
+    const msgEl = document.getElementById(`msg-${this._currentAssistantMessage.id}`);
+    return msgEl?.querySelector('.chat-message-parts') as HTMLElement | null;
+  }
+
   private _finishStreaming(): void {
     if (this._currentAssistantMessage) {
       this._currentAssistantMessage.isStreaming = false;
-      this._updateAssistantContent();
+      // Final render of the last text part (removes cursor)
+      this._updateLastTextPart();
     }
     this._currentThinkingSection.value?.setActive(false);
     // Don't clear the MutableDisposable — the section stays in the DOM for scrollback.
@@ -494,29 +617,32 @@ export class ChatPanel extends Disposable {
       bubbleEl.textContent = msg.content;
       body.appendChild(bubbleEl);
     } else {
-      // Assistant messages: role label + tool calls + markdown content
+      // Assistant messages: role label + parts container (thinking + inline tool calls + text)
       const roleLabel = document.createElement('div');
       roleLabel.className = 'chat-role-label';
       roleLabel.textContent = 'GHO Work';
       body.appendChild(roleLabel);
 
-      // Tool calls section
-      const toolCallsEl = document.createElement('div');
-      toolCallsEl.className = 'chat-tool-calls';
-      body.appendChild(toolCallsEl);
+      // Parts container: thinking section, inline tool calls, and text segments
+      // are all appended here in order as events stream in
+      const partsEl = document.createElement('div');
+      partsEl.className = 'chat-message-parts';
+      body.appendChild(partsEl);
 
-      // Content
-      const contentEl = document.createElement('div');
-      contentEl.className = 'chat-message-content';
-      if (msg.content) {
+      // For non-streaming messages (loaded from history), render content directly
+      if (!msg.isStreaming && msg.content) {
+        const contentEl = document.createElement('div');
+        contentEl.className = 'chat-message-content';
         this._setSanitizedMarkdown(contentEl, msg.content);
+        partsEl.appendChild(contentEl);
       }
+
+      // Typing indicator for empty streaming messages
       if (msg.isStreaming && !msg.content) {
         const indicator = document.createElement('span');
         indicator.className = 'chat-typing-indicator';
-        contentEl.appendChild(indicator);
+        partsEl.appendChild(indicator);
       }
-      body.appendChild(contentEl);
 
       // Status
       const statusEl = document.createElement('div');
@@ -535,27 +661,6 @@ export class ChatPanel extends Disposable {
    */
   private _setSanitizedMarkdown(el: Element, markdownText: string, isStreaming = false): void {
     renderChatMarkdown(el, markdownText, { isStreaming });
-  }
-
-  private _updateAssistantContent(): void {
-    if (!this._currentAssistantMessage) {
-      return;
-    }
-    const el = document.getElementById(`msg-${this._currentAssistantMessage.id}`);
-    if (!el) {
-      return;
-    }
-    const contentEl = el.querySelector('.chat-message-content');
-    if (contentEl) {
-      // Sanitize markdown output with DOMPurify + highlight.js
-      this._setSanitizedMarkdown(contentEl, this._currentAssistantMessage.content, this._currentAssistantMessage.isStreaming ?? false);
-      if (this._currentAssistantMessage.isStreaming) {
-        const cursor = document.createElement('span');
-        cursor.className = 'chat-cursor';
-        contentEl.appendChild(cursor);
-      }
-    }
-    this._scrollToBottom();
   }
 
   showError(message: string): void {

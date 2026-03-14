@@ -706,6 +706,29 @@ html, body {
   75% { content: '...'; }
 }
 
+/* ── Message Parts Container ────────────────────────────────── */
+
+.chat-message-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Inline Tool Call Widget ───────────────────────────────── */
+
+.chat-inline-tool-call {
+  margin: 6px 0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+}
+
+.chat-inline-tool-call .chat-tool-call-item {
+  padding: 0;
+  gap: 6px;
+}
+
 /* ── Thinking / Collapsible Section ────────────────────────── */
 
 .chat-tool-calls {
