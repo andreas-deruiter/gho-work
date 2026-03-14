@@ -221,7 +221,7 @@ export class AgentServiceImpl implements IAgentService {
           type: 'plan_step_updated',
           planId: data.planId as string,
           stepId: data.stepId as string,
-          state: data.state as string,
+          state: data.state as 'pending' | 'running' | 'completed' | 'failed',
           messageId: (data.messageId as string) ?? undefined,
           startedAt: data.state === 'running' ? Date.now() : undefined,
           completedAt: data.state === 'completed' ? Date.now() : undefined,
