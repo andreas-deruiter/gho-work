@@ -2,6 +2,7 @@
  * AgentService — orchestrates task execution.
  * Creates SDK sessions, injects context, maps SDK events to AgentEvents via AsyncQueue.
  */
+import * as os from 'node:os';
 import { generateUUID } from '@gho-work/base';
 import type { AgentContext, AgentEvent } from '@gho-work/base';
 import type { IAgentService } from '../common/agent.js';
@@ -11,10 +12,16 @@ import type { MCPServerConfig, SessionEvent } from '../common/types.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
 import type { ISkillRegistry } from '../common/skillRegistry.js';
 
+interface SetupSessionOverrides {
+  systemContent: string;
+  workingDirectory?: string;
+  excludedTools?: string[];
+}
+
 export class AgentServiceImpl implements IAgentService {
   private _activeTaskId: string | null = null;
   private _activeSession: ISDKSession | null = null;
-  private readonly _installContexts = new Map<string, string>();
+  private readonly _installContexts = new Map<string, SetupSessionOverrides>();
   /** Cached sessions keyed by conversationId — enables multi-turn conversations. */
   private readonly _sessions = new Map<string, ISDKSession>();
 
@@ -44,10 +51,10 @@ export class AgentServiceImpl implements IAgentService {
           systemContent += (systemContent ? '\n\n' : '') + context.systemPrompt;
         }
 
-        // Prepend install context if available for this conversation
-        const installContext = this._installContexts.get(context.conversationId);
-        if (installContext) {
-          systemContent = installContext + (systemContent ? '\n\n' + systemContent : '');
+        // Apply setup overrides if this is a setup conversation
+        const setupOverrides = this._installContexts.get(context.conversationId);
+        if (setupOverrides) {
+          systemContent = setupOverrides.systemContent + (systemContent ? '\n\n' + systemContent : '');
         }
 
         session = await this._sdk.createSession({
@@ -56,6 +63,8 @@ export class AgentServiceImpl implements IAgentService {
           systemMessage: systemContent ? { mode: 'append', content: systemContent } : undefined,
           streaming: true,
           mcpServers,
+          workingDirectory: setupOverrides?.workingDirectory,
+          excludedTools: setupOverrides?.excludedTools,
         });
         this._sessions.set(context.conversationId, session);
       }
@@ -111,15 +120,20 @@ export class AgentServiceImpl implements IAgentService {
       throw new Error('Setup conversations require conversation service (no workspace)');
     }
     const setupSkill = await this._loadSkill('connectors', 'setup');
-    const systemMessage = setupSkill ?? '';
     const conversation = this._conversationService.createConversation('default');
     this._conversationService.renameConversation(conversation.id, 'Set up connector');
-    this._installContexts.set(conversation.id, systemMessage);
+    this._installContexts.set(conversation.id, {
+      systemContent: setupSkill ?? '',
+      // Scope the agent to the user's home directory — NOT the project folder.
+      // This prevents the agent from exploring source code while still allowing
+      // bash for running CLI commands (npx, uvx, docker, etc.).
+      workingDirectory: os.homedir(),
+    });
     return conversation.id;
   }
 
   getInstallContext(conversationId: string): string | undefined {
-    return this._installContexts.get(conversationId);
+    return this._installContexts.get(conversationId)?.systemContent;
   }
 
   private async _loadSkill(category: string, toolId: string): Promise<string | undefined> {
