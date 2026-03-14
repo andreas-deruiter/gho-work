@@ -354,6 +354,16 @@ export function createMainProcess(
       model: request.model,
     };
 
+    // Ensure conversation exists in DB (auto-create if sent from welcome screen)
+    if (conversationService) {
+      try {
+        const existing = conversationService.getConversation(request.conversationId);
+        if (!existing) {
+          conversationService.createConversationWithId(request.conversationId, request.model ?? 'gpt-4o');
+        }
+      } catch (err) { console.warn('[main] Non-critical error:', err instanceof Error ? err.message : String(err)); }
+    }
+
     // Persist user message
     if (conversationService) {
       try {
@@ -397,6 +407,8 @@ export function createMainProcess(
         }));
 
         for await (const event of agentService.executeTask(request.content, context, mcpServers, sdkAttachments)) {
+          // Don't forward 'done' from the stream — we send our own after persist + auto-title
+          if (event.type === 'done') { continue; }
           ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, event);
           // Accumulate assistant text for persistence
           if (event.type === 'text_delta') {
@@ -436,6 +448,9 @@ export function createMainProcess(
           }
         } catch (err) { console.warn('[main] Non-critical error:', err instanceof Error ? err.message : String(err)); }
       }
+
+      // Signal stream completion to renderer AFTER persist + auto-title
+      ipcMainAdapter.sendToRenderer(IPC_CHANNELS.AGENT_EVENT, { type: 'done' });
     })();
 
     return { messageId: 'pending' };

@@ -138,6 +138,12 @@ export class Workbench extends Disposable {
     this._chatPanel = this._register(new ChatPanel(this._ipc));
     this._chatPanel.render(chatPanelContainer);
 
+    // After agent response completes, refresh sidebar list and header title
+    this._chatPanel.onDidFinishResponse(() => {
+      void this._conversationList.refresh();
+      void this._chatPanel.refreshTitle();
+    });
+
     // Store reference to main element for settings panel injection
     this._mainEl = layout.main;
 

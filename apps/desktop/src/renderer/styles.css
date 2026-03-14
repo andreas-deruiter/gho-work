@@ -315,16 +315,42 @@ html, body {
 }
 
 .chat-header {
-  padding: 12px 24px;
+  padding: 10px 24px;
   border-bottom: 1px solid var(--border-secondary);
+  background: var(--bg-secondary);
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
-.chat-header h2 {
-  font-size: var(--font-size-lg);
-  font-weight: 500;
+.chat-header-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--fg-primary);
+  cursor: text;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.chat-header-title:hover {
+  border-color: var(--border-primary);
+  background: var(--bg-hover);
+}
+
+.chat-header-title.editing {
+  border-color: var(--fg-accent);
+  background: var(--bg-input);
+}
+
+.chat-header-title-input {
+  all: unset;
+  font: inherit;
+  color: inherit;
+  min-width: 40px;
 }
 
 .chat-model-badge {
@@ -1235,10 +1261,17 @@ html, body {
   white-space: nowrap;
 }
 
-.conversation-item-date {
+.conversation-group-heading {
   font-size: 11px;
+  font-weight: 600;
   color: var(--fg-muted);
-  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 8px 4px;
+}
+
+.conversation-group-heading:first-child {
+  padding-top: 4px;
 }
 
 .conversation-list-empty {

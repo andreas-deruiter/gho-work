@@ -74,23 +74,55 @@ export class ConversationListPanel extends Disposable {
       return;
     }
 
-    for (const conv of this._conversations) {
-      const item = document.createElement('div');
-      item.className = 'conversation-list-item';
-      item.dataset.id = conv.id;
+    // Group conversations by time bucket
+    const groups = this._groupByTime(this._conversations);
 
-      const title = document.createElement('span');
-      title.className = 'conversation-item-title';
-      title.textContent = conv.title;
-      item.appendChild(title);
+    for (const group of groups) {
+      const heading = document.createElement('div');
+      heading.className = 'conversation-group-heading';
+      heading.textContent = group.label;
+      list.appendChild(heading);
 
-      const date = document.createElement('span');
-      date.className = 'conversation-item-date';
-      date.textContent = new Date(conv.updatedAt).toLocaleDateString();
-      item.appendChild(date);
+      for (const conv of group.items) {
+        const item = document.createElement('div');
+        item.className = 'conversation-list-item';
+        item.dataset.id = conv.id;
 
-      item.addEventListener('click', () => this._onDidSelect.fire(conv.id));
-      list.appendChild(item);
+        const title = document.createElement('span');
+        title.className = 'conversation-item-title';
+        title.textContent = conv.title;
+        item.appendChild(title);
+
+        item.addEventListener('click', () => this._onDidSelect.fire(conv.id));
+        list.appendChild(item);
+      }
     }
+  }
+
+  private _groupByTime(conversations: ConversationSummary[]): Array<{ label: string; items: ConversationSummary[] }> {
+    const now = Date.now();
+    const HOUR = 60 * 60 * 1000;
+    const DAY = 24 * HOUR;
+
+    const buckets: Array<{ label: string; maxAge: number; items: ConversationSummary[] }> = [
+      { label: 'Last hour', maxAge: HOUR, items: [] },
+      { label: 'Today', maxAge: DAY, items: [] },
+      { label: 'Yesterday', maxAge: 2 * DAY, items: [] },
+      { label: 'Last 7 days', maxAge: 7 * DAY, items: [] },
+      { label: 'Last 30 days', maxAge: 30 * DAY, items: [] },
+      { label: 'Older', maxAge: Infinity, items: [] },
+    ];
+
+    for (const conv of conversations) {
+      const age = now - conv.updatedAt;
+      for (const bucket of buckets) {
+        if (age < bucket.maxAge) {
+          bucket.items.push(conv);
+          break;
+        }
+      }
+    }
+
+    return buckets.filter(b => b.items.length > 0);
   }
 }

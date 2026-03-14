@@ -47,6 +47,9 @@ export class ChatPanel extends Disposable {
   private readonly _onDidSendMessage = this._register(new Emitter<SendMessageEvent>());
   readonly onDidSendMessage: Event<SendMessageEvent> = this._onDidSendMessage.event;
 
+  private readonly _onDidFinishResponse = this._register(new Emitter<void>());
+  readonly onDidFinishResponse: Event<void> = this._onDidFinishResponse.event;
+
   private readonly _onDidChangeAttachments = this._register(new Emitter<Array<{ name: string; path: string; size: number }>>());
   readonly onDidChangeAttachments: Event<Array<{ name: string; path: string; size: number }>> = this._onDidChangeAttachments.event;
 
@@ -78,19 +81,22 @@ export class ChatPanel extends Disposable {
   render(container: HTMLElement): void {
     this._clearElement(container);
 
-    // Panel wrapper
-    const panel = document.createElement('div');
-    panel.className = 'chat-panel';
-
-    // Header
+    // Header with inline-editable title — rendered outside chat-panel so it spans full width
     const header = document.createElement('div');
     header.className = 'chat-header';
 
     const headerTitle = document.createElement('h2');
+    headerTitle.className = 'chat-header-title';
     headerTitle.textContent = 'New Conversation';
+    headerTitle.title = 'Click to rename';
+    headerTitle.addEventListener('click', () => this._startTitleEdit(headerTitle));
     header.appendChild(headerTitle);
 
-    panel.appendChild(header);
+    container.appendChild(header);
+
+    // Panel wrapper (max-width constrained)
+    const panel = document.createElement('div');
+    panel.className = 'chat-panel';
 
     // Model selector (will be placed below the input area)
     this._modelSelector = this._register(new ModelSelector());
@@ -246,6 +252,57 @@ export class ChatPanel extends Disposable {
     }
   }
 
+  private _startTitleEdit(titleEl: HTMLElement): void {
+    if (titleEl.querySelector('input')) { return; } // already editing
+
+    const currentText = titleEl.textContent ?? '';
+    titleEl.textContent = '';
+    titleEl.classList.add('editing');
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'chat-header-title-input';
+    input.value = currentText;
+
+    // Size input to content
+    const sizeToContent = () => {
+      input.style.width = '0';
+      input.style.width = `${Math.max(input.scrollWidth + 2, 40)}px`;
+    };
+    input.addEventListener('input', sizeToContent);
+
+    titleEl.appendChild(input);
+    sizeToContent();
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const newTitle = input.value.trim() || currentText;
+      titleEl.textContent = newTitle;
+      titleEl.classList.remove('editing');
+      if (newTitle !== currentText) {
+        void this._ipc.invoke(IPC_CHANNELS.CONVERSATION_RENAME, {
+          conversationId: this._conversationId,
+          title: newTitle,
+        });
+      }
+    };
+
+    const cancel = () => {
+      titleEl.textContent = currentText;
+      titleEl.classList.remove('editing');
+    };
+
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') {
+        input.removeEventListener('blur', commit);
+        cancel();
+      }
+    });
+  }
+
   async loadConversation(conversationId: string): Promise<void> {
     this._conversationId = conversationId;
     this._messages = [];
@@ -258,8 +315,9 @@ export class ChatPanel extends Disposable {
         messages: Array<{ id: string; role: string; content: string }>;
       }>(IPC_CHANNELS.CONVERSATION_GET, { conversationId });
 
-      // Update header title
-      const headerTitle = this._messageListEl?.parentElement?.querySelector('.chat-header h2');
+      // Update header title (header is sibling of chat-panel in the container)
+      const container = this._messageListEl?.parentElement?.parentElement;
+      const headerTitle = container?.querySelector('.chat-header-title');
       if (headerTitle) {
         headerTitle.textContent = response.conversation.title;
       }
@@ -278,6 +336,23 @@ export class ChatPanel extends Disposable {
       }
     } catch (err) {
       console.error('Failed to load conversation:', err);
+    }
+  }
+
+  async refreshTitle(): Promise<void> {
+    try {
+      const response = await this._ipc.invoke<{
+        conversation: { id: string; title: string };
+        messages: Array<{ id: string; role: string; content: string }>;
+      }>(IPC_CHANNELS.CONVERSATION_GET, { conversationId: this._conversationId });
+
+      const container = this._messageListEl?.parentElement?.parentElement;
+      const headerTitle = container?.querySelector('.chat-header-title');
+      if (headerTitle) {
+        headerTitle.textContent = response.conversation.title;
+      }
+    } catch (err) {
+      console.warn('Failed to refresh title:', err);
     }
   }
 
@@ -472,6 +547,7 @@ export class ChatPanel extends Disposable {
     this._sendBtnEl.style.display = '';
     this._cancelBtnEl.style.display = 'none';
     this._inputEl.focus();
+    this._onDidFinishResponse.fire();
   }
 
   private _renderMessage(msg: ChatMessage): void {

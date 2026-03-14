@@ -124,6 +124,24 @@ export class ConversationServiceImpl implements IConversationService {
     };
   }
 
+  createConversationWithId(id: string, model: string): Conversation {
+    const now = Date.now();
+    this._db
+      .prepare(
+        'INSERT INTO conversations (id, title, model, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(id, 'New Conversation', model, 'active', now, now);
+    return {
+      id,
+      workspaceId: '',
+      title: 'New Conversation',
+      model,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   renameConversation(id: string, title: string): void {
     this._db
       .prepare('UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?')
