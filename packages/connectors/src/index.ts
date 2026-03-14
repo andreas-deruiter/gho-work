@@ -11,6 +11,7 @@ export type {
   PluginSettingsStore,
 } from './common/pluginService.js';
 export * from './common/pluginTypes.js';
+export * from './common/marketplaceTypes.js';
 
 // Node implementations (main process only)
 export { MCPClientManagerImpl } from './node/mcpClientManagerImpl.js';
@@ -19,3 +20,4 @@ export * from './node/agentTools.js';
 export { PluginServiceImpl } from './node/pluginServiceImpl.js';
 export { PluginCatalogFetcher } from './node/pluginCatalogFetcher.js';
 export { PluginInstaller } from './node/pluginInstaller.js';
+export { MarketplaceRegistryImpl } from './node/marketplaceRegistryImpl.js';

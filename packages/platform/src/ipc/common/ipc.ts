@@ -45,6 +45,11 @@ export const IPC_CHANNELS = {
   SKILL_TOGGLE: 'skill:toggle',
   SKILL_DISABLED_LIST: 'skill:disabled-list',
   SKILL_OPEN_FILE: 'skill:open-file',
+  // Marketplace channels
+  MARKETPLACE_LIST: 'marketplace:list',
+  MARKETPLACE_ADD: 'marketplace:add',
+  MARKETPLACE_REMOVE: 'marketplace:remove',
+  MARKETPLACE_UPDATE: 'marketplace:update',
   // Plugin channels
   PLUGIN_AGENT_LIST: 'plugin:agent-list',
   PLUGIN_CATALOG: 'plugin:catalog',
