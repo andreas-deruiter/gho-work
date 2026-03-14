@@ -356,7 +356,7 @@ VS Code-inspired layout with five zones:
 ```
 
 **Activity Bar** (leftmost, 48px wide, dark background):
-- Icon buttons for switching sidebar content: Chat, Tool Activity, Connectors, Documents
+- Icon buttons for switching sidebar content: Chat, Tool Activity, Documents
 - Settings icon anchored at the bottom
 - Active view indicated with highlight
 
@@ -364,13 +364,13 @@ VS Code-inspired layout with five zones:
 - Content changes based on Activity Bar selection
 - **Chat** (default): New conversation button, search filter, conversation list sorted by recency. Right-click context menu: rename, archive, delete.
 - **Tool Activity**: Live feed of tool calls with filter by server/status/time. Expandable detail per call. Full audit log viewer.
-- **Connectors**: Configured MCP servers and CLIs with status indicators, enable/disable toggles, tool counts, add button.
 - **Documents**: File tree of current workspace. Click to preview in main panel. Export actions (DOCX, PDF).
 
 **Main Panel** (remaining width minus Context Panel):
 - Contains the active view: Chat (default), Document Preview, or Settings
 - Own header with context-specific actions (conversation title, model selector dropdown)
 - Supports split-view: chat on left, document preview on right (when agent creates/edits a document)
+- **Settings > Connectors** sub-page: MCP server management has moved from a standalone sidebar panel to a sub-page within Settings, with 5 tabs: Installed (status, connect/disconnect, enable/disable), Registry (browse MCP Registry), Remote (add Streamable HTTP servers), CLI Tools (detected CLI tools with install/auth status), Custom (form to add stdio/HTTP server manually)
 
 **Context Panel** (right side, 280px, collapsible):
 - Shows task-level metadata for the active conversation. Collapsible via `Cmd+Shift+B` or drag handle. Hidden when no task is active. Sections are collapsible individually.
@@ -379,7 +379,7 @@ VS Code-inspired layout with five zones:
 - **Context**: Tools and files referenced during the current task. Shows MCP server icons, tool names, and file thumbnails/icons. Gives the user a quick overview of what data the agent has touched. Click a file to preview, click a tool to jump to its call in the chat.
 
 **Status Bar** (full width, 24px):
-- Left: workspace path (clickable — opens workspace picker), connector count with status dot
+- Left: workspace path (clickable — opens workspace picker), MCP connector count with status dot (e.g., "MCP: 2/3" — clickable, navigates to Settings > Connectors)
 - Right: active model name, agent state indicator (idle / working / queued), Copilot usage meter, user avatar
 
 ### 6.4 Chat Interface
@@ -446,7 +446,7 @@ Users can submit new tasks while the agent is busy. Tasks queue and execute sequ
 | `Cmd+N` | New conversation |
 | `Cmd+K` | Quick command palette |
 | `Cmd+,` | Open settings |
-| `Cmd+1` through `Cmd+4` | Switch activity bar view (Chat, Tool Activity, Connectors, Documents) |
+| `Cmd+1` through `Cmd+3` | Switch activity bar view (Chat, Tool Activity, Documents) |
 | `Cmd+L` | Focus chat input |
 | `Cmd+Shift+B` | Toggle context panel |
 | `Esc` | Cancel current agent task |
@@ -1126,7 +1126,7 @@ GHO Work deliberately does not fork, maintain, or ship any MCP servers:
 
 > Visual mockups for all connector screens are in the [UX Tutorial Site](tutorial/index.html#connectors).
 
-The Connector Settings panel uses a **tabbed layout** (not a separate "Add" dialog):
+The **Settings > Connectors** sub-page uses a **tabbed layout** (not a separate "Add" dialog):
 
 | Tab | Content |
 |-----|---------|

@@ -12,5 +12,3 @@ export { KeyboardShortcuts } from './browser/keyboardShortcuts.js';
 export * from './browser/conversationList.js';
 export * from './browser/modelSelector.js';
 export { OnboardingFlow } from './browser/onboarding/onboardingFlow.js';
-export { ConnectorSidebarWidget } from './browser/connectors/connectorSidebar.js';
-export { ConnectorListItemWidget } from './browser/connectors/connectorListItem.js';
