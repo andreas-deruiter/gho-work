@@ -12,7 +12,7 @@ export interface IFileService {
   readDir(path: string): Promise<string[]>;
   mkdir(path: string): Promise<void>;
 
-  // Documents panel methods
+  // Files panel methods
   readDirWithStats(path: string): Promise<FileEntry[]>;
   stat(path: string): Promise<FileEntry>;
   createFile(path: string, content?: string): Promise<void>;

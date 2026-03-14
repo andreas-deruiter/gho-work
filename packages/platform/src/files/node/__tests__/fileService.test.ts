@@ -115,6 +115,48 @@ describe('NodeFileService', () => {
     });
   });
 
+  describe('search', () => {
+    it('finds files matching query recursively', async () => {
+      await mkdir(join(tempDir, 'sub'));
+      await writeFile(join(tempDir, 'readme.md'), '# Hello');
+      await writeFile(join(tempDir, 'sub/readme.txt'), 'nested');
+      await writeFile(join(tempDir, 'other.ts'), '');
+
+      const results = await service.search(tempDir, 'readme');
+      expect(results).toHaveLength(2);
+      expect(results.map(r => r.name).sort()).toEqual(['readme.md', 'readme.txt']);
+    });
+
+    it('is case-insensitive', async () => {
+      await writeFile(join(tempDir, 'MyFile.ts'), '');
+      const results = await service.search(tempDir, 'myfile');
+      expect(results).toHaveLength(1);
+      expect(results[0].name).toBe('MyFile.ts');
+    });
+
+    it('skips hidden directories', async () => {
+      await mkdir(join(tempDir, '.hidden'));
+      await writeFile(join(tempDir, '.hidden/secret.txt'), '');
+      const results = await service.search(tempDir, 'secret');
+      expect(results).toHaveLength(0);
+    });
+
+    it('skips node_modules', async () => {
+      await mkdir(join(tempDir, 'node_modules/pkg'), { recursive: true });
+      await writeFile(join(tempDir, 'node_modules/pkg/index.js'), '');
+      const results = await service.search(tempDir, 'index');
+      expect(results).toHaveLength(0);
+    });
+
+    it('respects maxResults limit', async () => {
+      for (let i = 0; i < 5; i++) {
+        await writeFile(join(tempDir, `match${i}.txt`), '');
+      }
+      const results = await service.search(tempDir, 'match', 3);
+      expect(results).toHaveLength(3);
+    });
+  });
+
   describe('watch', () => {
     it('emits FileChangeEvent when a file is created', async () => {
       const events: Array<{ type: string; path: string }> = [];

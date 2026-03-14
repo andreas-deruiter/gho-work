@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DocumentsPanel } from '../documentsPanel.js';
+import { FilesPanel } from '../filesPanel.js';
 
 function createMockIPC() {
   return {
-    invoke: vi.fn().mockImplementation(async (channel: string) => {
+    invoke: vi.fn().mockImplementation(async (channel: string, args?: Record<string, unknown>) => {
       if (channel === 'workspace:get-root') { return { path: '/test/workspace' }; }
       if (channel === 'files:stat') {
         return { name: 'workspace', path: '/test/workspace', type: 'directory', size: 0, mtime: Date.now(), isHidden: false };
@@ -15,6 +15,14 @@ function createMockIPC() {
           { name: '.git', path: '/test/workspace/.git', type: 'directory', size: 0, mtime: Date.now(), isHidden: true },
         ];
       }
+      if (channel === 'files:search') {
+        const query = (args as { query?: string })?.query ?? '';
+        const all = [
+          { name: 'readme.md', path: '/test/workspace/readme.md', type: 'file', size: 1024, mtime: Date.now(), isHidden: false },
+          { name: 'index.ts', path: '/test/workspace/src/index.ts', type: 'file', size: 512, mtime: Date.now(), isHidden: false },
+        ];
+        return all.filter(e => e.name.toLowerCase().includes(query.toLowerCase()));
+      }
       if (channel === 'files:watch') { return { watchId: 'w1' }; }
       return {};
     }),
@@ -23,13 +31,13 @@ function createMockIPC() {
   };
 }
 
-describe('DocumentsPanel', () => {
-  let panel: DocumentsPanel;
+describe('FilesPanel', () => {
+  let panel: FilesPanel;
   let ipc: ReturnType<typeof createMockIPC>;
 
   beforeEach(async () => {
     ipc = createMockIPC();
-    panel = new DocumentsPanel('/test/workspace', ipc);
+    panel = new FilesPanel('/test/workspace', ipc);
     document.body.appendChild(panel.getDomNode());
     await panel.load();
   });
@@ -39,12 +47,17 @@ describe('DocumentsPanel', () => {
     document.body.textContent = '';
   });
 
-  it('renders header with title and action buttons', () => {
-    const header = panel.getDomNode().querySelector('.documents-header');
+  it('renders header with title and SVG action buttons', () => {
+    const header = panel.getDomNode().querySelector('.files-header');
     expect(header).toBeTruthy();
-    expect(header!.textContent).toContain('DOCUMENTS');
+    expect(header!.textContent).toContain('FILES');
+    // 3 buttons: toggle hidden, sort, refresh (no new-file button)
     const buttons = header!.querySelectorAll('button');
-    expect(buttons.length).toBeGreaterThanOrEqual(3);
+    expect(buttons.length).toBe(3);
+    // Each button should contain an SVG icon
+    for (const btn of buttons) {
+      expect(btn.querySelector('svg')).toBeTruthy();
+    }
   });
 
   it('renders file tree with entries', () => {
@@ -75,14 +88,23 @@ describe('DocumentsPanel', () => {
     expect(attached.length).toBe(1);
   });
 
-  it('filters tree when filter input changes', async () => {
-    const input = panel.getDomNode().querySelector('.documents-filter-input') as HTMLInputElement;
+  it('triggers search via IPC when filter input has text', async () => {
+    const input = panel.getDomNode().querySelector('.files-filter-input') as HTMLInputElement;
     input.value = 'readme';
     input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Wait for debounce (300ms) + search completion
     await vi.waitFor(() => {
-      const rows = panel.getDomNode().querySelectorAll('.tree-row');
-      expect(rows.length).toBe(1);
-    });
+      const searchRows = panel.getDomNode().querySelectorAll('.files-search-row');
+      expect(searchRows.length).toBe(1);
+    }, { timeout: 2000 });
+
+    // Verify IPC was called with search channel
+    const searchCalls = ipc.invoke.mock.calls.filter(
+      (call: unknown[]) => call[0] === 'files:search',
+    );
+    expect(searchCalls.length).toBe(1);
+    expect(searchCalls[0][1]).toMatchObject({ query: 'readme' });
   });
 
   it('refreshes tree when refresh button is clicked', () => {
@@ -90,5 +112,12 @@ describe('DocumentsPanel', () => {
     const refreshBtn = panel.getDomNode().querySelector('[aria-label="Refresh"]') as HTMLElement;
     refreshBtn.click();
     expect(ipc.invoke.mock.calls.length).toBeGreaterThan(callCountBefore);
+  });
+
+  it('has title attribute on tree-name spans for tooltip', () => {
+    const nameSpans = panel.getDomNode().querySelectorAll('.tree-name');
+    for (const span of nameSpans) {
+      expect(span.getAttribute('title')).toBeTruthy();
+    }
   });
 });

@@ -143,8 +143,6 @@ export class FilesPanel extends Disposable {
   private readonly _dataSource: FileTreeDataSource;
   private _showHidden = false;
   private _filterText = '';
-  private _watchDisposable: IDisposable | null = null;
-  private _refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly _searchResults: HTMLElement;
   private _searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -381,27 +379,6 @@ export class FilesPanel extends Disposable {
     return a.name.localeCompare(b.name);
   }
 
-  private _startWatching(): void {
-    void this._ipc.invoke<{ watchId: string }>(IPC_CHANNELS.FILES_WATCH, { path: this._workspacePath }).then((result) => {
-      const watchId = result.watchId;
-      const disposable = this._ipc.on(IPC_CHANNELS.FILES_CHANGED, () => {
-        if (this._refreshTimer) { clearTimeout(this._refreshTimer); }
-        this._refreshTimer = setTimeout(() => {
-          this._refreshTimer = null;
-          void this._tree.refresh();
-        }, 1000);
-      });
-      this._watchDisposable = {
-        dispose: () => {
-          disposable.dispose();
-          void this._ipc.invoke(IPC_CHANNELS.FILES_UNWATCH, { watchId });
-        },
-      };
-    }).catch((err) => {
-      console.warn('[FilesPanel] Failed to start file watching:', err);
-    });
-  }
-
   private _showContextMenu(entry: FileEntry, event: MouseEvent): void {
     ContextMenu.show([
       {
@@ -451,8 +428,6 @@ export class FilesPanel extends Disposable {
 
   override dispose(): void {
     if (this._searchDebounceTimer) { clearTimeout(this._searchDebounceTimer); }
-    if (this._refreshTimer) { clearTimeout(this._refreshTimer); }
-    this._watchDisposable?.dispose();
     super.dispose();
   }
 }

@@ -102,7 +102,7 @@ export class Workbench extends Disposable {
       void this._createNewConversation();
     });
 
-    // Documents panel — lazy-loaded
+    // Files panel — lazy-loaded
     let filesPanel: FilesPanel | undefined;
     let filesLoaded = false;
 
@@ -120,7 +120,7 @@ export class Workbench extends Disposable {
           });
         }
       } catch (err) {
-        console.warn('[Workbench] Failed to initialize documents panel:', err);
+        console.warn('[Workbench] Failed to initialize files panel:', err);
       }
     })();
 
@@ -159,7 +159,7 @@ export class Workbench extends Disposable {
           this._settingsPanel.getDomNode().style.display = 'none';
         }
 
-        // Lazy-load documents panel on first activation
+        // Lazy-load files panel on first activation
         if (item === 'files' && !filesLoaded && filesPanel) {
           filesLoaded = true;
           void filesPanel.load();
