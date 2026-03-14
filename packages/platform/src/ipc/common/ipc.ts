@@ -52,6 +52,7 @@ export const IPC_CHANNELS = {
   FILES_UNWATCH: 'files:unwatch',
   FILES_CHANGED: 'files:changed',
   WORKSPACE_GET_ROOT: 'workspace:get-root',
+  FILES_SEARCH: 'files:search',
 } as const;
 
 export const SendMessageRequestSchema = z.object({
@@ -336,6 +337,12 @@ export const WorkspaceGetRootResponseSchema = z.object({
   path: z.string().nullable(),
 });
 export type WorkspaceGetRootResponse = z.infer<typeof WorkspaceGetRootResponseSchema>;
+
+export const FilesSearchRequestSchema = z.object({
+  rootPath: z.string(),
+  query: z.string(),
+  maxResults: z.number().optional(),
+});
 
 export const FileAttachmentSchema = z.object({
   name: z.string(),

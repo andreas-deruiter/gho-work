@@ -964,6 +964,12 @@ export function createMainProcess(
     }
   });
 
+  ipcMainAdapter.handle(IPC_CHANNELS.FILES_SEARCH, async (...args: unknown[]) => {
+    const { rootPath, query, maxResults } = args[0] as { rootPath: string; query: string; maxResults?: number };
+    validatePath(rootPath);
+    return fileService.search(rootPath, query, maxResults);
+  });
+
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {
     // Write onboarding-complete flag
     fs.writeFileSync(onboardingFilePath, JSON.stringify({ complete: true }), 'utf-8');

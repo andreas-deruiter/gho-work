@@ -21,6 +21,7 @@ export interface IFileService {
   delete(path: string): Promise<void>;
   watch(path: string): Promise<IDisposable>;
   readonly onDidChangeFile: Event<FileChangeEvent>;
+  search(rootPath: string, query: string, maxResults?: number): Promise<FileEntry[]>;
 }
 
 export const IFileService = createServiceIdentifier<IFileService>('IFileService');

@@ -8,7 +8,7 @@ import {
   rename as fsRename,
   rm,
 } from 'node:fs/promises';
-import { watch as fsWatch, type FSWatcher } from 'node:fs';
+import { watch as fsWatch, type FSWatcher, type Dirent } from 'node:fs';
 import { join, basename } from 'node:path';
 import { Disposable, Emitter } from '@gho-work/base';
 import type { Event, IDisposable } from '@gho-work/base';
@@ -117,6 +117,41 @@ export class NodeFileService extends Disposable implements IFileService {
         this._watchers.delete(id);
       },
     };
+  }
+
+  async search(rootPath: string, query: string, maxResults = 50): Promise<FileEntry[]> {
+    const results: FileEntry[] = [];
+    const lowerQuery = query.toLowerCase();
+
+    const walk = async (dir: string): Promise<void> => {
+      if (results.length >= maxResults) { return; }
+      let entries: Dirent[];
+      try {
+        entries = await readdir(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (results.length >= maxResults) { return; }
+        const fullPath = join(dir, entry.name);
+        if (entry.name.toLowerCase().includes(lowerQuery)) {
+          results.push({
+            name: entry.name,
+            path: fullPath,
+            type: entry.isDirectory() ? 'directory' : 'file',
+            size: 0,
+            mtime: 0,
+            isHidden: entry.name.startsWith('.'),
+          });
+        }
+        if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+          await walk(fullPath);
+        }
+      }
+    };
+
+    await walk(rootPath);
+    return results;
   }
 
   override dispose(): void {
