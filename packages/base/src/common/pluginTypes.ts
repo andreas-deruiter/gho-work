@@ -3,6 +3,29 @@
  * Used across packages: base, platform, agent, connectors, ui, electron.
  */
 
+// --- Plugin Agent Definition ---
+
+/**
+ * Describes an agent contributed by a plugin.
+ * Used by IPluginAgentRegistry in packages/agent.
+ */
+export interface PluginAgentDefinition {
+  /** Fully qualified: plugin-name:agent-name */
+  id: string;
+  /** Display name */
+  name: string;
+  /** When to invoke this agent */
+  description: string;
+  /** System prompt (body of .md file) */
+  systemPrompt: string;
+  /** Source plugin */
+  pluginName: string;
+  /** Optional model override */
+  model?: string;
+  /** Optional tool restrictions */
+  allowedTools?: string[];
+}
+
 // --- Install Progress ---
 
 /** Progress status for a plugin installation operation. */
