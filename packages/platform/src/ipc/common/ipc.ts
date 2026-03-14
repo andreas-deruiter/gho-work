@@ -35,6 +35,13 @@ export const IPC_CHANNELS = {
   CONNECTOR_STATUS_CHANGED: 'connector:status-changed',
   CONNECTOR_LIST_CHANGED: 'connector:list-changed',
   CONNECTOR_SETUP_CONVERSATION: 'connector:setup-conversation',
+  // Skill channels
+  SKILL_LIST: 'skill:list',
+  SKILL_SOURCES: 'skill:sources',
+  SKILL_ADD_PATH: 'skill:add-path',
+  SKILL_REMOVE_PATH: 'skill:remove-path',
+  SKILL_RESCAN: 'skill:rescan',
+  SKILL_CHANGED: 'skill:changed',
 } as const;
 
 export const SendMessageRequestSchema = z.object({
@@ -229,3 +236,34 @@ export const ConnectorSetupResponseSchema = z.object({
   error: z.string().optional(),
 });
 export type ConnectorSetupResponse = z.infer<typeof ConnectorSetupResponseSchema>;
+
+// --- Skill schemas ---
+
+export const SkillEntryDTOSchema = z.object({
+  id: z.string(),
+  category: z.string(),
+  name: z.string(),
+  description: z.string(),
+  sourceId: z.string(),
+  filePath: z.string(),
+});
+export type SkillEntryDTO = z.infer<typeof SkillEntryDTOSchema>;
+
+export const SkillSourceDTOSchema = z.object({
+  id: z.string(),
+  priority: z.number(),
+  basePath: z.string(),
+});
+export type SkillSourceDTO = z.infer<typeof SkillSourceDTOSchema>;
+
+export const SkillAddPathRequestSchema = z.object({ path: z.string() });
+export type SkillAddPathRequest = z.infer<typeof SkillAddPathRequestSchema>;
+
+export const SkillAddPathResponseSchema = z.union([
+  z.object({ ok: z.literal(true) }),
+  z.object({ error: z.string() }),
+]);
+export type SkillAddPathResponse = z.infer<typeof SkillAddPathResponseSchema>;
+
+export const SkillRemovePathRequestSchema = z.object({ path: z.string() });
+export type SkillRemovePathRequest = z.infer<typeof SkillRemovePathRequestSchema>;

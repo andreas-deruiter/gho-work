@@ -1,6 +1,6 @@
 # Settings UI Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a settings view with Appearance (theme switching) and Skills (skill browser + path config) pages, accessible via the gear icon in the activity bar.
 
@@ -19,7 +19,7 @@
 **Files:**
 - Modify: `packages/platform/src/ipc/common/ipc.ts:6-38` (IPC_CHANNELS) and append schemas after line 231
 
-- [ ] **Step 1: Add skill channels to IPC_CHANNELS**
+- [x] **Step 1: Add skill channels to IPC_CHANNELS**
 
 Add after the connector channels block (line 37) in `packages/platform/src/ipc/common/ipc.ts`:
 
@@ -33,7 +33,7 @@ Add after the connector channels block (line 37) in `packages/platform/src/ipc/c
   SKILL_CHANGED: 'skill:changed',
 ```
 
-- [ ] **Step 2: Add Zod schemas and DTO types**
+- [x] **Step 2: Add Zod schemas and DTO types**
 
 Append after line 231 (after `ConnectorSetupResponse`) in `packages/platform/src/ipc/common/ipc.ts`:
 
@@ -70,12 +70,12 @@ export const SkillRemovePathRequestSchema = z.object({ path: z.string() });
 export type SkillRemovePathRequest = z.infer<typeof SkillRemovePathRequestSchema>;
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 Run: `npx turbo build --filter=@gho-work/platform`
 Expected: Clean build, no errors
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/platform/src/ipc/common/ipc.ts
@@ -92,7 +92,7 @@ git commit -m "feat: add skill IPC channels and Zod schemas for settings UI"
 - Modify: `packages/ui/src/browser/theme.ts` (add IPC-based persistence)
 - Test: `packages/ui/src/browser/__tests__/theme.test.ts` (new)
 
-- [ ] **Step 1: Write failing tests for theme persistence**
+- [x] **Step 1: Write failing tests for theme persistence**
 
 Create `packages/ui/src/browser/__tests__/theme.test.ts`:
 
@@ -164,12 +164,12 @@ describe('ThemeService', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run packages/ui/src/browser/__tests__/theme.test.ts`
 Expected: FAIL — ThemeService constructor doesn't accept IPC argument
 
-- [ ] **Step 3: Update ThemeService to accept IPC and persist**
+- [x] **Step 3: Update ThemeService to accept IPC and persist**
 
 Replace `packages/ui/src/browser/theme.ts` entirely:
 
@@ -239,21 +239,21 @@ export class ThemeService extends Disposable implements IThemeService {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run packages/ui/src/browser/__tests__/theme.test.ts`
 Expected: All 5 tests PASS
 
-- [ ] **Step 5: Fix ThemeService construction sites**
+- [x] **Step 5: Fix ThemeService construction sites**
 
 The `ThemeService` constructor now requires `IIPCRenderer`. Run `grep -rn "new ThemeService" packages/ apps/` to find all construction sites and update each one to pass `ipc`.
 
-- [ ] **Step 6: Verify full build**
+- [x] **Step 6: Verify full build**
 
 Run: `npx turbo build`
 Expected: Clean build
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/ui/src/browser/theme.ts packages/ui/src/browser/__tests__/theme.test.ts
@@ -269,13 +269,13 @@ The spec assumes `STORAGE_GET` and `STORAGE_SET` channels are handled in the mai
 **Files:**
 - Modify: `packages/electron/src/main/mainProcess.ts` (add storage handlers if missing)
 
-- [ ] **Step 1: Check if handlers exist**
+- [x] **Step 1: Check if handlers exist**
 
 Run: `grep -n 'STORAGE_GET\|STORAGE_SET' packages/electron/src/main/mainProcess.ts`
 
 If handlers exist, skip this task entirely.
 
-- [ ] **Step 2: Add storage IPC handlers**
+- [x] **Step 2: Add storage IPC handlers**
 
 Add after the auth handlers section (~line 503) in `packages/electron/src/main/mainProcess.ts`:
 
@@ -294,12 +294,12 @@ Add after the auth handlers section (~line 503) in `packages/electron/src/main/m
   });
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 Run: `npx turbo build --filter=@gho-work/electron`
 Expected: Clean build
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/electron/src/main/mainProcess.ts
@@ -316,7 +316,7 @@ git commit -m "feat: add STORAGE_GET/SET IPC handlers for settings persistence"
 - Create: `packages/ui/src/browser/settings/settingsPanel.ts`
 - Test: `packages/ui/src/browser/settings/__tests__/settingsPanel.test.ts` (new)
 
-- [ ] **Step 1: Write failing tests for SettingsPanel**
+- [x] **Step 1: Write failing tests for SettingsPanel**
 
 Create `packages/ui/src/browser/settings/__tests__/settingsPanel.test.ts`:
 
@@ -400,12 +400,12 @@ describe('SettingsPanel', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run packages/ui/src/browser/settings/__tests__/settingsPanel.test.ts`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Create SettingsPanel implementation**
+- [x] **Step 3: Create SettingsPanel implementation**
 
 Create `packages/ui/src/browser/settings/settingsPanel.ts`:
 
@@ -505,7 +505,7 @@ export class SettingsPanel extends Widget {
 
 Note: This depends on `AppearancePage` and `SkillsPage` which are created in Tasks 5 and 6. For now, create stub files so the SettingsPanel tests can pass.
 
-- [ ] **Step 4: Create stub AppearancePage**
+- [x] **Step 4: Create stub AppearancePage**
 
 Create `packages/ui/src/browser/settings/appearancePage.ts`:
 
@@ -524,7 +524,7 @@ export class AppearancePage extends Widget {
 }
 ```
 
-- [ ] **Step 5: Create stub SkillsPage**
+- [x] **Step 5: Create stub SkillsPage**
 
 Create `packages/ui/src/browser/settings/skillsPage.ts`:
 
@@ -547,17 +547,17 @@ export class SkillsPage extends Widget {
 }
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run: `npx vitest run packages/ui/src/browser/settings/__tests__/settingsPanel.test.ts`
 Expected: All 5 tests PASS
 
-- [ ] **Step 7: Verify build**
+- [x] **Step 7: Verify build**
 
 Run: `npx turbo build --filter=@gho-work/ui`
 Expected: Clean build
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add packages/ui/src/browser/settings/
@@ -574,7 +574,7 @@ git commit -m "feat: add SettingsPanel shell with nav switching and stub pages"
 - Modify: `packages/ui/src/browser/settings/appearancePage.ts` (replace stub)
 - Test: `packages/ui/src/browser/settings/__tests__/appearancePage.test.ts` (new)
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `packages/ui/src/browser/settings/__tests__/appearancePage.test.ts`:
 
@@ -670,12 +670,12 @@ describe('AppearancePage', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run packages/ui/src/browser/settings/__tests__/appearancePage.test.ts`
 Expected: FAIL — stub AppearancePage has no theme cards or logic
 
-- [ ] **Step 3: Implement AppearancePage**
+- [x] **Step 3: Implement AppearancePage**
 
 Replace `packages/ui/src/browser/settings/appearancePage.ts`:
 
@@ -794,12 +794,12 @@ export class AppearancePage extends Widget {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run packages/ui/src/browser/settings/__tests__/appearancePage.test.ts`
 Expected: All 6 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/ui/src/browser/settings/appearancePage.ts packages/ui/src/browser/settings/__tests__/appearancePage.test.ts
@@ -816,7 +816,7 @@ git commit -m "feat: implement AppearancePage with theme card selector"
 - Modify: `packages/ui/src/browser/settings/skillsPage.ts` (replace stub)
 - Test: `packages/ui/src/browser/settings/__tests__/skillsPage.test.ts` (new)
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `packages/ui/src/browser/settings/__tests__/skillsPage.test.ts`:
 
@@ -967,12 +967,12 @@ describe('SkillsPage', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run packages/ui/src/browser/settings/__tests__/skillsPage.test.ts`
 Expected: FAIL — stub SkillsPage has no real implementation
 
-- [ ] **Step 3: Implement SkillsPage**
+- [x] **Step 3: Implement SkillsPage**
 
 Replace `packages/ui/src/browser/settings/skillsPage.ts`:
 
@@ -1241,12 +1241,12 @@ export class SkillsPage extends Widget {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run packages/ui/src/browser/settings/__tests__/skillsPage.test.ts`
 Expected: All 8 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/ui/src/browser/settings/skillsPage.ts packages/ui/src/browser/settings/__tests__/skillsPage.test.ts
@@ -1262,7 +1262,7 @@ git commit -m "feat: implement SkillsPage with skill browser and path configurat
 **Files:**
 - Modify: `packages/electron/src/main/mainProcess.ts` (add handlers after connector handlers)
 
-- [ ] **Step 1: Add skill IPC handlers**
+- [x] **Step 1: Add skill IPC handlers**
 
 Add after the connector handler section in `packages/electron/src/main/mainProcess.ts`. The `skillRegistry` variable (line 263) and `storageService` variable (line 96) are already in scope. Import `SkillSource` from `@gho-work/agent` at the top of the file.
 
@@ -1329,7 +1329,7 @@ Add after the connector handler section in `packages/electron/src/main/mainProce
 - Verify `skillSources` is mutable — `buildSkillSources()` returns a plain array, but if it's declared as `const skillSources = buildSkillSources(...)` the reference is const while the array contents are mutable (`.push()` works). If for some reason it's frozen, spread into a mutable copy: `const skillSources: SkillSource[] = [...buildSkillSources(...)]`.
 - The `ipcMainAdapter.sendToRenderer()` method is already available in scope (used by connector handlers).
 
-- [ ] **Step 2: Load persisted additional paths on startup**
+- [x] **Step 2: Load persisted additional paths on startup**
 
 After `const skillSources = buildSkillSources(...)` (line 258), add:
 
@@ -1350,12 +1350,12 @@ After `const skillSources = buildSkillSources(...)` (line 258), add:
   }
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 Run: `npx turbo build --filter=@gho-work/electron`
 Expected: Clean build
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/electron/src/main/mainProcess.ts
@@ -1372,7 +1372,7 @@ git commit -m "feat: add skill list/sources/add/remove/rescan IPC handlers"
 - Modify: `packages/ui/src/browser/workbench.ts` (add settings panel toggling)
 - Modify: `packages/ui/src/index.ts` (export SettingsPanel if needed)
 
-- [ ] **Step 1: Add imports and instance variables**
+- [x] **Step 1: Add imports and instance variables**
 
 In `packages/ui/src/browser/workbench.ts`, add import at top:
 
@@ -1389,7 +1389,7 @@ Add instance variables after the existing ones (around line 24):
   private _mainEl!: HTMLElement;
 ```
 
-- [ ] **Step 2: Create ThemeService in render()**
+- [x] **Step 2: Create ThemeService in render()**
 
 In the `render()` method, before creating ChatPanel (line 88), add:
 
@@ -1398,7 +1398,7 @@ In the `render()` method, before creating ChatPanel (line 88), add:
     void this._themeService.init();
 ```
 
-- [ ] **Step 3: Store reference to main element**
+- [x] **Step 3: Store reference to main element**
 
 After `layout.main` is used (line 48), store reference:
 
@@ -1406,7 +1406,7 @@ After `layout.main` is used (line 48), store reference:
     this._mainEl = layout.main;
 ```
 
-- [ ] **Step 4: Update onDidSelectItem handler**
+- [x] **Step 4: Update onDidSelectItem handler**
 
 Replace the existing `onDidSelectItem` handler (lines 79-85). **Important:** The replacement must preserve the `connectorSidebarActivated` guard variable that is a local `let` inside `render()` — the new handler uses it in the `else` branch:
 
@@ -1439,7 +1439,7 @@ Replace the existing `onDidSelectItem` handler (lines 79-85). **Important:** The
     }));
 ```
 
-- [ ] **Step 5: Export SettingsPanel from packages/ui**
+- [x] **Step 5: Export SettingsPanel from packages/ui**
 
 Check `packages/ui/src/index.ts` and add export if needed:
 
@@ -1447,12 +1447,12 @@ Check `packages/ui/src/index.ts` and add export if needed:
 export { SettingsPanel } from './browser/settings/settingsPanel.js';
 ```
 
-- [ ] **Step 6: Verify build**
+- [x] **Step 6: Verify build**
 
 Run: `npx turbo build`
 Expected: Clean build
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/ui/src/browser/workbench.ts packages/ui/src/index.ts
@@ -1467,7 +1467,7 @@ git commit -m "feat: wire SettingsPanel into workbench with activity bar togglin
 - Create: `apps/desktop/src/renderer/settings.css`
 - Modify: `apps/desktop/src/renderer/main.ts:8` (add import)
 
-- [ ] **Step 1: Create settings.css**
+- [x] **Step 1: Create settings.css**
 
 Create `apps/desktop/src/renderer/settings.css`. Use CSS custom properties from `styles.css` — never hardcode hex values. Full content:
 
@@ -1663,7 +1663,7 @@ Create `apps/desktop/src/renderer/settings.css`. Use CSS custom properties from 
 .skill-rescan-btn:hover { background: var(--bg-hover); }
 ```
 
-- [ ] **Step 2: Import settings.css in renderer entry**
+- [x] **Step 2: Import settings.css in renderer entry**
 
 Add to `apps/desktop/src/renderer/main.ts` after line 8:
 
@@ -1671,12 +1671,12 @@ Add to `apps/desktop/src/renderer/main.ts` after line 8:
 import './settings.css';
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 Run: `npx turbo build`
 Expected: Clean build
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/desktop/src/renderer/settings.css apps/desktop/src/renderer/main.ts
@@ -1692,7 +1692,7 @@ git commit -m "feat: add settings panel CSS styles"
 **Files:**
 - Create: `tests/e2e/settings.spec.ts`
 
-- [ ] **Step 1: Create E2E test**
+- [x] **Step 1: Create E2E test**
 
 Create `tests/e2e/settings.spec.ts`. The test should:
 
@@ -1706,12 +1706,12 @@ Create `tests/e2e/settings.spec.ts`. The test should:
 
 Adapt the test setup from existing E2E tests in `tests/e2e/` (check the actual app launch pattern used there — it may differ from the standard `_electron.launch()`).
 
-- [ ] **Step 2: Run E2E test**
+- [x] **Step 2: Run E2E test**
 
 Run: `npx turbo build && npx playwright test tests/e2e/settings.spec.ts`
 Expected: All tests PASS
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/e2e/settings.spec.ts
@@ -1724,15 +1724,15 @@ git commit -m "test: add Playwright E2E tests for settings UI"
 
 ### Task 11: HARD GATE — Launch app and verify settings UI
 
-- [ ] **Step 1: Build the app**
+- [x] **Step 1: Build the app**
 
 Run: `npx turbo build`
 
-- [ ] **Step 2: Launch the app**
+- [x] **Step 2: Launch the app**
 
 Run: `npm run desktop:dev`
 
-- [ ] **Step 3: Verify the complete flow**
+- [x] **Step 3: Verify the complete flow**
 
 1. Click gear icon → settings view appears, sidebar and chat hidden
 2. Appearance page is default → three theme cards visible
@@ -1743,16 +1743,16 @@ Run: `npm run desktop:dev`
 7. Click chat icon → returns to chat, sidebar visible again
 8. Click gear again → settings remembers last page (Skills)
 
-- [ ] **Step 4: Self-verify with Playwright screenshot script**
+- [x] **Step 4: Self-verify with Playwright screenshot script**
 
 Write a temp script using `_electron.launch()` that navigates through settings, takes screenshots at each checkpoint, and view them with Read tool. Delete the script after verification.
 
-- [ ] **Step 5: Run full test suite**
+- [x] **Step 5: Run full test suite**
 
 Run: `npx turbo lint && npx turbo build && npx vitest run && npx playwright test`
 Expected: All quality gates pass
 
-- [ ] **Step 6: Final commit if any fixes were needed**
+- [x] **Step 6: Final commit if any fixes were needed**
 
 ```bash
 git add -A
