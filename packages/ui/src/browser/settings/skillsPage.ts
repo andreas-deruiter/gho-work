@@ -9,6 +9,7 @@ export class SkillsPage extends Widget {
   private readonly _skillListEl: HTMLElement;
   private readonly _inputEl: HTMLInputElement;
   private readonly _errorEl: HTMLElement;
+  private _disclaimerShown = false;
 
   constructor(private readonly _ipc: IIPCRenderer) {
     const layout = h('div.settings-page-skills', [
@@ -184,8 +185,9 @@ export class SkillsPage extends Widget {
       groupEl.className = 'skill-list-group';
 
       for (const entry of entries) {
+        const isDisabled = entry.disabled === true;
         const item = document.createElement('div');
-        item.className = 'skill-item';
+        item.className = 'skill-item' + (isDisabled ? ' disabled' : '');
 
         const entryInfo = document.createElement('div');
         entryInfo.className = 'skill-item-info';
@@ -202,16 +204,68 @@ export class SkillsPage extends Widget {
 
         item.appendChild(entryInfo);
 
+        const actions = document.createElement('div');
+        actions.className = 'skill-item-actions';
+
         const source = document.createElement('div');
         source.className = 'skill-item-source';
         source.textContent = entry.sourceId;
-        item.appendChild(source);
+        actions.appendChild(source);
 
+        // Toggle switch
+        const toggle = document.createElement('div');
+        toggle.className = 'skill-toggle';
+        toggle.setAttribute('role', 'switch');
+        toggle.setAttribute('aria-checked', String(!isDisabled));
+        toggle.setAttribute('aria-label', `Enable ${entry.name}`);
+        toggle.setAttribute('tabindex', '0');
+
+        const knob = document.createElement('div');
+        knob.className = 'skill-toggle-knob';
+        toggle.appendChild(knob);
+
+        const handleToggle = () => {
+          const currentlyEnabled = toggle.getAttribute('aria-checked') === 'true';
+          void this._toggleSkill(entry.id, !currentlyEnabled);
+        };
+        this.listen(toggle, 'click', handleToggle);
+        this.listen(toggle, 'keydown', (e: Event) => {
+          const ke = e as KeyboardEvent;
+          if (ke.key === 'Enter' || ke.key === ' ') {
+            ke.preventDefault();
+            handleToggle();
+          }
+        });
+
+        actions.appendChild(toggle);
+        item.appendChild(actions);
         groupEl.appendChild(item);
       }
 
       this._skillListEl.appendChild(groupEl);
     }
+  }
+
+  private async _toggleSkill(skillId: string, enabled: boolean): Promise<void> {
+    try {
+      await this._ipc.invoke(IPC_CHANNELS.SKILL_TOGGLE, { skillId, enabled });
+      if (!this._disclaimerShown) {
+        this._disclaimerShown = true;
+        this._showDisclaimer();
+      }
+    } catch (err) {
+      console.error('[SkillsPage] Failed to toggle skill:', err);
+    }
+  }
+
+  private _showDisclaimer(): void {
+    const existing = this.getDomNode().querySelector('.skill-toggle-disclaimer');
+    if (existing) { return; }
+    const disclaimer = document.createElement('div');
+    disclaimer.className = 'skill-toggle-disclaimer';
+    disclaimer.textContent = 'Changes apply to new conversations. Existing conversations keep their current settings.';
+    // Insert before the skill list container
+    this._skillListEl.parentElement?.insertBefore(disclaimer, this._skillListEl);
   }
 
   private async _addPath(): Promise<void> {

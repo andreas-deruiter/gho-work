@@ -125,4 +125,91 @@ describe('SkillsPage', () => {
     expect(empty).toBeTruthy();
     page.dispose();
   });
+
+  it('renders toggle switches for each skill', async () => {
+    const ipc = createMockIPC();
+    const page = new SkillsPage(ipc);
+    await page.load();
+    const dom = page.getDomNode();
+    const toggles = dom.querySelectorAll('.skill-toggle');
+    expect(toggles.length).toBe(2);
+    toggles.forEach(t => {
+      expect(t.getAttribute('role')).toBe('switch');
+      expect(t.getAttribute('aria-checked')).toBe('true');
+      expect(t.getAttribute('tabindex')).toBe('0');
+    });
+    page.dispose();
+  });
+
+  it('renders disabled skills with aria-checked=false and dimmed row', async () => {
+    const ipc = createMockIPC();
+    ipc.invoke.mockImplementation(async (channel: string) => {
+      if (channel === 'skill:list') {
+        return [
+          { id: 'install/gh', category: 'install', name: 'gh', description: 'Install GitHub CLI', sourceId: 'bundled', filePath: '/skills/install/gh.md', disabled: true },
+        ];
+      }
+      if (channel === 'skill:sources') { return []; }
+      if (channel === 'skill:disabled-list') { return ['install/gh']; }
+      return {};
+    });
+    const page = new SkillsPage(ipc);
+    await page.load();
+    const dom = page.getDomNode();
+    const toggle = dom.querySelector('.skill-toggle');
+    expect(toggle?.getAttribute('aria-checked')).toBe('false');
+    const item = dom.querySelector('.skill-item');
+    expect(item?.classList.contains('disabled')).toBe(true);
+    page.dispose();
+  });
+
+  it('calls skill:toggle IPC when toggle is clicked', async () => {
+    const ipc = createMockIPC();
+    const page = new SkillsPage(ipc);
+    await page.load();
+    const dom = page.getDomNode();
+    const toggle = dom.querySelector('.skill-toggle') as HTMLElement;
+    toggle.click();
+    expect(ipc.invoke).toHaveBeenCalledWith('skill:toggle', { skillId: 'install/gh', enabled: false });
+    page.dispose();
+  });
+
+  it('shows disclaimer after first toggle', async () => {
+    const ipc = createMockIPC();
+    const page = new SkillsPage(ipc);
+    await page.load();
+    const dom = page.getDomNode();
+    // No disclaimer before toggle
+    expect(dom.querySelector('.skill-toggle-disclaimer')).toBeNull();
+    // Click toggle
+    const toggle = dom.querySelector('.skill-toggle') as HTMLElement;
+    toggle.click();
+    await vi.waitFor(() => {
+      expect(dom.querySelector('.skill-toggle-disclaimer')).toBeTruthy();
+      expect(dom.querySelector('.skill-toggle-disclaimer')?.textContent).toContain('new conversations');
+    });
+    page.dispose();
+  });
+
+  it('toggle responds to Enter key', async () => {
+    const ipc = createMockIPC();
+    const page = new SkillsPage(ipc);
+    await page.load();
+    const dom = page.getDomNode();
+    const toggle = dom.querySelector('.skill-toggle') as HTMLElement;
+    toggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(ipc.invoke).toHaveBeenCalledWith('skill:toggle', { skillId: 'install/gh', enabled: false });
+    page.dispose();
+  });
+
+  it('toggle responds to Space key', async () => {
+    const ipc = createMockIPC();
+    const page = new SkillsPage(ipc);
+    await page.load();
+    const dom = page.getDomNode();
+    const toggle = dom.querySelector('.skill-toggle') as HTMLElement;
+    toggle.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    expect(ipc.invoke).toHaveBeenCalledWith('skill:toggle', { skillId: 'install/gh', enabled: false });
+    page.dispose();
+  });
 });
