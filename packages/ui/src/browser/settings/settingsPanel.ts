@@ -77,12 +77,18 @@ export class SettingsPanel extends Widget {
         page = skillsPage;
         break;
       }
-      case 'plugins':
-        page = new PluginsPage(this._ipc);
+      case 'plugins': {
+        const pluginsPage = new PluginsPage(this._ipc);
+        void pluginsPage.load();
+        page = pluginsPage;
         break;
-      case 'connectors':
-        page = new ConnectorsPage(this._ipc);
+      }
+      case 'connectors': {
+        const connectorsPage = new ConnectorsPage(this._ipc);
+        void connectorsPage.load();
+        page = connectorsPage;
         break;
+      }
       case 'appearance':
       default:
         page = new AppearancePage(this._themeService);
