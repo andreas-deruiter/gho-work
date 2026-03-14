@@ -2676,3 +2676,36 @@ html, body {
   color: var(--fg-secondary);
 }
 
+/* --- Instructions page --- */
+.instructions-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.instructions-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.instructions-tips {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--color-surface, rgba(255, 255, 255, 0.03));
+}
+
+.instructions-tips .settings-section-title {
+  margin-bottom: 8px;
+}
+
+.instructions-tips-list {
+  margin: 0;
+  padding-left: 16px;
+}
