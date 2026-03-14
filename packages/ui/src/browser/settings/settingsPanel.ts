@@ -3,6 +3,7 @@ import { Widget } from '../widget.js';
 import { h } from '../dom.js';
 import type { IThemeService } from '../theme.js';
 import { AppearancePage } from './appearancePage.js';
+import { InstructionsPage } from './instructionsPage.js';
 import { SkillsPage } from './skillsPage.js';
 import { PluginsPage } from './pluginsPage.js';
 import { ConnectorsPage } from './connectorsPage.js';
@@ -14,6 +15,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'appearance', label: 'General' },
+  { id: 'instructions', label: 'Instructions' },
   { id: 'skills', label: 'Skills' },
   { id: 'plugins', label: 'Plugins' },
   { id: 'connectors', label: 'Connectors' },
@@ -71,6 +73,12 @@ export class SettingsPanel extends Widget {
 
     let page: Widget;
     switch (id) {
+      case 'instructions': {
+        const instructionsPage = new InstructionsPage(this._ipc);
+        void instructionsPage.load();
+        page = instructionsPage;
+        break;
+      }
       case 'skills': {
         const skillsPage = new SkillsPage(this._ipc);
         void skillsPage.load();
