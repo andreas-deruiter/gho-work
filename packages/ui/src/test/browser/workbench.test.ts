@@ -10,7 +10,7 @@ describe('ActivityBar', () => {
     const bar = new ActivityBar();
     const el = bar.getDomNode();
     const buttons = el.querySelectorAll('.activity-bar-item');
-    expect(buttons.length).toBe(5);
+    expect(buttons.length).toBe(4);
     bar.dispose();
   });
 
@@ -19,10 +19,10 @@ describe('ActivityBar', () => {
     const listener = vi.fn();
     bar.onDidSelectItem(listener);
 
-    const connBtn = bar.getDomNode().querySelector('[data-item="connectors"]') as HTMLElement;
-    connBtn.click();
+    const toolsBtn = bar.getDomNode().querySelector('[data-item="tools"]') as HTMLElement;
+    toolsBtn.click();
 
-    expect(listener).toHaveBeenCalledWith('connectors');
+    expect(listener).toHaveBeenCalledWith('tools');
     bar.dispose();
   });
 

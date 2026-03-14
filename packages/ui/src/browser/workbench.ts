@@ -12,7 +12,6 @@ import { StatusBar } from './statusBar.js';
 import { KeyboardShortcuts } from './keyboardShortcuts.js';
 import { ChatPanel } from './chatPanel.js';
 import { ConversationListPanel } from './conversationList.js';
-import { ConnectorSidebarWidget } from './connectors/connectorSidebar.js';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
@@ -21,7 +20,6 @@ export class Workbench extends Disposable {
   private readonly _sidebar: Sidebar;
   private _chatPanel!: ChatPanel;
   private _conversationList!: ConversationListPanel;
-  private _connectorSidebar!: ConnectorSidebarWidget;
   private _sidebarVisible = true;
 
   constructor(
@@ -67,21 +65,9 @@ export class Workbench extends Disposable {
       void this._createNewConversation();
     });
 
-    // Connector sidebar (lazy — activated on first selection)
-    this._connectorSidebar = this._register(new ConnectorSidebarWidget(this._ipc));
-    const connectorSidebarContainer = document.createElement('div');
-    connectorSidebarContainer.className = 'sidebar-panel-connectors';
-    connectorSidebarContainer.appendChild(this._connectorSidebar.getDomNode());
-    this._sidebar.addPanel('connectors', connectorSidebarContainer);
-
-    // Wire activity bar — activate connector sidebar lazily
-    let connectorSidebarActivated = false;
-    this._register(this._activityBar.onDidSelectItem(async (item) => {
+    // Wire activity bar to sidebar panel switching
+    this._register(this._activityBar.onDidSelectItem((item) => {
       this._sidebar.showPanel(item);
-      if (item === 'connectors' && !connectorSidebarActivated) {
-        connectorSidebarActivated = true;
-        await this._connectorSidebar.activate();
-      }
     }));
 
     // Chat panel in main content
@@ -108,67 +94,9 @@ export class Workbench extends Disposable {
     this._container.appendChild(titleBar.root);
     this._container.appendChild(wrapper.root);
 
-    // Wire connector sidebar events
-    this._connectorSidebar.onDidRequestAddConnector(async () => {
-      try {
-        const result = await this._ipc.invoke<{ conversationId: string; error?: string }>(
-          IPC_CHANNELS.CONNECTOR_SETUP_CONVERSATION,
-        );
-        if (result.error) {
-          this._chatPanel.showError(`Failed to start connector setup: ${result.error}`);
-          return;
-        }
-        await this._openSetupConversation(result.conversationId);
-      } catch (err) {
-        console.error('[workbench] Setup conversation failed:', err);
-        this._chatPanel.showError('Failed to start connector setup.');
-      }
-    });
-
-    this._connectorSidebar.onDidRequestConnect(async (name) => {
-      try {
-        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_CONNECT, { name });
-      } catch (err) {
-        console.error('[workbench] Connect failed:', err);
-      }
-    });
-
-    this._connectorSidebar.onDidRequestDisconnect(async (name) => {
-      try {
-        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_DISCONNECT, { name });
-      } catch (err) {
-        console.error('[workbench] Disconnect failed:', err);
-      }
-    });
-
-    this._connectorSidebar.onDidRequestRemove(async (name) => {
-      try {
-        await this._ipc.invoke(IPC_CHANNELS.CONNECTOR_REMOVE, { name });
-      } catch (err) {
-        console.error('[workbench] Remove failed:', err);
-      }
-    });
-
     // Status bar items
     this._statusBar.addLeftItem('Ready');
     this._statusBar.addRightItem('Copilot SDK');
-  }
-
-  private async _openSetupConversation(conversationId: string, toolName?: string): Promise<void> {
-    try {
-      // Switch activity bar and panels to chat view
-      this._activityBar.setActiveItem('chat');
-      this._sidebar.showPanel('chat');
-
-      await this._chatPanel.loadConversation(conversationId);
-      await this._conversationList.refresh();
-
-      // Auto-send kickoff message to trigger the setup skill
-      const name = toolName ?? 'a connector';
-      await this._chatPanel.sendMessage(`Help me set up ${name}.`);
-    } catch (err) {
-      console.error('Failed to open setup conversation:', err);
-    }
   }
 
   private async _createNewConversation(): Promise<void> {

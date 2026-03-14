@@ -118,8 +118,8 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 
 - [x] 6. **Workbench shell** (`packages/ui`) — see [UX Tutorial Site](tutorial/index.html#workbench) for visual spec
    - VS Code-style layout: activity bar (48px), sidebar (240px, collapsible via Cmd+B), main content area, status bar (24px)
-   - Activity bar with icon buttons: Chat, Tool Activity, Connectors, Documents, Settings (bottom)
-   - Status bar: workspace path, connector count/status, active model, agent state, Copilot usage meter, user avatar
+   - Activity bar with icon buttons: Chat, Tool Activity, Documents, Settings (bottom)
+   - Status bar: workspace path, MCP connector count/status (clickable → Settings > Connectors), active model, agent state, Copilot usage meter, user avatar
    - Custom DOM widget base classes: `Widget`, `SplitView`, `ListView`
    - CSS custom properties for theming (light/dark/system)
    - Keyboard navigation foundation (Cmd+B, Cmd+N, Cmd+K, Cmd+L, Cmd+1-4, Cmd+,, Esc)
@@ -256,24 +256,32 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Setup guidance for missing tools (link to install docs)
    - Wrapper utilities for common CLI patterns (JSON output parsing)
 
-- [ ] 6. **Connector settings UI** (`packages/ui`) — see [UX Tutorial Site](tutorial/index.html#connectors) for visual spec
-   - `ConnectorPanel` in Settings with 5-tab layout: Installed, Registry, Remote, CLI Tools, Custom
-   - Installed tab: MCP servers (status dot, tool count, enable/disable toggle, gear icon) + CLI tools subsection
-   - Registry tab: search + filter MCP Registry, server cards with Install/Installed badge
-   - Remote tab: Claude-compatible partner servers with OAuth connect buttons
-   - CLI Tools tab: detected CLIs with version/auth status, install links for missing
-   - Custom tab: form for manual MCP server config (name, transport, command/args/env or URL/headers)
+- [ ] 6. **Settings panel shell** (`packages/ui`)
+   - Settings container with left navigation and content router
+   - Navigation items: Appearance, Connectors, Permissions, About
+   - Content area switches based on selected nav item
+
+- [ ] 7. **Settings > Connectors sub-page** (`packages/ui`) — see [UX Tutorial Site](tutorial/index.html#connectors) for visual spec
+   - Tabbed layout with 5 tabs: Installed, Registry, Remote, CLI Tools, Custom
+   - **Installed tab**: MCP servers (status dot, tool count, connect/disconnect, enable/disable toggle, gear icon)
+   - **Registry tab**: search + filter MCP Registry, server cards with Install/Installed badge
+   - **Remote tab**: add Streamable HTTP servers, OAuth connect buttons for partner servers
+   - **CLI Tools tab**: detected CLIs with version/auth status, install links for missing
+   - **Custom tab**: form for manual MCP server config (name, transport type, command/args/env or URL/headers)
    - Per-connector detail view (gear icon): tools list with per-tool enable/disable toggles, credentials, test connection, disconnect
-   - Sidebar Connectors quick-view: status dots, tool count, enable/disable toggles — see [Connectors Sidebar mockup](tutorial/index.html#workbench)
    - Empty state: no connectors configured (with Browse Registry button) — see [Empty States mockup](tutorial/index.html#states)
    - Error state: MCP server connection failure with tooltip details — see [Error States mockup](tutorial/index.html#states)
 
-- [ ] 7. **Tool bridge: MCP tools to SDK**
+- [ ] 8. **Status bar MCP indicator enhancement** (`packages/ui`)
+   - Clickable "MCP: 2/3" indicator in the status bar showing connected/total server count
+   - Clicking navigates to Settings > Connectors sub-page
+
+- [ ] 9. **Tool bridge: MCP tools to SDK**
    - MCP servers are passed to the SDK via its native `mcpServers` session config — no custom `defineTool()` wrapping needed
    - When MCP Manager connects/disconnects servers, update the `mcpServers` config for new SDK sessions
    - SDK handles MCP tool discovery and invocation natively
 
-- [ ] 8. **Phase 3 tests**
+- [ ] 10. **Phase 3 tests**
    - Unit tests: MCP client connect/disconnect lifecycle, tool list change handling (debounce, cache invalidation), health check ping timeout
    - Unit tests: connector registry CRUD, connector status transitions (initializing → connected → error → disconnected)
    - Unit tests: CLI detection — mock PATH scanning, version parsing, missing tool handling
@@ -287,7 +295,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
 - [ ] A remote MCP server connected via Streamable HTTP + OAuth authenticates and lists tools
 - [ ] `gh` CLI detected, version shown in settings, agent can run `gh issue list`
 - [ ] `mgc` CLI detected, agent can query OneDrive files via shell
-- [ ] Connector settings UI shows all configured servers with live status
+- [ ] Settings > Connectors sub-page shows all configured servers with live status
 - [ ] Test connection button works for MCP servers (both stdio and HTTP)
 - [ ] Adding a custom MCP server via settings UI works end-to-end
 - [ ] Tool allowlisting/denylisting works for remote servers
@@ -382,10 +390,10 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Skills are baselines — the agent adapts when steps fail (diagnose, web search, propose fix)
 
 - [ ] 12. **Agent-assisted CLI install UX** (`packages/ui`, `packages/agent`)
-   - "Install" button in Connectors settings > CLI Tools for missing tools
+   - "Install" button in Settings > Connectors > CLI Tools for missing tools
    - Clicking "Install" creates a new conversation with: tool's install skill loaded as context, platform info injected (OS, arch, available package managers)
    - Platform detection utility: detect OS, architecture, Homebrew/winget/chocolatey availability
-   - Post-install: Connectors settings auto-refreshes CLI detection status
+   - Post-install: Settings > Connectors auto-refreshes CLI detection status
 
 - [ ] 13. **Phase 4 tests**
    - Unit tests: memory context loading — CLAUDE.md parsing, .github/copilot-instructions.md fallback, global memory merge
@@ -397,7 +405,7 @@ The project is divided into six phases. Phases 0 and 1 are strictly sequential. 
    - Integration test: context panel receives agent events — plan decomposition → progress steps, tool invocation → context items, file creation → downloads list
    - Unit tests: platform detection utility — OS, architecture, package manager availability
    - Integration test: "Install" button creates conversation with correct skill and platform context
-   - E2E test (Playwright): click Install button → conversation opens with skill context → mock agent completes install → Connectors settings refreshes and shows tool installed
+   - E2E test (Playwright): click Install button → conversation opens with skill context → mock agent completes install → Settings > Connectors refreshes and shows tool installed
    - Smoke test (`tests/smoke/phase4.ts`): run `/draft-email` skill, queue two tasks and verify sequential execution
 
 **Acceptance criteria:**
