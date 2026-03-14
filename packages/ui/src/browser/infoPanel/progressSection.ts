@@ -186,14 +186,27 @@ export class ProgressSection extends Widget {
       el.setAttribute('aria-current', 'step');
     }
 
-    // Track icon
+    // Track column: circle + connector line
     const track = document.createElement('span');
     track.className = 'info-step-track';
     track.setAttribute('aria-hidden', 'true');
 
+    const circle = document.createElement('span');
+    circle.className = `info-step-circle info-step-circle--${step.state}`;
+    if (step.state === 'completed') {
+      circle.textContent = '\u2713'; // checkmark
+    } else if (step.state === 'failed') {
+      circle.textContent = '\u2717'; // X mark
+    }
+    track.appendChild(circle);
+
+    const line = document.createElement('span');
+    line.className = `info-step-line info-step-line--${step.state === 'completed' || step.state === 'failed' ? 'completed' : 'pending'}`;
+    track.appendChild(line);
+
     // Label
     const label = document.createElement('span');
-    label.className = 'info-step-label';
+    label.className = `info-step-label${step.state === 'completed' ? ' info-step-label--completed' : ''}`;
     label.textContent = step.label;
 
     el.appendChild(track);

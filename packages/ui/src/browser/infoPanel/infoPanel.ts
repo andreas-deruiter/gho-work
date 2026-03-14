@@ -5,7 +5,7 @@
  * Dispatches AgentEvent to the appropriate child section and manages
  * empty-state messaging, conversation switching, and aggregated events.
  */
-import { Emitter } from '@gho-work/base';
+import { Emitter, DisposableStore } from '@gho-work/base';
 import type { Event, AgentEvent } from '@gho-work/base';
 import { Widget } from '../widget.js';
 import { h } from '../dom.js';
@@ -48,6 +48,9 @@ export class InfoPanel extends Widget {
   private readonly _stateMap = new Map<string, InfoPanelState>();
   private _currentConversationId: string | null = null;
   private _currentState: InfoPanelState = new InfoPanelState();
+
+  /** Disposable store for section widgets — cleared on conversation switch. */
+  private _sectionStore = this._register(new DisposableStore());
 
   constructor() {
     const layout = h('div.info-panel@root', [
@@ -205,11 +208,11 @@ export class InfoPanel extends Widget {
   // ---------------------------------------------------------------------------
 
   private _createProgressSection(): ProgressSection {
-    const section = this._register(new ProgressSection());
+    const section = this._sectionStore.add(new ProgressSection());
     this._progressWrap.appendChild(section.getDomNode());
 
     // Wire click events
-    this._register(section.onDidClickStep((messageId) => {
+    this._sectionStore.add(section.onDidClickStep((messageId) => {
       this._onDidRequestScrollToMessage.fire(messageId);
     }));
 
@@ -217,10 +220,10 @@ export class InfoPanel extends Widget {
   }
 
   private _createInputSection(): InputSection {
-    const section = this._register(new InputSection());
+    const section = this._sectionStore.add(new InputSection());
     this._inputWrap.appendChild(section.getDomNode());
 
-    this._register(section.onDidClickEntry((messageId) => {
+    this._sectionStore.add(section.onDidClickEntry((messageId) => {
       this._onDidRequestScrollToMessage.fire(messageId);
     }));
 
@@ -228,13 +231,13 @@ export class InfoPanel extends Widget {
   }
 
   private _createOutputSection(): OutputSection {
-    const section = this._register(new OutputSection());
+    const section = this._sectionStore.add(new OutputSection());
     this._outputWrap.appendChild(section.getDomNode());
 
-    this._register(section.onDidClickEntry((messageId) => {
+    this._sectionStore.add(section.onDidClickEntry((messageId) => {
       this._onDidRequestScrollToMessage.fire(messageId);
     }));
-    this._register(section.onDidRequestReveal((path) => {
+    this._sectionStore.add(section.onDidRequestReveal((path) => {
       this._onDidRequestRevealFile.fire(path);
     }));
 
@@ -246,7 +249,10 @@ export class InfoPanel extends Widget {
    * This is called on conversation switch to reflect the loaded state.
    */
   private _rebuildSections(): void {
-    // Clear wrappers
+    // Dispose old section widgets and their event subscriptions
+    this._sectionStore.clear();
+
+    // Clear DOM wrappers
     clearChildren(this._progressWrap);
     clearChildren(this._inputWrap);
     clearChildren(this._outputWrap);
