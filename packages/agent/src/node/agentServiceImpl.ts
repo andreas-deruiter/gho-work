@@ -5,7 +5,7 @@
 import * as os from 'node:os';
 import { generateUUID, Emitter } from '@gho-work/base';
 import type { AgentContext, AgentEvent, Event } from '@gho-work/base';
-import type { AgentState } from '../common/agent.js';
+import type { AgentState, QuotaSnapshot } from '../common/agent.js';
 import type { IAgentService } from '../common/agent.js';
 import type { IConversationService } from '../common/conversation.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
@@ -28,6 +28,9 @@ export class AgentServiceImpl implements IAgentService {
 
   private readonly _onDidChangeAgentState = new Emitter<{ state: AgentState }>();
   readonly onDidChangeAgentState: Event<{ state: AgentState }> = this._onDidChangeAgentState.event;
+
+  private readonly _onDidChangeQuota = new Emitter<{ snapshots: QuotaSnapshot[] }>();
+  readonly onDidChangeQuota: Event<{ snapshots: QuotaSnapshot[] }> = this._onDidChangeQuota.event;
 
   constructor(
     private readonly _sdk: ICopilotSDK,
@@ -185,6 +188,23 @@ export class AgentServiceImpl implements IAgentService {
           toolCallId: data.toolCallId as string,
           result: { success: (data.success as boolean) ?? true, content: result.content ?? '' },
         };
+      }
+      case 'assistant.usage': {
+        const quotaSnapshots = data.quotaSnapshots as Record<string, Record<string, unknown>> | undefined;
+        if (quotaSnapshots) {
+          this._onDidChangeQuota.fire({
+            snapshots: Object.entries(quotaSnapshots).map(([key, snap]) => ({
+              quotaType: key,
+              remainingPercentage: (snap.remainingPercentage as number) ?? 0,
+              entitlementRequests: (snap.entitlementRequests as number) ?? 0,
+              usedRequests: (snap.usedRequests as number) ?? 0,
+              overage: (snap.overage as number) ?? 0,
+              overageAllowed: (snap.overageAllowedWithExhaustedQuota as boolean) ?? false,
+              resetDate: snap.resetDate as string | undefined,
+            })),
+          });
+        }
+        return null;
       }
       case 'session.idle':
         return { type: 'done', messageId: generateUUID() };
