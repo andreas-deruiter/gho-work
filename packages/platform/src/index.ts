@@ -10,3 +10,4 @@ export * from './storage/node/globalSchema.js';
 export * from './storage/node/workspaceSchema.js';
 export * from './storage/node/sqliteStorage.js';
 export * from './files/common/files.js';
+export * from './files/node/fileService.js';
