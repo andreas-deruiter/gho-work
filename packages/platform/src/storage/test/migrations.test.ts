@@ -1,12 +1,26 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
 import { migrateDatabase, configurePragmas } from '../node/migrations.js';
 
-describe('migrateDatabase', () => {
-  let db: Database.Database;
+// better-sqlite3 may be compiled for Electron ABI — skip tests gracefully.
+function canLoadSqlite(): boolean {
+  try {
+    const Db = require('better-sqlite3');
+    const test = new Db(':memory:');
+    test.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const describeIfSqlite = canLoadSqlite() ? describe : describe.skip;
+
+describeIfSqlite('migrateDatabase', () => {
+  const Database = (): any => require('better-sqlite3');
+  let db: import('better-sqlite3').Database;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = new (Database())(':memory:');
     configurePragmas(db);
   });
 

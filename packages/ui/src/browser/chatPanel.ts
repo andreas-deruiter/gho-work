@@ -90,19 +90,17 @@ export class ChatPanel extends Disposable {
     headerTitle.textContent = 'New Conversation';
     header.appendChild(headerTitle);
 
-    const modelSelectorContainer = document.createElement('div');
+    panel.appendChild(header);
+
+    // Model selector (will be placed below the input area)
     this._modelSelector = this._register(new ModelSelector());
-    this._modelSelector.render(modelSelectorContainer);
     this._modelSelector.onDidSelectModel((modelId) => {
       this._model = modelId;
       void this._ipc.invoke(IPC_CHANNELS.MODEL_SELECT, { modelId });
     });
-    header.appendChild(modelSelectorContainer);
 
     // Load models from main process
     void this._loadModels();
-
-    panel.appendChild(header);
 
     // Message list
     this._messageListEl = document.createElement('div');
@@ -213,10 +211,21 @@ export class ChatPanel extends Disposable {
 
     inputArea.appendChild(inputWrapper);
 
+    // Footer row: model selector (left) + hint (right)
+    const inputFooter = document.createElement('div');
+    inputFooter.className = 'chat-input-footer';
+
+    const modelSelectorContainer = document.createElement('div');
+    modelSelectorContainer.className = 'chat-input-model';
+    this._modelSelector.render(modelSelectorContainer);
+    inputFooter.appendChild(modelSelectorContainer);
+
     const hint = document.createElement('div');
     hint.className = 'chat-hint';
     hint.textContent = 'Press Enter to send, Shift+Enter for new line';
-    inputArea.appendChild(hint);
+    inputFooter.appendChild(hint);
+
+    inputArea.appendChild(inputFooter);
 
     panel.appendChild(inputArea);
     container.appendChild(panel);

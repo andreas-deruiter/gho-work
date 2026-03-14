@@ -1,7 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SqliteStorageService } from '../node/sqliteStorage.js';
 
-describe('SqliteStorageService', () => {
+// better-sqlite3 may be compiled for Electron ABI — skip tests gracefully.
+function canLoadSqlite(): boolean {
+  try {
+    const Db = require('better-sqlite3');
+    const test = new Db(':memory:');
+    test.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const describeIfSqlite = canLoadSqlite() ? describe : describe.skip;
+
+describeIfSqlite('SqliteStorageService', () => {
   let service: SqliteStorageService;
 
   beforeEach(() => {

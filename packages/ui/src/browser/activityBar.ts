@@ -3,7 +3,7 @@ import type { Event } from '@gho-work/base';
 import { Widget } from './widget.js';
 import { h } from './dom.js';
 
-export type ActivityBarItem = 'chat' | 'tools' | 'files' | 'settings';
+export type ActivityBarItem = 'chat' | 'files' | 'settings';
 
 /**
  * Create an SVG icon element for an activity bar item.
@@ -52,13 +52,6 @@ function createIcon(id: ActivityBarItem): SVGElement {
       svg.appendChild(makePath('M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'));
       break;
     }
-    case 'tools': {
-      // Wrench (Feather: tool)
-      svg.appendChild(makePath(
-        'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
-      ));
-      break;
-    }
 case 'files': {
       // Folder icon (Feather: folder)
       svg.appendChild(makePath('M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'));
@@ -88,7 +81,6 @@ export class ActivityBar extends Widget {
 
     const items: { id: ActivityBarItem; label: string; bottom?: boolean }[] = [
       { id: 'chat', label: 'Chat' },
-      { id: 'tools', label: 'Tool Activity' },
       { id: 'files', label: 'Files' },
       { id: 'settings', label: 'Settings', bottom: true },
     ];

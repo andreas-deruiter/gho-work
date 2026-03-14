@@ -1,16 +1,33 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { GLOBAL_MIGRATIONS } from '../node/globalSchema.js';
 import { migrateDatabase, configurePragmas } from '../node/migrations.js';
 
-describe('Global database schema', () => {
-  let db: Database.Database;
+// better-sqlite3 may be compiled for Electron ABI — skip tests gracefully.
+// The JS wrapper loads fine; the native .node binary only fails at construction time.
+function canLoadSqlite(): boolean {
+  try {
+    const Db = require('better-sqlite3');
+    const test = new Db(':memory:');
+    test.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const sqliteAvailable = canLoadSqlite();
+const describeIfSqlite = sqliteAvailable ? describe : describe.skip;
+
+describeIfSqlite('Global database schema', () => {
+  // Lazy-load so the require only executes when the suite actually runs
+  const Database = (): any => require('better-sqlite3');
+  let db: import('better-sqlite3').Database;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = new (Database())(':memory:');
     configurePragmas(db);
     migrateDatabase(db, GLOBAL_MIGRATIONS);
   });
@@ -51,9 +68,8 @@ describe('Global database schema', () => {
   });
 
   it('should enforce WAL mode on file-based databases', () => {
-    // WAL mode is not supported on :memory: databases — test with a real file
     const dir = mkdtempSync(join(tmpdir(), 'gho-wal-test-'));
-    const fileDb = new Database(join(dir, 'test.db'));
+    const fileDb = new (Database())(join(dir, 'test.db'));
     try {
       configurePragmas(fileDb);
       const mode = fileDb.pragma('journal_mode', { simple: true });
@@ -65,11 +81,12 @@ describe('Global database schema', () => {
   });
 });
 
-describe('Migration v1: connectors table', () => {
-  let db: Database.Database;
+describeIfSqlite('Migration v1: connectors table', () => {
+  const Database = (): any => require('better-sqlite3');
+  let db: import('better-sqlite3').Database;
 
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = new (Database())(':memory:');
     configurePragmas(db);
   });
 
