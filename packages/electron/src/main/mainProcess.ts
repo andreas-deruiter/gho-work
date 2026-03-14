@@ -303,9 +303,69 @@ export function createMainProcess(
     const raw = storageService?.getSetting('skills.disabled');
     return raw ? JSON.parse(raw) : [];
   };
-  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, undefined, getDisabledSkills);
+
+  const DEFAULT_INSTRUCTIONS_PATH = path.join(os.homedir(), '.gho-work', 'gho-instructions.md');
+  const MAX_INSTRUCTIONS_SIZE = 50 * 1024; // 50KB
+
+  const getInstructionsPath = (): string => {
+    const custom = storageService?.getSetting('instructions.filePath');
+    return custom || DEFAULT_INSTRUCTIONS_PATH;
+  };
+
+  const validateInstructionsFile = async (filePath: string): Promise<{ path: string; exists: boolean; lineCount: number; isDefault: boolean }> => {
+    const isDefault = filePath === DEFAULT_INSTRUCTIONS_PATH;
+    try {
+      const content = await fs.promises.readFile(filePath, { encoding: 'utf-8' });
+      const lineCount = content.split('\n').length;
+      return { path: filePath, exists: true, lineCount, isDefault };
+    } catch {
+      return { path: filePath, exists: false, lineCount: 0, isDefault };
+    }
+  };
+
+  const readInstructionsFile = async (): Promise<string> => {
+    const filePath = getInstructionsPath();
+    try {
+      const content = await fs.promises.readFile(filePath, { encoding: 'utf-8' });
+      if (content.length > MAX_INSTRUCTIONS_SIZE) {
+        console.warn(`Instructions file exceeds 50KB (${content.length} bytes), truncating`);
+        return content.slice(0, MAX_INSTRUCTIONS_SIZE) + '\n\n[Instructions truncated — file exceeds 50KB]';
+      }
+      return content;
+    } catch {
+      return '';
+    }
+  };
+
+  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, readInstructionsFile, getDisabledSkills);
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
+
+  // Create default instructions template on first launch
+  try {
+    if (!fs.existsSync(DEFAULT_INSTRUCTIONS_PATH)) {
+      fs.mkdirSync(path.dirname(DEFAULT_INSTRUCTIONS_PATH), { recursive: true });
+      fs.writeFileSync(DEFAULT_INSTRUCTIONS_PATH, `# GHO Work Instructions
+
+<!--
+  This file contains instructions for the GHO Work AI agent.
+  The agent reads this file at the start of every new conversation.
+
+  You can edit this file with any text editor.
+  To change its location, go to Settings > Instructions in GHO Work.
+-->
+
+## About Me
+<!-- Describe your role, preferences, and how you'd like the agent to behave -->
+
+## Conventions
+<!-- Add any conventions, tools, or workflows the agent should follow -->
+`, { encoding: 'utf-8' });
+      console.log('Created default instructions file at', DEFAULT_INSTRUCTIONS_PATH);
+    }
+  } catch (err) {
+    console.warn('Failed to create default instructions template:', err);
+  }
 
   // Forward agent state changes to renderer
   agentService.onDidChangeAgentState((state) => {
@@ -1093,6 +1153,32 @@ export function createMainProcess(
       return { canceled: true };
     }
     return { path: result.filePaths[0] };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.DIALOG_OPEN_FILE, async (...args: unknown[]) => {
+    const { dialog } = await import('electron');
+    const req = args[0] as { filters?: Array<{ name: string; extensions: string[] }> } | undefined;
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      title: 'Select file',
+      filters: req?.filters,
+    });
+    return { path: result.canceled ? null : result.filePaths[0] ?? null };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.INSTRUCTIONS_GET_PATH, async () => {
+    return validateInstructionsFile(getInstructionsPath());
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.INSTRUCTIONS_SET_PATH, async (...args: unknown[]) => {
+    const { path: newPath } = args[0] as { path: string };
+    if (newPath) {
+      storageService?.setSetting('instructions.filePath', newPath);
+    } else {
+      // Reset to default: clear the setting (empty string is falsy, so getInstructionsPath returns default)
+      storageService?.setSetting('instructions.filePath', '');
+    }
+    return validateInstructionsFile(getInstructionsPath());
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.SKILL_OPEN_FILE, async (_evt: unknown, args: unknown) => {
