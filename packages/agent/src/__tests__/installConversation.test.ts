@@ -148,4 +148,20 @@ describe('createSetupConversation', () => {
 		);
 		await expect(noConvService.createSetupConversation()).rejects.toThrow('conversation service');
 	});
+
+	it('filters disabled skills in _loadSkill', async () => {
+		const disabledSkills = ['connectors/setup'];
+		const svc = new AgentServiceImpl(
+			createMockCopilotSDK() as any,
+			conversationService as any,
+			registry,
+			undefined,
+			() => disabledSkills,
+		);
+		const convId = await svc.createSetupConversation();
+		// The setup skill is 'connectors/setup' which is disabled
+		const context = svc.getInstallContext(convId);
+		// When disabled, the install context should be empty string (skill not loaded)
+		expect(context).toBe('');
+	});
 });
