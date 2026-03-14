@@ -60,6 +60,10 @@ export const IPC_CHANNELS = {
   CONNECTOR_UPDATE: 'connector:update',
   // Dialog channels
   DIALOG_OPEN_FOLDER: 'dialog:open-folder',
+  DIALOG_OPEN_FILE: 'dialog:open-file',
+  // Instructions channels
+  INSTRUCTIONS_GET_PATH: 'instructions:get-path',
+  INSTRUCTIONS_SET_PATH: 'instructions:set-path',
   // File channels
   FILES_READ_DIR: 'files:read-dir',
   FILES_STAT: 'files:stat',
@@ -464,3 +468,31 @@ export const QuotaResultSchema = z.object({
   snapshots: z.array(QuotaSnapshotSchema),
 });
 export type QuotaResult = z.infer<typeof QuotaResultSchema>;
+
+// --- Instructions schemas ---
+
+export const InstructionsPathResponseSchema = z.object({
+  path: z.string(),
+  exists: z.boolean(),
+  lineCount: z.number(),
+  isDefault: z.boolean(),
+});
+export type InstructionsPathResponse = z.infer<typeof InstructionsPathResponseSchema>;
+
+export const InstructionsSetPathRequestSchema = z.object({
+  path: z.string(),
+});
+export type InstructionsSetPathRequest = z.infer<typeof InstructionsSetPathRequestSchema>;
+
+export const DialogOpenFileRequestSchema = z.object({
+  filters: z.array(z.object({
+    name: z.string(),
+    extensions: z.array(z.string()),
+  })).optional(),
+});
+export type DialogOpenFileRequest = z.infer<typeof DialogOpenFileRequestSchema>;
+
+export const DialogOpenFileResponseSchema = z.object({
+  path: z.string().nullable(),
+});
+export type DialogOpenFileResponse = z.infer<typeof DialogOpenFileResponseSchema>;
