@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { CatalogEntry, PluginLocation } from '@gho-work/base/common';
+import type { CatalogEntry, PluginLocation } from '@gho-work/base';
 import { PluginCatalogFetcher } from '../node/pluginCatalogFetcher.js';
 
 // ---------------------------------------------------------------------------

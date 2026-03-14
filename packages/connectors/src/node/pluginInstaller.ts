@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { CatalogEntry } from '@gho-work/base/common';
+import type { CatalogEntry } from '@gho-work/base';
 
 const execFileAsync = promisify(execFile);
 

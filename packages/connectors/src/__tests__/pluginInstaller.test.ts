@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { PluginInstaller } from '../node/pluginInstaller.js';
-import type { CatalogEntry } from '@gho-work/base/common';
+import type { CatalogEntry } from '@gho-work/base';
 
 // ---------------------------------------------------------------------------
 // Helpers

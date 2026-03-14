@@ -1,4 +1,4 @@
-import type { CatalogEntry, PluginLocation } from '@gho-work/base/common';
+import type { CatalogEntry, PluginLocation } from '@gho-work/base';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -74,7 +74,7 @@ export class PluginCatalogFetcher {
       );
     }
 
-    const raw: RawMarketplace = await response.json();
+    const raw = (await response.json()) as RawMarketplace;
     const pluginRoot = raw.metadata?.pluginRoot;
 
     return (raw.plugins ?? []).map((plugin) => this._toEntry(plugin, pluginRoot));
