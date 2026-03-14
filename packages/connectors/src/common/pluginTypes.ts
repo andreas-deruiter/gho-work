@@ -17,6 +17,10 @@ export interface PluginManifest {
   version?: string;
   description?: string;
   skills?: string | string[];
+  agents?: string | string[];
+  commands?: string | string[];
+  hooks?: string | Record<string, unknown>;
+  settings?: Record<string, unknown>;
   mcpServers?: string | Record<string, MCPServerInlineConfig>;
 }
 
