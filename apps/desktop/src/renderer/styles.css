@@ -2174,3 +2174,188 @@ html, body {
 }
 
 /* Skill toggle styles moved to settings.css */
+
+/* =============================================================================
+   Status Bar
+   ============================================================================= */
+
+/* Wrapper in workbench layout */
+.workbench-statusbar {
+  flex-shrink: 0;
+}
+
+/* Main status bar container */
+.status-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-secondary);
+  padding: 0 8px;
+  font-size: var(--font-size-sm);
+  color: var(--fg-secondary);
+  user-select: none;
+  overflow: hidden;
+}
+
+/* Left and right groups */
+.status-bar-left,
+.status-bar-right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.status-bar-right {
+  flex-shrink: 0;
+}
+
+/* Individual status bar items */
+.status-bar-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* Clickable status bar items */
+.status-bar-item[role="button"] {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background 0.1s ease;
+}
+
+.status-bar-item[role="button"]:hover {
+  background: var(--bg-hover);
+}
+
+.status-bar-item[role="button"]:focus-visible {
+  outline: 1px solid var(--brand-primary);
+  outline-offset: 1px;
+}
+
+/* Dot indicators */
+.sb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--fg-muted);
+}
+
+.sb-dot.green {
+  background: #4ade80;
+}
+
+.sb-dot.yellow {
+  background: #facc15;
+}
+
+.sb-dot.red {
+  background: #f87171;
+}
+
+/* Pulse animation for agent working state */
+@keyframes sb-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.sb-dot.pulse {
+  animation: sb-pulse 1.5s ease-in-out infinite;
+}
+
+/* Usage / token progress bar */
+.sb-usage-bar {
+  display: inline-block;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sb-usage-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--brand-primary);
+  transition: width 0.3s ease, background 0.3s ease;
+  width: 0%;
+}
+
+/* Usage tint states on the item wrapper */
+.sb-usage.usage-warning .sb-usage-fill {
+  background: #facc15;
+}
+
+.sb-usage.usage-critical .sb-usage-fill {
+  background: #f87171;
+}
+
+.sb-usage.usage-warning {
+  color: #facc15;
+}
+
+.sb-usage.usage-critical {
+  color: #f87171;
+}
+
+/* Model label */
+.sb-model {
+  color: var(--fg-secondary);
+}
+
+/* Workspace icon — ensure SVG inherits color */
+.sb-workspace-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.sb-workspace-icon svg {
+  display: block;
+  fill: currentColor;
+}
+
+/* User avatar */
+.sb-user {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sb-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Connectors label */
+.sb-connectors-label {
+  color: var(--fg-secondary);
+}
+

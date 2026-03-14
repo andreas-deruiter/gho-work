@@ -24,7 +24,7 @@ describe('AgentServiceImpl.onDidChangeAgentState', () => {
     const states: string[] = [];
     service.onDidChangeAgentState(e => states.push(e.state));
 
-    for await (const _e of service.executeTask('test', { conversationId: 'c1', model: 'gpt-4o' })) {
+    for await (const _e of service.executeTask('test', { conversationId: 'c1', workspaceId: 'w1', model: 'gpt-4o' })) {
       // consume events
     }
 
@@ -48,7 +48,7 @@ describe('AgentServiceImpl.onDidChangeAgentState', () => {
     service.onDidChangeAgentState(e => states.push(e.state));
 
     const events: any[] = [];
-    for await (const e of service.executeTask('test', { conversationId: 'c2', model: 'gpt-4o' })) {
+    for await (const e of service.executeTask('test', { conversationId: 'c2', workspaceId: 'w1', model: 'gpt-4o' })) {
       events.push(e);
     }
 
