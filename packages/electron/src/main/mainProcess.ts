@@ -301,6 +301,20 @@ export function createMainProcess(
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
+  // Forward agent state changes to renderer
+  agentService.onDidChangeAgentState((state) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_CHANNELS.AGENT_STATE_CHANGED, state);
+    }
+  });
+
+  // Forward quota changes from assistant.usage events to renderer
+  agentService.onDidChangeQuota((quota) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_CHANNELS.QUOTA_CHANGED, quota);
+    }
+  });
+
   // Dispose skill registry on app quit
   app.on('will-quit', () => {
     skillRegistry.dispose();
@@ -541,6 +555,27 @@ export function createMainProcess(
     const request = args[0] as ModelSelectRequest;
     // Store selection (for now just acknowledge — will persist via storage service later)
     return { modelId: request.modelId, success: true };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.QUOTA_GET, async () => {
+    try {
+      await sdkReady;
+      const result = await sdk.getQuota();
+      return {
+        snapshots: Object.entries(result.quotaSnapshots).map(([key, snap]) => ({
+          quotaType: key,
+          entitlementRequests: snap.entitlementRequests,
+          usedRequests: snap.usedRequests,
+          remainingPercentage: snap.remainingPercentage,
+          overage: snap.overage,
+          overageAllowed: snap.overageAllowedWithExhaustedQuota,
+          resetDate: snap.resetDate,
+        })),
+      };
+    } catch (err) {
+      console.warn('[MainProcess] Failed to get quota:', err instanceof Error ? err.message : String(err));
+      return { snapshots: [] };
+    }
   });
 
   // --- Storage handlers ---

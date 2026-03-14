@@ -5,10 +5,11 @@
 import { Disposable } from '@gho-work/base';
 import type { IIPCRenderer } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
+import type { ConnectorStatus } from './statusBar/connectorStatusItem.js';
 import { h } from './dom.js';
 import { ActivityBar } from './activityBar.js';
 import { Sidebar } from './sidebar.js';
-import { StatusBar } from './statusBar.js';
+import { StatusBar } from './statusBar/statusBar.js';
 import { KeyboardShortcuts } from './keyboardShortcuts.js';
 import { ChatPanel } from './chatPanel.js';
 import { ConversationListPanel } from './conversationList.js';
@@ -199,9 +200,152 @@ export class Workbench extends Disposable {
     this._container.appendChild(titleBar.root);
     this._container.appendChild(wrapper.root);
 
-    // Status bar items
-    this._statusBar.addLeftItem('Ready');
-    this._statusBar.addRightItem('Copilot SDK');
+    // Status bar wiring
+    this._wireStatusBar();
+  }
+
+  private _wireStatusBar(): void {
+    // Workspace path
+    void (async () => {
+      try {
+        const result = await this._ipc.invoke<{ path: string | null }>(IPC_CHANNELS.WORKSPACE_GET_ROOT, {});
+        this._statusBar.updateWorkspace({ path: result?.path ?? null });
+      } catch (err) {
+        console.warn('[Workbench] Failed to get workspace root for status bar:', err);
+        this._statusBar.updateWorkspace({ path: null });
+      }
+    })();
+
+    // Connectors — maintain local map, seed + subscribe
+    const connectorMap = new Map<string, ConnectorStatus>();
+
+    const applyConnectorMap = () => {
+      const servers = Array.from(connectorMap.entries()).map(([name, status]) => ({ name, status }));
+      this._statusBar.updateConnectors({ servers });
+    };
+
+    void (async () => {
+      try {
+        const result = await this._ipc.invoke<{ servers: Array<{ name: string; status: ConnectorStatus; error?: string }> }>(IPC_CHANNELS.CONNECTOR_LIST);
+        for (const s of result?.servers ?? []) {
+          connectorMap.set(s.name, s.status);
+        }
+        applyConnectorMap();
+      } catch (err) {
+        console.warn('[Workbench] Failed to seed connector list for status bar:', err);
+      }
+    })();
+
+    this._ipc.on(IPC_CHANNELS.CONNECTOR_STATUS_CHANGED, (...args: unknown[]) => {
+      const event = args[0] as { name: string; status: ConnectorStatus; error?: string };
+      if (event?.name) {
+        connectorMap.set(event.name, event.status);
+        applyConnectorMap();
+      }
+    });
+
+    this._ipc.on(IPC_CHANNELS.CONNECTOR_LIST_CHANGED, () => {
+      void (async () => {
+        try {
+          const result = await this._ipc.invoke<{ servers: Array<{ name: string; status: ConnectorStatus; error?: string }> }>(IPC_CHANNELS.CONNECTOR_LIST);
+          connectorMap.clear();
+          for (const s of result?.servers ?? []) {
+            connectorMap.set(s.name, s.status);
+          }
+          applyConnectorMap();
+        } catch (err) {
+          console.warn('[Workbench] Failed to refresh connector list for status bar:', err);
+        }
+      })();
+    });
+
+    // Auth/user — seed + subscribe
+    let isAuthenticated = false;
+    let hasQuota = false;
+
+    const updateUsageVisibility = (remainingPercentage: number) => {
+      this._statusBar.updateUsage({ remainingPercentage, visible: isAuthenticated && hasQuota });
+    };
+
+    void (async () => {
+      try {
+        const result = await this._ipc.invoke<{ isAuthenticated: boolean; user: { githubLogin: string } | null }>(IPC_CHANNELS.AUTH_STATE);
+        isAuthenticated = result?.isAuthenticated ?? false;
+        this._statusBar.updateUser({
+          githubLogin: result?.user?.githubLogin ?? null,
+          isAuthenticated,
+        });
+      } catch (err) {
+        console.warn('[Workbench] Failed to seed auth state for status bar:', err);
+      }
+    })();
+
+    this._ipc.on(IPC_CHANNELS.AUTH_STATE_CHANGED, (...args: unknown[]) => {
+      const event = args[0] as { isAuthenticated: boolean; user: { githubLogin: string } | null };
+      isAuthenticated = event?.isAuthenticated ?? false;
+      this._statusBar.updateUser({
+        githubLogin: event?.user?.githubLogin ?? null,
+        isAuthenticated,
+      });
+    });
+
+    // Agent state — subscribe
+    this._statusBar.updateAgentState({ state: 'idle' });
+    this._ipc.on(IPC_CHANNELS.AGENT_STATE_CHANGED, (...args: unknown[]) => {
+      const event = args[0] as { state: 'idle' | 'working' | 'error' };
+      if (event?.state) {
+        this._statusBar.updateAgentState({ state: event.state });
+      }
+    });
+
+    // Model — seed from ModelSelector, subscribe to live updates
+    const seedModel = () => {
+      const modelId = this._chatPanel.modelSelector.selectedModel;
+      this._statusBar.updateModel({ modelName: modelId });
+    };
+    // ChatPanel.render() is called before this, so modelSelector exists
+    seedModel();
+    this._register(this._chatPanel.modelSelector.onDidSelectModel((modelId: string) => {
+      this._statusBar.updateModel({ modelName: modelId });
+    }));
+
+    // Quota — seed + subscribe
+    let lastRemainingPercentage = 1;
+
+    void (async () => {
+      try {
+        const result = await this._ipc.invoke<{ snapshots: Array<{ quotaType: string; remainingPercentage: number }> }>(IPC_CHANNELS.QUOTA_GET);
+        const snapshots = result?.snapshots ?? [];
+        const snap = snapshots.find(s => s.quotaType === 'premium_interactions') ?? snapshots[0];
+        if (snap) {
+          hasQuota = true;
+          lastRemainingPercentage = snap.remainingPercentage;
+          updateUsageVisibility(lastRemainingPercentage);
+        }
+      } catch (err) {
+        console.warn('[Workbench] Failed to seed quota for status bar:', err);
+      }
+    })();
+
+    this._ipc.on(IPC_CHANNELS.QUOTA_CHANGED, (...args: unknown[]) => {
+      const event = args[0] as { snapshots: Array<{ quotaType: string; remainingPercentage: number }> };
+      const snapshots = event?.snapshots ?? [];
+      const snap = snapshots.find(s => s.quotaType === 'premium_interactions') ?? snapshots[0];
+      if (snap) {
+        hasQuota = true;
+        lastRemainingPercentage = snap.remainingPercentage;
+        updateUsageVisibility(lastRemainingPercentage);
+      }
+    });
+
+    // Click routing
+    this._register(this._statusBar.onDidClickItem((itemId) => {
+      if (itemId === 'connectors') {
+        // Navigate to settings panel — setActiveItem fires onDidSelectItem
+        // which triggers the existing handler that manages panel visibility
+        this._activityBar.setActiveItem('settings');
+      }
+    }));
   }
 
   private async _createNewConversation(): Promise<void> {

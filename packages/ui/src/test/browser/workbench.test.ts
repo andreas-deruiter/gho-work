@@ -3,7 +3,6 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { ActivityBar } from '../../browser/activityBar.js';
-import { StatusBar } from '../../browser/statusBar.js';
 
 describe('ActivityBar', () => {
   it('should render all activity items', () => {
@@ -49,23 +48,3 @@ describe('ActivityBar', () => {
   });
 });
 
-describe('StatusBar', () => {
-  it('should render left and right sections', () => {
-    const bar = new StatusBar();
-    const el = bar.getDomNode();
-    expect(el.querySelector('.status-bar-left')).toBeTruthy();
-    expect(el.querySelector('.status-bar-right')).toBeTruthy();
-    bar.dispose();
-  });
-
-  it('should add and update items', () => {
-    const bar = new StatusBar();
-    const item = bar.addLeftItem('Ready', 'System status');
-    expect(item.textContent).toBe('Ready');
-    expect(item.title).toBe('System status');
-
-    bar.updateItem(item, 'Processing...');
-    expect(item.textContent).toBe('Processing...');
-    bar.dispose();
-  });
-});

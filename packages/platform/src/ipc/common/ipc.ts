@@ -58,6 +58,11 @@ export const IPC_CHANNELS = {
   FILES_CHANGED: 'files:changed',
   WORKSPACE_GET_ROOT: 'workspace:get-root',
   FILES_SEARCH: 'files:search',
+  // Agent state
+  AGENT_STATE_CHANGED: 'agent:state-changed',
+  // Quota
+  QUOTA_GET: 'quota:get',
+  QUOTA_CHANGED: 'quota:changed',
 } as const;
 
 export const SendMessageRequestSchema = z.object({
@@ -362,3 +367,26 @@ export const FileAttachmentSchema = z.object({
   size: z.number(),
 });
 export type FileAttachment = z.infer<typeof FileAttachmentSchema>;
+
+// --- Agent state schema ---
+export const AgentStateChangedSchema = z.object({
+  state: z.enum(['idle', 'working', 'error']),
+});
+export type AgentStateChanged = z.infer<typeof AgentStateChangedSchema>;
+
+// --- Quota schemas ---
+export const QuotaSnapshotSchema = z.object({
+  quotaType: z.string(),
+  entitlementRequests: z.number(),
+  usedRequests: z.number(),
+  remainingPercentage: z.number(),
+  overage: z.number(),
+  overageAllowed: z.boolean(),
+  resetDate: z.string().optional(),
+});
+export type QuotaSnapshot = z.infer<typeof QuotaSnapshotSchema>;
+
+export const QuotaResultSchema = z.object({
+  snapshots: z.array(QuotaSnapshotSchema),
+});
+export type QuotaResult = z.infer<typeof QuotaResultSchema>;

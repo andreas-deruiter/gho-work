@@ -4,7 +4,7 @@
  * Events use the `data` payload shape matching the real @github/copilot-sdk.
  */
 import { generateUUID } from '@gho-work/base';
-import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
+import type { ICopilotSDK, ISDKSession, SDKQuotaResult } from '../common/copilotSDK.js';
 import type { SessionConfig, MessageOptions, SessionEvent, SessionMetadata, ModelInfo, PingResponse } from '../common/types.js';
 
 type EventHandler = (event: SessionEvent) => void;
@@ -295,6 +295,10 @@ export class MockCopilotSDK implements ICopilotSDK {
 
   async ping(message?: string): Promise<PingResponse> {
     return { message: message ?? 'pong', timestamp: Date.now() };
+  }
+
+  async getQuota(): Promise<SDKQuotaResult> {
+    return { quotaSnapshots: {} };
   }
 
   private ensureStarted(): void {

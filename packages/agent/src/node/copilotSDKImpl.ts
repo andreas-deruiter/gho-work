@@ -5,7 +5,7 @@
  * The SDK is imported dynamically to avoid module resolution failures in environments
  * where vscode-jsonrpc/node is not available (e.g., Vitest).
  */
-import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
+import type { ICopilotSDK, ISDKSession, SDKQuotaResult } from '../common/copilotSDK.js';
 import type {
 	SessionConfig,
 	MessageOptions,
@@ -292,5 +292,17 @@ export class CopilotSDKImpl implements ICopilotSDK {
 		}
 		const response = await this._client.ping(message);
 		return { message: response.message, timestamp: response.timestamp };
+	}
+
+	async getQuota(): Promise<SDKQuotaResult> {
+		if (this._mock) {
+			// Mock returns empty quota — no subscription data in test mode
+			return { quotaSnapshots: {} };
+		}
+		if (!this._client) {
+			throw new Error('SDK not started. Call start() first.');
+		}
+		const result = await this._client.rpc.account.getQuota();
+		return result as SDKQuotaResult;
 	}
 }

@@ -3,8 +3,9 @@
  * Creates SDK sessions, injects context, maps SDK events to AgentEvents via AsyncQueue.
  */
 import * as os from 'node:os';
-import { generateUUID } from '@gho-work/base';
-import type { AgentContext, AgentEvent } from '@gho-work/base';
+import { generateUUID, Emitter } from '@gho-work/base';
+import type { AgentContext, AgentEvent, Event } from '@gho-work/base';
+import type { AgentState, QuotaSnapshot } from '../common/agent.js';
 import type { IAgentService } from '../common/agent.js';
 import type { IConversationService } from '../common/conversation.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
@@ -25,6 +26,12 @@ export class AgentServiceImpl implements IAgentService {
   /** Cached sessions keyed by conversationId — enables multi-turn conversations. */
   private readonly _sessions = new Map<string, ISDKSession>();
 
+  private readonly _onDidChangeAgentState = new Emitter<{ state: AgentState }>();
+  readonly onDidChangeAgentState: Event<{ state: AgentState }> = this._onDidChangeAgentState.event;
+
+  private readonly _onDidChangeQuota = new Emitter<{ snapshots: QuotaSnapshot[] }>();
+  readonly onDidChangeQuota: Event<{ snapshots: QuotaSnapshot[] }> = this._onDidChangeQuota.event;
+
   constructor(
     private readonly _sdk: ICopilotSDK,
     private readonly _conversationService: IConversationService | null,
@@ -36,6 +43,7 @@ export class AgentServiceImpl implements IAgentService {
   async *executeTask(prompt: string, context: AgentContext, mcpServers?: Record<string, MCPServerConfig>, attachments?: MessageOptions['attachments']): AsyncIterable<AgentEvent> {
     const taskId = generateUUID();
     this._activeTaskId = taskId;
+    this._onDidChangeAgentState.fire({ state: 'working' });
 
     const queue = new AsyncQueue<AgentEvent>();
 
@@ -105,6 +113,7 @@ export class AgentServiceImpl implements IAgentService {
     } finally {
       this._activeTaskId = null;
       this._activeSession = null;
+      this._onDidChangeAgentState.fire({ state: 'idle' });
     }
   }
 
@@ -179,6 +188,23 @@ export class AgentServiceImpl implements IAgentService {
           toolCallId: data.toolCallId as string,
           result: { success: (data.success as boolean) ?? true, content: result.content ?? '' },
         };
+      }
+      case 'assistant.usage': {
+        const quotaSnapshots = data.quotaSnapshots as Record<string, Record<string, unknown>> | undefined;
+        if (quotaSnapshots) {
+          this._onDidChangeQuota.fire({
+            snapshots: Object.entries(quotaSnapshots).map(([key, snap]) => ({
+              quotaType: key,
+              remainingPercentage: (snap.remainingPercentage as number) ?? 0,
+              entitlementRequests: (snap.entitlementRequests as number) ?? 0,
+              usedRequests: (snap.usedRequests as number) ?? 0,
+              overage: (snap.overage as number) ?? 0,
+              overageAllowed: (snap.overageAllowedWithExhaustedQuota as boolean) ?? false,
+              resetDate: snap.resetDate as string | undefined,
+            })),
+          });
+        }
+        return null;
       }
       case 'session.idle':
         return { type: 'done', messageId: generateUUID() };

@@ -1,6 +1,19 @@
 import { createServiceIdentifier } from '@gho-work/base';
 import type { SessionConfig, MessageOptions, SessionEvent, SessionMetadata, ModelInfo, PingResponse } from './types.js';
 
+export interface QuotaSnapshotRaw {
+  entitlementRequests: number;
+  usedRequests: number;
+  remainingPercentage: number;
+  overage: number;
+  overageAllowedWithExhaustedQuota: boolean;
+  resetDate?: string;
+}
+
+export interface SDKQuotaResult {
+  quotaSnapshots: Record<string, QuotaSnapshotRaw>;
+}
+
 export interface ICopilotSDK {
   start(): Promise<void>;
   stop(): Promise<Error[]>;
@@ -11,6 +24,7 @@ export interface ICopilotSDK {
   listModels(): Promise<ModelInfo[]>;
   ping(message?: string): Promise<PingResponse>;
   restart(options?: { githubToken?: string; useMock?: boolean }): Promise<void>;
+  getQuota(): Promise<SDKQuotaResult>;
 }
 
 export const ICopilotSDK = createServiceIdentifier<ICopilotSDK>('ICopilotSDK');
