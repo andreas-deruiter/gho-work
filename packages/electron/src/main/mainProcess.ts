@@ -260,6 +260,22 @@ export function createMainProcess(
     userPath: path.join(os.homedir(), '.gho-work', 'skills'),
     overridePath: options?.skillsPath,
   });
+
+  // Load persisted additional skill paths
+  const additionalPathsRaw = storageService?.getSetting('skills.additionalPaths');
+  if (additionalPathsRaw) {
+    try {
+      const additionalPaths: string[] = JSON.parse(additionalPathsRaw);
+      for (let i = 0; i < additionalPaths.length; i++) {
+        if (fs.existsSync(additionalPaths[i])) {
+          skillSources.push({ id: `additional-${i + 1}`, priority: 20, basePath: additionalPaths[i] });
+        }
+      }
+    } catch (err) {
+      console.warn('[main] Failed to load additional skill paths:', err);
+    }
+  }
+
   const skillRegistry = new SkillRegistryImpl(skillSources);
   // Fire scan as non-blocking — skills load in background; agent works immediately.
   void skillRegistry.scan().catch((err) => {
@@ -803,6 +819,62 @@ export function createMainProcess(
   // capability, wire the handlers here. Until then, users manage servers through the
   // Connectors sidebar UI. Tracked in the spec:
   // docs/superpowers/specs/2026-03-13-connector-simplification-design.md
+
+  // --- Skill handlers ---
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_LIST, async () => {
+    return skillRegistry.list();
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_SOURCES, async () => {
+    return skillSources;
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_ADD_PATH, async (...args: unknown[]) => {
+    const { path: newPath } = args[0] as { path: string };
+
+    // Validate path exists
+    if (!fs.existsSync(newPath)) {
+      return { error: 'Directory not found' };
+    }
+
+    // Check for duplicates
+    const existing = storageService?.getSetting('skills.additionalPaths');
+    const paths: string[] = existing ? JSON.parse(existing) : [];
+    if (paths.includes(newPath) || skillSources.some((s) => s.basePath === newPath)) {
+      return { error: 'Path already added' };
+    }
+
+    paths.push(newPath);
+    storageService?.setSetting('skills.additionalPaths', JSON.stringify(paths));
+
+    skillSources.push({ id: `additional-${paths.length}`, priority: 20, basePath: newPath });
+    await skillRegistry.refresh();
+
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, skillRegistry.list());
+    return { ok: true as const };
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_REMOVE_PATH, async (...args: unknown[]) => {
+    const { path: removePath } = args[0] as { path: string };
+
+    const existing = storageService?.getSetting('skills.additionalPaths');
+    const paths: string[] = existing ? JSON.parse(existing) : [];
+    const filtered = paths.filter((p) => p !== removePath);
+    storageService?.setSetting('skills.additionalPaths', JSON.stringify(filtered));
+
+    const idx = skillSources.findIndex((s) => s.basePath === removePath && s.priority > 0);
+    if (idx >= 0) {
+      skillSources.splice(idx, 1);
+    }
+    await skillRegistry.refresh();
+
+    ipcMainAdapter.sendToRenderer(IPC_CHANNELS.SKILL_CHANGED, skillRegistry.list());
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.SKILL_RESCAN, async () => {
+    await skillRegistry.refresh();
+    return skillRegistry.list();
+  });
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {
     // Write onboarding-complete flag
