@@ -225,6 +225,37 @@ test.describe('Settings panel', () => {
     await expect(firstToggle).toHaveAttribute('aria-checked', 'true');
   });
 
+  test('Instructions tab shows file path and status', async () => {
+    await openSettings();
+
+    // Click Instructions tab
+    const instructionsTab = page.locator('.settings-nav-item:has-text("Instructions")');
+    await expect(instructionsTab).toBeVisible();
+    await instructionsTab.click();
+
+    // Verify page title
+    await expect(page.locator('.settings-page-title:has-text("Instructions")')).toBeVisible();
+
+    // Verify path input shows a path ending in gho-instructions.md
+    const pathInput = page.locator('.skill-path-input[aria-label="Instructions file path"]');
+    await expect(pathInput).toBeVisible();
+    const pathValue = await pathInput.inputValue();
+    expect(pathValue).toContain('gho-instructions.md');
+
+    // Verify status indicator is visible (green = found, since template was created at startup)
+    const statusText = page.locator('.instructions-status span:last-child');
+    await expect(statusText).toBeVisible();
+    const statusContent = await statusText.textContent();
+    expect(statusContent).toMatch(/File found/);
+
+    // Verify Browse and Reset buttons exist
+    await expect(page.locator('button:has-text("Browse")')).toBeVisible();
+    await expect(page.locator('button:has-text("Reset")')).toBeVisible();
+
+    // Verify Tips section
+    await expect(page.locator('text=Edit this file with any text editor')).toBeVisible();
+  });
+
   test('clicking chat activity bar item returns to chat view', async () => {
     await openSettings();
     await openChat();
