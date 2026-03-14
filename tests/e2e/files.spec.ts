@@ -4,8 +4,8 @@ import { resolve } from 'path';
 import { writeFileSync, mkdirSync, rmSync } from 'fs';
 
 const appPath = resolve(__dirname, '../../apps/desktop');
-const userDataDir = resolve(__dirname, '../../.e2e-userdata-documents');
-const workspaceDir = resolve(__dirname, '../../.e2e-workspace-documents');
+const userDataDir = resolve(__dirname, '../../.e2e-userdata-files');
+const workspaceDir = resolve(__dirname, '../../.e2e-workspace-files');
 
 // Set up user data and workspace
 mkdirSync(userDataDir, { recursive: true });
@@ -34,50 +34,54 @@ test.afterAll(async () => {
   rmSync(workspaceDir, { recursive: true, force: true });
 });
 
-async function openDocuments(): Promise<void> {
-  const btn = page.locator('[aria-label="Documents"]');
+async function openFiles(): Promise<void> {
+  const btn = page.locator('[aria-label="Files"]');
   await btn.click();
-  await expect(page.locator('.documents-panel')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.files-panel')).toBeVisible({ timeout: 5000 });
 }
 
-test.describe('Documents panel', () => {
-  test('clicking Documents icon shows the documents panel', async () => {
-    await openDocuments();
-    await expect(page.locator('.documents-header')).toBeVisible();
-    await expect(page.locator('.documents-header')).toContainText('DOCUMENTS');
+test.describe('Files panel', () => {
+  test('clicking Files icon shows the files panel', async () => {
+    await openFiles();
+    await expect(page.locator('.files-header')).toBeVisible();
+    await expect(page.locator('.files-header')).toContainText('FILES');
   });
 
   test('file tree shows workspace files (hidden excluded)', async () => {
-    await openDocuments();
+    await openFiles();
     await expect(page.locator('.tree-row')).toHaveCount(3, { timeout: 5000 });
-    const allText = await page.locator('.documents-tree').textContent();
+    const allText = await page.locator('.files-tree').textContent();
     expect(allText).not.toContain('.hidden');
   });
 
   test('toggle hidden shows dotfiles', async () => {
-    await openDocuments();
+    await openFiles();
     await page.locator('[aria-label="Toggle hidden files"]').click();
     await expect(page.locator('.tree-name', { hasText: '.hidden' })).toBeVisible({ timeout: 3000 });
     // Toggle back
     await page.locator('[aria-label="Toggle hidden files"]').click();
   });
 
-  test('filter input narrows visible files', async () => {
-    await openDocuments();
-    await page.locator('.documents-filter-input').fill('readme');
-    await expect(page.locator('.tree-row')).toHaveCount(1, { timeout: 3000 });
-    await page.locator('.documents-filter-input').fill('');
+  test('search input finds files recursively', async () => {
+    await openFiles();
+    await page.locator('.files-filter-input').fill('index');
+    // Search is debounced (300ms) + async, wait for results
+    await expect(page.locator('.files-search-row')).toHaveCount(1, { timeout: 5000 });
+    await expect(page.locator('.files-search-name', { hasText: 'index.ts' })).toBeVisible();
+    // Clear search returns to tree view
+    await page.locator('.files-filter-input').fill('');
+    await expect(page.locator('.files-tree')).toBeVisible({ timeout: 3000 });
   });
 
   test('expanding a folder shows children', async () => {
-    await openDocuments();
+    await openFiles();
     const srcRow = page.locator('.tree-row', { hasText: 'src' });
     await srcRow.locator('.tree-chevron').click();
     await expect(page.locator('.tree-name', { hasText: 'index.ts' })).toBeVisible({ timeout: 3000 });
   });
 
   test('clicking chat icon returns to chat view', async () => {
-    await openDocuments();
+    await openFiles();
     await page.locator('[aria-label="Chat"]').click();
     await expect(page.locator('.chat-input')).toBeVisible({ timeout: 5000 });
   });
