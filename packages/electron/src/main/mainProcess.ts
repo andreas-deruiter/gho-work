@@ -45,6 +45,7 @@ import {
   SkillRegistryImpl,
   buildSkillSources,
   toSdkMcpConfig,
+  PluginAgentRegistryImpl,
 } from '@gho-work/agent';
 import * as os from 'node:os';
 import type { AgentContext } from '@gho-work/base';
@@ -303,7 +304,8 @@ export function createMainProcess(
     const raw = storageService?.getSetting('skills.disabled');
     return raw ? JSON.parse(raw) : [];
   };
-  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, undefined, getDisabledSkills);
+  const pluginAgentRegistry = new PluginAgentRegistryImpl();
+  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, undefined, getDisabledSkills, pluginAgentRegistry);
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
@@ -369,12 +371,10 @@ export function createMainProcess(
     refresh: () => skillRegistry.refresh(),
   };
 
-  // Placeholder agent registration — full wiring (Task 11) will replace this
-  // with the real IPluginAgentRegistry once it is wired into the main process.
   const agentRegistration: PluginAgentRegistration = {
-    register: () => {},
-    unregister: () => {},
-    unregisterPlugin: () => {},
+    register: (agent) => pluginAgentRegistry.register(agent),
+    unregister: (id) => pluginAgentRegistry.unregister(id),
+    unregisterPlugin: (name) => pluginAgentRegistry.unregisterPlugin(name),
   };
 
   const pluginService = new PluginServiceImpl(
@@ -1074,6 +1074,8 @@ export function createMainProcess(
   ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_LIST, async () => {
     return pluginService.getInstalled();
   });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_AGENT_LIST, async () => pluginAgentRegistry.getAgents());
 
   ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_UPDATE, async (...args: unknown[]) => {
     const { name } = args[0] as { name: string };

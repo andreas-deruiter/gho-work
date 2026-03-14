@@ -46,6 +46,7 @@ export const IPC_CHANNELS = {
   SKILL_DISABLED_LIST: 'skill:disabled-list',
   SKILL_OPEN_FILE: 'skill:open-file',
   // Plugin channels
+  PLUGIN_AGENT_LIST: 'plugin:agent-list',
   PLUGIN_CATALOG: 'plugin:catalog',
   PLUGIN_INSTALL: 'plugin:install',
   PLUGIN_UNINSTALL: 'plugin:uninstall',

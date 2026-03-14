@@ -13,6 +13,7 @@ import type { MessageOptions, SessionEvent } from '../common/types.js';
 import type { SdkMcpServerConfig } from '../common/mcpConfigMapping.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
 import type { ISkillRegistry } from '../common/skillRegistry.js';
+import type { IPluginAgentRegistry } from '../common/pluginAgentRegistry.js';
 
 interface SetupSessionOverrides {
   systemContent: string;
@@ -39,6 +40,7 @@ export class AgentServiceImpl implements IAgentService {
     private readonly _skillRegistry: ISkillRegistry,
     private readonly _readContextFiles?: () => Promise<string>,
     private readonly _getDisabledSkills?: () => string[],
+    private readonly _pluginAgentRegistry?: IPluginAgentRegistry,
   ) {}
 
   async *executeTask(prompt: string, context: AgentContext, mcpServers?: Record<string, SdkMcpServerConfig>, attachments?: MessageOptions['attachments']): AsyncIterable<AgentEvent> {
