@@ -8,6 +8,7 @@ export class SkillsPage extends Widget {
   private readonly _sourceListEl: HTMLElement;
   private readonly _skillListEl: HTMLElement;
   private readonly _inputEl: HTMLInputElement;
+  private readonly _addBtn: HTMLButtonElement;
   private readonly _errorEl: HTMLElement;
   private _disclaimerShown = false;
 
@@ -45,15 +46,24 @@ export class SkillsPage extends Widget {
     this._inputEl = document.createElement('input');
     this._inputEl.type = 'text';
     this._inputEl.className = 'skill-path-input';
-    this._inputEl.placeholder = 'Add additional skill path...';
+    this._inputEl.placeholder = 'Enter path or use Browse...';
     this._inputEl.setAttribute('aria-label', 'Additional skill path');
+    this.listen(this._inputEl, 'input', () => this._updateAddButtonState());
     inputRow.appendChild(this._inputEl);
 
-    const addBtn = document.createElement('button');
-    addBtn.className = 'skill-path-add-btn';
-    addBtn.textContent = 'Add';
-    this.listen(addBtn, 'click', () => void this._addPath());
-    inputRow.appendChild(addBtn);
+    const browseBtn = document.createElement('button');
+    browseBtn.className = 'skill-path-browse-btn';
+    browseBtn.textContent = 'Browse';
+    browseBtn.setAttribute('aria-label', 'Browse for skill directory');
+    this.listen(browseBtn, 'click', () => void this._browsePath());
+    inputRow.appendChild(browseBtn);
+
+    this._addBtn = document.createElement('button');
+    this._addBtn.className = 'skill-path-add-btn';
+    this._addBtn.textContent = 'Add';
+    this._addBtn.disabled = true;
+    this.listen(this._addBtn, 'click', () => void this._addPath());
+    inputRow.appendChild(this._addBtn);
 
     layout.sourcesSection.appendChild(inputRow);
 
@@ -268,6 +278,24 @@ export class SkillsPage extends Widget {
     this._skillListEl.parentElement?.insertBefore(disclaimer, this._skillListEl);
   }
 
+  private _updateAddButtonState(): void {
+    this._addBtn.disabled = this._inputEl.value.trim().length === 0;
+  }
+
+  private async _browsePath(): Promise<void> {
+    try {
+      const result = await this._ipc.invoke<{ canceled?: boolean; path?: string }>(
+        IPC_CHANNELS.DIALOG_OPEN_FOLDER,
+      );
+      if (!result.canceled && result.path) {
+        this._inputEl.value = result.path;
+        this._updateAddButtonState();
+      }
+    } catch (err) {
+      console.error('[SkillsPage] Failed to open folder dialog:', err);
+    }
+  }
+
   private async _addPath(): Promise<void> {
     const pathValue = this._inputEl.value.trim();
     if (!pathValue) { return; }
@@ -287,6 +315,7 @@ export class SkillsPage extends Widget {
       }
 
       this._inputEl.value = '';
+      this._updateAddButtonState();
       await this.load();
     } catch (err) {
       this._errorEl.textContent = 'Failed to add path';

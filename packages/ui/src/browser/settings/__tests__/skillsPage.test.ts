@@ -78,6 +78,7 @@ describe('SkillsPage', () => {
     const input = dom.querySelector('.skill-path-input') as HTMLInputElement;
     const addBtn = dom.querySelector('.skill-path-add-btn') as HTMLButtonElement;
     input.value = '/new/path';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
     addBtn.click();
     expect(ipc.invoke).toHaveBeenCalledWith('skill:add-path', { path: '/new/path' });
     page.dispose();
@@ -97,6 +98,7 @@ describe('SkillsPage', () => {
     const input = dom.querySelector('.skill-path-input') as HTMLInputElement;
     const addBtn = dom.querySelector('.skill-path-add-btn') as HTMLButtonElement;
     input.value = '/bad/path';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
     addBtn.click();
     await vi.waitFor(() => {
       const error = dom.querySelector('.skill-path-input-error');

@@ -44,6 +44,8 @@ export const IPC_CHANNELS = {
   SKILL_CHANGED: 'skill:changed',
   SKILL_TOGGLE: 'skill:toggle',
   SKILL_DISABLED_LIST: 'skill:disabled-list',
+  // Dialog channels
+  DIALOG_OPEN_FOLDER: 'dialog:open-folder',
 } as const;
 
 export const SendMessageRequestSchema = z.object({

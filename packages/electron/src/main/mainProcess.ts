@@ -914,6 +914,18 @@ export function createMainProcess(
     return raw ? JSON.parse(raw) : [];
   });
 
+  ipcMainAdapter.handle(IPC_CHANNELS.DIALOG_OPEN_FOLDER, async () => {
+    const { dialog } = await import('electron');
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: 'Select skill directory',
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+    return { path: result.filePaths[0] };
+  });
+
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {
     // Write onboarding-complete flag
     fs.writeFileSync(onboardingFilePath, JSON.stringify({ complete: true }), 'utf-8');
