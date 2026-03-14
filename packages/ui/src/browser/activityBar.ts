@@ -3,7 +3,7 @@ import type { Event } from '@gho-work/base';
 import { Widget } from './widget.js';
 import { h } from './dom.js';
 
-export type ActivityBarItem = 'chat' | 'tools' | 'documents' | 'settings';
+export type ActivityBarItem = 'chat' | 'tools' | 'files' | 'settings';
 
 /**
  * Create an SVG icon element for an activity bar item.
@@ -59,10 +59,9 @@ function createIcon(id: ActivityBarItem): SVGElement {
       ));
       break;
     }
-case 'documents': {
-      // Document with folded corner (Feather: file)
-      svg.appendChild(makePath('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'));
-      svg.appendChild(makePolyline('14,2 14,8 20,8'));
+case 'files': {
+      // Folder icon (Feather: folder)
+      svg.appendChild(makePath('M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'));
       break;
     }
     case 'settings': {
@@ -90,7 +89,7 @@ export class ActivityBar extends Widget {
     const items: { id: ActivityBarItem; label: string; bottom?: boolean }[] = [
       { id: 'chat', label: 'Chat' },
       { id: 'tools', label: 'Tool Activity' },
-      { id: 'documents', label: 'Documents' },
+      { id: 'files', label: 'Files' },
       { id: 'settings', label: 'Settings', bottom: true },
     ];
 

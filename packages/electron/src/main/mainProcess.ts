@@ -886,7 +886,7 @@ export function createMainProcess(
     fileService.dispose();
   });
 
-  const workspaceRoot = process.cwd();
+  const workspaceRoot = os.homedir();
 
   function validatePath(targetPath: string): void {
     const resolved = path.resolve(targetPath);

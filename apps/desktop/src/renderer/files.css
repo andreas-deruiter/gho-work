@@ -1,22 +1,22 @@
-/* Documents panel layout */
-.documents-panel { display: flex; flex-direction: column; height: 100%; }
+/* Files panel layout */
+.files-panel { display: flex; flex-direction: column; height: 100%; }
 
-.documents-header {
+.files-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-primary);
 }
-.documents-title {
+.files-title {
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--fg-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.documents-actions { display: flex; gap: 4px; }
-.documents-actions button {
+.files-actions { display: flex; gap: 4px; }
+.files-actions button {
   background: transparent;
   border: none;
   color: var(--fg-muted);
@@ -25,10 +25,10 @@
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
 }
-.documents-actions button:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.files-actions button:hover { background: var(--bg-hover); color: var(--fg-primary); }
 
-.documents-filter { padding: 4px 12px; }
-.documents-filter-input {
+.files-filter { padding: 4px 12px; }
+.files-filter-input {
   width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
@@ -39,18 +39,18 @@
   font-family: var(--font-family);
   box-sizing: border-box;
 }
-.documents-filter-input::placeholder { color: var(--fg-muted); }
-.documents-filter-input:focus { outline: 1px solid var(--brand-primary); border-color: var(--brand-primary); }
+.files-filter-input::placeholder { color: var(--fg-muted); }
+.files-filter-input:focus { outline: 1px solid var(--brand-primary); border-color: var(--brand-primary); }
 
-.documents-tree { flex: 1; overflow-y: auto; }
+.files-tree { flex: 1; overflow-y: auto; }
 
-.documents-footer {
+.files-footer {
   padding: 4px 12px;
   font-size: var(--font-size-sm);
   color: var(--fg-muted);
   border-top: 1px solid var(--border-primary);
 }
-.documents-summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.files-summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Tree widget */
 .tree-widget { outline: none; }
@@ -75,6 +75,14 @@
   user-select: none;
 }
 .tree-chevron-hidden { visibility: hidden; }
+
+.tree-error-row {
+  font-style: italic;
+  color: var(--fg-muted);
+  font-size: 12px;
+  cursor: default;
+}
+.tree-error-row:hover { background: none; }
 
 .tree-content {
   display: flex;

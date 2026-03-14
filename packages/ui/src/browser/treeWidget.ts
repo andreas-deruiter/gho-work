@@ -17,6 +17,7 @@ export interface ITreeOptions<T> {
   renderer: ITreeRenderer<T>;
   filter?: (element: T) => boolean;
   sorter?: (a: T, b: T) => number;
+  getKey?: (element: T) => string;
 }
 
 interface TreeNode<T> {
@@ -26,15 +27,18 @@ interface TreeNode<T> {
   children: TreeNode<T>[] | null;
   row: HTMLElement | null;
   disposables: DisposableStore;
+  error: boolean;
 }
 
 export class TreeWidget<T> extends Disposable {
   private readonly _container: HTMLElement;
   private readonly _dataSource: ITreeDataSource<T>;
   private readonly _renderer: ITreeRenderer<T>;
+  private readonly _getKey: ((element: T) => string) | undefined;
   private _filter: ((element: T) => boolean) | undefined;
   private _sorter: ((a: T, b: T) => number) | undefined;
   private _roots: TreeNode<T>[] = [];
+  private _refreshSeq = 0;
 
   private readonly _onDidSelect = this._register(new Emitter<T>());
   readonly onDidSelect: Event<T> = this._onDidSelect.event;
@@ -49,6 +53,7 @@ export class TreeWidget<T> extends Disposable {
     super();
     this._dataSource = options.dataSource;
     this._renderer = options.renderer;
+    this._getKey = options.getKey;
     this._filter = options.filter;
     this._sorter = options.sorter;
 
@@ -80,9 +85,15 @@ export class TreeWidget<T> extends Disposable {
       }
       return;
     }
+    const expandedKeys = this._getKey ? this._collectExpandedKeys(this._roots) : new Set<string>();
     this._clearAll();
+    const seq = ++this._refreshSeq;
     const roots = await this._dataSource.getRoots();
+    if (seq !== this._refreshSeq) { return; }
     this._roots = this._toNodes(roots, 0);
+    if (expandedKeys.size > 0) {
+      await this._restoreExpanded(this._roots, expandedKeys);
+    }
     this._renderNodes(this._roots, this._container);
   }
 
@@ -98,6 +109,7 @@ export class TreeWidget<T> extends Disposable {
       children: null,
       row: null,
       disposables: new DisposableStore(),
+      error: false,
     }));
   }
 
@@ -138,9 +150,13 @@ export class TreeWidget<T> extends Disposable {
     node.disposables.add(renderDisposable);
     row.appendChild(content);
 
-    // Row click -> select
+    // Row click -> toggle if has children, otherwise select
     row.addEventListener('click', () => {
-      this._onDidSelect.fire(node.element);
+      if (this._dataSource.hasChildren(node.element)) {
+        void this._toggleNode(node);
+      } else {
+        this._onDidSelect.fire(node.element);
+      }
     });
 
     // Right-click -> context menu
@@ -157,7 +173,15 @@ export class TreeWidget<T> extends Disposable {
 
     // Children (only if expanded)
     if (node.expanded && node.children) {
-      this._renderNodes(node.children, container);
+      if (node.error) {
+        const errorRow = document.createElement('div');
+        errorRow.classList.add('tree-row', 'tree-error-row');
+        errorRow.style.paddingLeft = `${(node.depth + 1) * 16}px`;
+        errorRow.textContent = '(access denied)';
+        container.appendChild(errorRow);
+      } else {
+        this._renderNodes(node.children, container);
+      }
     }
   }
 
@@ -173,8 +197,14 @@ export class TreeWidget<T> extends Disposable {
     if (!this._dataSource.hasChildren(node.element)) { return; }
 
     if (!node.children) {
-      const children = await this._dataSource.getChildren(node.element);
-      node.children = this._toNodes(children, node.depth + 1);
+      try {
+        const children = await this._dataSource.getChildren(node.element);
+        node.children = this._toNodes(children, node.depth + 1);
+      } catch (err) {
+        console.warn('[TreeWidget] Failed to fetch children:', err);
+        node.children = [];
+        node.error = true;
+      }
     }
 
     node.expanded = true;
@@ -271,6 +301,39 @@ export class TreeWidget<T> extends Disposable {
       }
     }
     return null;
+  }
+
+  private _collectExpandedKeys(nodes: TreeNode<T>[]): Set<string> {
+    const keys = new Set<string>();
+    for (const node of nodes) {
+      if (node.expanded && this._getKey) {
+        keys.add(this._getKey(node.element));
+      }
+      if (node.children) {
+        for (const key of this._collectExpandedKeys(node.children)) {
+          keys.add(key);
+        }
+      }
+    }
+    return keys;
+  }
+
+  private async _restoreExpanded(nodes: TreeNode<T>[], keys: Set<string>): Promise<void> {
+    for (const node of nodes) {
+      if (this._getKey && keys.has(this._getKey(node.element)) && this._dataSource.hasChildren(node.element)) {
+        try {
+          const children = await this._dataSource.getChildren(node.element);
+          node.children = this._toNodes(children, node.depth + 1);
+          node.expanded = true;
+          await this._restoreExpanded(node.children, keys);
+        } catch (err) {
+          console.warn('[TreeWidget] Failed to restore expanded node:', err);
+          node.children = [];
+          node.expanded = true;
+          node.error = true;
+        }
+      }
+    }
   }
 
   private _disposeRows(nodes: TreeNode<T>[]): void {

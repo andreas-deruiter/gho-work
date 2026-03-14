@@ -13,4 +13,4 @@ export * from './browser/conversationList.js';
 export * from './browser/modelSelector.js';
 export { OnboardingFlow } from './browser/onboarding/onboardingFlow.js';
 export { SettingsPanel } from './browser/settings/settingsPanel.js';
-export { DocumentsPanel } from './browser/documentsPanel.js';
+export { FilesPanel } from './browser/filesPanel.js';

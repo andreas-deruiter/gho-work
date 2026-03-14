@@ -82,7 +82,7 @@ class FileTreeRenderer implements ITreeRenderer<FileEntry> {
   }
 }
 
-export class DocumentsPanel extends Disposable {
+export class FilesPanel extends Disposable {
   private readonly _container: HTMLElement;
   private readonly _treeContainer: HTMLElement;
   private readonly _tree: TreeWidget<FileEntry>;
@@ -90,6 +90,7 @@ export class DocumentsPanel extends Disposable {
   private _showHidden = false;
   private _filterText = '';
   private _watchDisposable: IDisposable | null = null;
+  private _refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly _onDidRequestAttachEmitter = this._register(new Emitter<FileEntry>());
   readonly onDidRequestAttach: Event<FileEntry> = this._onDidRequestAttachEmitter.event;
@@ -101,7 +102,7 @@ export class DocumentsPanel extends Disposable {
     super();
 
     this._container = document.createElement('div');
-    this._container.classList.add('documents-panel');
+    this._container.classList.add('files-panel');
 
     // Header
     const header = this._buildHeader();
@@ -113,7 +114,7 @@ export class DocumentsPanel extends Disposable {
 
     // Tree container
     this._treeContainer = document.createElement('div');
-    this._treeContainer.classList.add('documents-tree');
+    this._treeContainer.classList.add('files-tree');
     this._container.appendChild(this._treeContainer);
 
     // Footer
@@ -131,6 +132,7 @@ export class DocumentsPanel extends Disposable {
       renderer,
       filter: (entry) => this._applyFilter(entry),
       sorter: (a, b) => this._sortEntries(a, b),
+      getKey: (entry) => entry.path,
     }));
 
     this._treeContainer.appendChild(this._tree.getDomNode());
@@ -147,20 +149,19 @@ export class DocumentsPanel extends Disposable {
 
   async load(): Promise<void> {
     await this._tree.refresh();
-    this._startWatching();
   }
 
   private _buildHeader(): HTMLElement {
     const header = document.createElement('div');
-    header.classList.add('documents-header');
+    header.classList.add('files-header');
 
     const title = document.createElement('span');
-    title.classList.add('documents-title');
-    title.textContent = 'DOCUMENTS';
+    title.classList.add('files-title');
+    title.textContent = 'FILES';
     header.appendChild(title);
 
     const actions = document.createElement('div');
-    actions.classList.add('documents-actions');
+    actions.classList.add('files-actions');
 
     // New file button
     const newFileBtn = document.createElement('button');
@@ -207,11 +208,11 @@ export class DocumentsPanel extends Disposable {
 
   private _buildFilterInput(): HTMLElement {
     const filterRow = document.createElement('div');
-    filterRow.classList.add('documents-filter');
+    filterRow.classList.add('files-filter');
 
     const input = document.createElement('input');
     input.type = 'text';
-    input.classList.add('documents-filter-input');
+    input.classList.add('files-filter-input');
     input.setAttribute('placeholder', 'Filter files...');
     input.setAttribute('aria-label', 'Filter files');
     input.addEventListener('input', () => {
@@ -226,10 +227,10 @@ export class DocumentsPanel extends Disposable {
 
   private _buildFooter(): HTMLElement {
     const footer = document.createElement('div');
-    footer.classList.add('documents-footer');
+    footer.classList.add('files-footer');
 
     const pathSpan = document.createElement('span');
-    pathSpan.classList.add('documents-workspace-path');
+    pathSpan.classList.add('files-workspace-path');
     pathSpan.textContent = this._workspacePath;
     pathSpan.setAttribute('title', this._workspacePath);
     footer.appendChild(pathSpan);
@@ -263,7 +264,11 @@ export class DocumentsPanel extends Disposable {
     void this._ipc.invoke<{ watchId: string }>(IPC_CHANNELS.FILES_WATCH, { path: this._workspacePath }).then((result) => {
       const watchId = result.watchId;
       const disposable = this._ipc.on(IPC_CHANNELS.FILES_CHANGED, () => {
-        void this._tree.refresh();
+        if (this._refreshTimer) { clearTimeout(this._refreshTimer); }
+        this._refreshTimer = setTimeout(() => {
+          this._refreshTimer = null;
+          void this._tree.refresh();
+        }, 1000);
       });
       this._watchDisposable = {
         dispose: () => {
@@ -272,7 +277,7 @@ export class DocumentsPanel extends Disposable {
         },
       };
     }).catch((err) => {
-      console.warn('[DocumentsPanel] Failed to start file watching:', err);
+      console.warn('[FilesPanel] Failed to start file watching:', err);
     });
   }
 
@@ -284,7 +289,7 @@ export class DocumentsPanel extends Disposable {
       await this._ipc.invoke(IPC_CHANNELS.FILES_CREATE, { path: filePath, type: 'file' });
       await this._tree.refresh();
     } catch (err) {
-      console.error('[DocumentsPanel] Failed to create file:', err);
+      console.error('[FilesPanel] Failed to create file:', err);
     }
   }
 
@@ -320,7 +325,7 @@ export class DocumentsPanel extends Disposable {
       await this._ipc.invoke(IPC_CHANNELS.FILES_RENAME, { oldPath: entry.path, newPath });
       await this._tree.refresh();
     } catch (err) {
-      console.error('[DocumentsPanel] Failed to rename:', err);
+      console.error('[FilesPanel] Failed to rename:', err);
     }
   }
 
@@ -331,11 +336,12 @@ export class DocumentsPanel extends Disposable {
       await this._ipc.invoke(IPC_CHANNELS.FILES_DELETE, { path: entry.path });
       await this._tree.refresh();
     } catch (err) {
-      console.error('[DocumentsPanel] Failed to delete:', err);
+      console.error('[FilesPanel] Failed to delete:', err);
     }
   }
 
   override dispose(): void {
+    if (this._refreshTimer) { clearTimeout(this._refreshTimer); }
     this._watchDisposable?.dispose();
     super.dispose();
   }

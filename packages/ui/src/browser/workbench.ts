@@ -14,7 +14,7 @@ import { ChatPanel } from './chatPanel.js';
 import { ConversationListPanel } from './conversationList.js';
 import { SettingsPanel } from './settings/settingsPanel.js';
 import { ThemeService } from './theme.js';
-import { DocumentsPanel } from './documentsPanel.js';
+import { FilesPanel } from './filesPanel.js';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
@@ -73,19 +73,19 @@ export class Workbench extends Disposable {
     });
 
     // Documents panel — lazy-loaded
-    let documentsPanel: DocumentsPanel | undefined;
-    let documentsLoaded = false;
+    let filesPanel: FilesPanel | undefined;
+    let filesLoaded = false;
 
     void (async () => {
       try {
         const result = await this._ipc.invoke<{ path: string | null }>(IPC_CHANNELS.WORKSPACE_GET_ROOT, {});
         const workspacePath = result?.path;
         if (workspacePath) {
-          documentsPanel = this._register(new DocumentsPanel(workspacePath, this._ipc));
-          this._sidebar.addPanel('documents', documentsPanel.getDomNode());
+          filesPanel = this._register(new FilesPanel(workspacePath, this._ipc));
+          this._sidebar.addPanel('files', filesPanel.getDomNode());
 
           // Wire attach event to chat
-          documentsPanel.onDidRequestAttach(file => {
+          filesPanel.onDidRequestAttach(file => {
             this._chatPanel.addAttachment(file);
           });
         }
@@ -130,9 +130,9 @@ export class Workbench extends Disposable {
         }
 
         // Lazy-load documents panel on first activation
-        if (item === 'documents' && !documentsLoaded && documentsPanel) {
-          documentsLoaded = true;
-          void documentsPanel.load();
+        if (item === 'files' && !filesLoaded && filesPanel) {
+          filesLoaded = true;
+          void filesPanel.load();
         }
 
         this._sidebar.showPanel(item);

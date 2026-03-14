@@ -97,13 +97,26 @@ describe('TreeWidget', () => {
     });
   });
 
-  it('fires onDidSelect when a row is clicked', () => {
+  it('fires onDidSelect when a leaf row is clicked', () => {
     const selected: TestNode[] = [];
     tree.onDidSelect(node => selected.push(node));
+    // Click the second row (File B, a leaf) — folder rows toggle instead of selecting
+    const rows = tree.getDomNode().querySelectorAll('.tree-row');
+    (rows[1] as HTMLElement).click();
+    expect(selected.length).toBe(1);
+    expect(selected[0].id).toBe('b');
+  });
+
+  it('toggles folder when a folder row is clicked', async () => {
+    const toggled: Array<{ element: TestNode; expanded: boolean }> = [];
+    tree.onDidToggle(e => toggled.push(e));
     const row = tree.getDomNode().querySelector('.tree-row') as HTMLElement;
     row.click();
-    expect(selected.length).toBe(1);
-    expect(selected[0].id).toBe('a');
+    await vi.waitFor(() => {
+      expect(toggled.length).toBe(1);
+    });
+    expect(toggled[0].element.id).toBe('a');
+    expect(toggled[0].expanded).toBe(true);
   });
 
   it('fires onContextMenu on right-click', () => {
@@ -178,5 +191,31 @@ describe('TreeWidget', () => {
       firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       expect(selected.length).toBe(1);
     });
+  });
+
+  it('shows folder as expanded with empty children when getChildren throws', async () => {
+    const failingDataSource: ITreeDataSource<TestNode> = {
+      getRoots: vi.fn().mockResolvedValue([
+        { id: 'locked', label: 'Locked Folder', children: [{ id: 'x', label: 'X' }] },
+      ]),
+      hasChildren: (node: TestNode) => !!node.children && node.children.length > 0,
+      getChildren: vi.fn().mockRejectedValue(new Error('EPERM: operation not permitted')),
+    };
+
+    const errorTree = new TreeWidget<TestNode>({ dataSource: failingDataSource, renderer: createTestRenderer() });
+    await errorTree.refresh();
+
+    const row = errorTree.getDomNode().querySelector('.tree-row') as HTMLElement;
+    row.click();
+
+    await vi.waitFor(() => {
+      const chevron = errorTree.getDomNode().querySelector('.tree-chevron') as HTMLElement;
+      expect(chevron.textContent).toBe('\u25BC');
+    });
+
+    // No child rows rendered
+    expect(errorTree.getDomNode().querySelectorAll('[data-tree-depth="1"]').length).toBe(0);
+
+    errorTree.dispose();
   });
 });
