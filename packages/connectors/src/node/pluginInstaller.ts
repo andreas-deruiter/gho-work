@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { CatalogEntry } from '@gho-work/base';
+import type { CatalogEntry, PluginAgentDefinition } from '@gho-work/base';
 
 // Module-level async wrapper (promisified execFile).
 // All class calls go through this._run() so tests can spy on the instance method.
@@ -294,6 +294,53 @@ export class PluginInstaller {
   }
 
   // -------------------------------------------------------------------------
+  // Agent parsing
+  // -------------------------------------------------------------------------
+
+  /**
+   * Parses agent `.md` files from the plugin's agent directories.
+   *
+   * Each file may have YAML frontmatter between `---` delimiters.
+   * Recognised frontmatter fields: `name`, `description`, `model`, `allowed-tools` / `allowedTools`.
+   * The body (after the closing `---`) becomes the system prompt.
+   *
+   * Returns an empty array when no agent directories are found.
+   */
+  async parseAgentFiles(
+    pluginDir: string,
+    pluginName: string,
+    agentPaths?: string | string[],
+  ): Promise<PluginAgentDefinition[]> {
+    const dirs = this._resolveDirs(pluginDir, agentPaths, 'agents');
+    const agents: PluginAgentDefinition[] = [];
+
+    for (const dir of dirs) {
+      if (!fs.existsSync(dir)) { continue; }
+      const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
+      for (const file of files) {
+        const content = fs.readFileSync(path.join(dir, file), 'utf-8');
+        const { frontmatter, body } = this._parseFrontmatter(content);
+        const name = frontmatter['name'] ?? path.basename(file, '.md');
+        agents.push({
+          id: `${pluginName}:${name}`,
+          name,
+          description: frontmatter['description'] ?? '',
+          systemPrompt: body.trim(),
+          pluginName,
+          model: frontmatter['model'],
+          allowedTools:
+            frontmatter['allowed-tools'] !== undefined
+              ? frontmatter['allowed-tools'].split(',').map((s) => s.trim())
+              : frontmatter['allowedTools'] !== undefined
+                ? frontmatter['allowedTools'].split(',').map((s) => s.trim())
+                : undefined,
+        });
+      }
+    }
+    return agents;
+  }
+
+  // -------------------------------------------------------------------------
   // Cache management
   // -------------------------------------------------------------------------
 
@@ -382,6 +429,33 @@ export class PluginInstaller {
     }
     const pathArray = Array.isArray(paths) ? paths : [paths];
     return pathArray.map((p) => path.join(pluginDir, p.replace(/\/$/, '')));
+  }
+
+  /**
+   * Parses YAML frontmatter from a markdown file.
+   *
+   * Expects the content to start with `---`, followed by key-value pairs
+   * (`key: value`), terminated by another `---`. Returns the parsed fields
+   * and the remaining body text.
+   */
+  private _parseFrontmatter(content: string): { frontmatter: Record<string, string | undefined>; body: string } {
+    if (!content.startsWith('---')) {
+      return { frontmatter: {}, body: content };
+    }
+    const endIndex = content.indexOf('---', 3);
+    if (endIndex === -1) {
+      return { frontmatter: {}, body: content };
+    }
+    const yaml = content.substring(3, endIndex);
+    const body = content.substring(endIndex + 3);
+    const frontmatter: Record<string, string | undefined> = {};
+    for (const line of yaml.split('\n')) {
+      const match = line.match(/^(\w[\w-]*):\s*(.+)$/);
+      if (match) {
+        frontmatter[match[1]] = match[2].trim();
+      }
+    }
+    return { frontmatter, body };
   }
 
   /**

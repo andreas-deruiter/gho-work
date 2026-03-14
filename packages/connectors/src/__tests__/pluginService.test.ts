@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { CatalogEntry } from '@gho-work/base';
 import { PluginServiceImpl } from '../node/pluginServiceImpl.js';
-import type { PluginSkillRegistration, PluginSettingsStore } from '../common/pluginService.js';
+import type { PluginSkillRegistration, PluginAgentRegistration, PluginSettingsStore } from '../common/pluginService.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -70,7 +70,17 @@ function makeInstaller() {
     parseMcpServers: vi.fn().mockResolvedValue(new Map()),
     countSkills: vi.fn().mockResolvedValue(3),
     countAgents: vi.fn().mockResolvedValue(0),
+    countCommands: vi.fn().mockResolvedValue(0),
     deleteCache: vi.fn().mockResolvedValue(undefined),
+    parseAgentFiles: vi.fn().mockResolvedValue([]),
+  };
+}
+
+function makeAgentRegistration(): PluginAgentRegistration {
+  return {
+    register: vi.fn(),
+    unregister: vi.fn(),
+    unregisterPlugin: vi.fn(),
   };
 }
 
@@ -100,6 +110,7 @@ describe('PluginServiceImpl', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       installer as any,
       skillRegistration,
+      makeAgentRegistration(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       configStore as any,
       settings,

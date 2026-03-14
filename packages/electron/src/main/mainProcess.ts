@@ -60,7 +60,7 @@ import {
   PluginCatalogFetcher,
   PluginInstaller,
 } from '@gho-work/connectors';
-import type { PluginSettingsStore } from '@gho-work/connectors';
+import type { PluginSettingsStore, PluginAgentRegistration } from '@gho-work/connectors';
 import type {
   ConnectorRemoveRequest,
   ConnectorConnectRequest,
@@ -369,10 +369,19 @@ export function createMainProcess(
     refresh: () => skillRegistry.refresh(),
   };
 
+  // Placeholder agent registration — full wiring (Task 11) will replace this
+  // with the real IPluginAgentRegistry once it is wired into the main process.
+  const agentRegistration: PluginAgentRegistration = {
+    register: () => {},
+    unregister: () => {},
+    unregisterPlugin: () => {},
+  };
+
   const pluginService = new PluginServiceImpl(
     pluginFetcher,
     pluginInstaller,
     skillRegistration,
+    agentRegistration,
     configStore,
     pluginSettings,
   );

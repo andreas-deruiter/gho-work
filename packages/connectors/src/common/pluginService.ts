@@ -1,7 +1,7 @@
 import type { IDisposable } from '@gho-work/base';
 import type { Event } from '@gho-work/base';
 import { createServiceIdentifier } from '@gho-work/base';
-import type { CatalogEntry, InstalledPlugin, InstallProgressStatus } from '@gho-work/base';
+import type { CatalogEntry, InstalledPlugin, InstallProgressStatus, PluginAgentDefinition } from '@gho-work/base';
 
 // ---------------------------------------------------------------------------
 // Progress
@@ -23,6 +23,18 @@ export interface PluginSkillRegistration {
   addSource(source: { id: string; path: string; priority: number }): void;
   removeSource(sourceId: string): void;
   refresh(): Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
+// Agent registration interface (connectors-side)
+// Agent package cannot be imported from connectors (wrong direction).
+// The main process satisfies this by passing the IPluginAgentRegistry.
+// ---------------------------------------------------------------------------
+
+export interface PluginAgentRegistration {
+  register(agent: PluginAgentDefinition): void;
+  unregister(agentId: string): void;
+  unregisterPlugin(pluginName: string): void;
 }
 
 // ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { PluginServiceImpl } from '../../packages/connectors/src/node/pluginServiceImpl.js';
-import type { PluginSkillRegistration, PluginSettingsStore } from '../../packages/connectors/src/common/pluginService.js';
+import type { PluginSkillRegistration, PluginAgentRegistration, PluginSettingsStore } from '../../packages/connectors/src/common/pluginService.js';
 import type { CatalogEntry } from '@gho-work/base';
 
 // ---------------------------------------------------------------------------
@@ -48,6 +48,14 @@ function makeSkillRegistration(): PluginSkillRegistration {
   };
 }
 
+function makeAgentRegistration(): PluginAgentRegistration {
+  return {
+    register: vi.fn(),
+    unregister: vi.fn(),
+    unregisterPlugin: vi.fn(),
+  };
+}
+
 function makeConfigStore() {
   return {
     addServer: vi.fn().mockResolvedValue(undefined),
@@ -76,6 +84,7 @@ function makeInstaller() {
     countAgents: vi.fn().mockResolvedValue(0),
     countCommands: vi.fn().mockResolvedValue(0),
     deleteCache: vi.fn().mockResolvedValue(undefined),
+    parseAgentFiles: vi.fn().mockResolvedValue([]),
   };
 }
 
@@ -102,7 +111,7 @@ describe('PluginServiceImpl — catalog', () => {
     skillReg = makeSkillRegistration();
     configStore = makeConfigStore();
     settings = makeSettingsStore();
-    service = new PluginServiceImpl(fetcher, installer, skillReg, configStore, settings);
+    service = new PluginServiceImpl(fetcher, installer, skillReg, makeAgentRegistration(), configStore, settings);
   });
 
   afterEach(() => {
@@ -194,6 +203,7 @@ describe('PluginServiceImpl — installed plugins (initial state)', () => {
       makeFetcher([]),
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
       makeConfigStore(),
       makeSettingsStore(),
     );
@@ -225,6 +235,7 @@ describe('PluginServiceImpl — settings restoration', () => {
       makeFetcher([]),
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
       makeConfigStore(),
       settings,
     );
@@ -245,6 +256,7 @@ describe('PluginServiceImpl — settings restoration', () => {
       fetcher,
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
       makeConfigStore(),
       settings,
     );
@@ -265,6 +277,7 @@ describe('PluginServiceImpl — settings restoration', () => {
       makeFetcher([]),
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
       makeConfigStore(),
       settings,
     );
@@ -282,6 +295,7 @@ describe('PluginServiceImpl — settings restoration', () => {
       makeFetcher([]),
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
       makeConfigStore(),
       settings,
     );
@@ -327,6 +341,7 @@ describe('PluginServiceImpl — ${CLAUDE_PLUGIN_ROOT} expansion', () => {
       makeFetcher([]),
       mockInstaller,
       makeSkillRegistration(),
+      makeAgentRegistration(),
       mockConfigStore,
       settings,
     );

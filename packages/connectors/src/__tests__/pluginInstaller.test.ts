@@ -331,6 +331,91 @@ describe('PluginInstaller', () => {
   });
 
   // -------------------------------------------------------------------------
+  // parseAgentFiles
+  // -------------------------------------------------------------------------
+
+  describe('parseAgentFiles', () => {
+    it('parses agent .md with frontmatter', async () => {
+      const pluginDir = path.join(tempDir, 'agent-plugin');
+      const agentDir = path.join(pluginDir, 'agents');
+      fs.mkdirSync(agentDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(agentDir, 'seer.md'),
+        [
+          '---',
+          'name: seer',
+          'description: Ask about Sentry data',
+          'model: sonnet',
+          '---',
+          'You are a Sentry expert. Help the user query their Sentry data.',
+        ].join('\n'),
+      );
+
+      const agents = await installer.parseAgentFiles(pluginDir, 'test-plugin');
+      expect(agents).toHaveLength(1);
+      expect(agents[0].id).toBe('test-plugin:seer');
+      expect(agents[0].name).toBe('seer');
+      expect(agents[0].description).toBe('Ask about Sentry data');
+      expect(agents[0].systemPrompt).toBe(
+        'You are a Sentry expert. Help the user query their Sentry data.',
+      );
+      expect(agents[0].pluginName).toBe('test-plugin');
+      expect(agents[0].model).toBe('sonnet');
+    });
+
+    it('returns empty array when no agents directory', async () => {
+      const pluginDir = path.join(tempDir, 'no-agents');
+      fs.mkdirSync(pluginDir, { recursive: true });
+      const agents = await installer.parseAgentFiles(pluginDir, 'test');
+      expect(agents).toEqual([]);
+    });
+
+    it('uses filename (without .md) as name when frontmatter has no name field', async () => {
+      const pluginDir = path.join(tempDir, 'no-name-agent');
+      const agentDir = path.join(pluginDir, 'agents');
+      fs.mkdirSync(agentDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(agentDir, 'helper.md'),
+        ['---', 'description: A helper agent', '---', 'Help the user.'].join('\n'),
+      );
+
+      const agents = await installer.parseAgentFiles(pluginDir, 'my-plugin');
+      expect(agents).toHaveLength(1);
+      expect(agents[0].name).toBe('helper');
+      expect(agents[0].id).toBe('my-plugin:helper');
+    });
+
+    it('returns empty systemPrompt when no body after frontmatter', async () => {
+      const pluginDir = path.join(tempDir, 'empty-body-agent');
+      const agentDir = path.join(pluginDir, 'agents');
+      fs.mkdirSync(agentDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(agentDir, 'stub.md'),
+        ['---', 'name: stub', '---'].join('\n'),
+      );
+
+      const agents = await installer.parseAgentFiles(pluginDir, 'my-plugin');
+      expect(agents).toHaveLength(1);
+      expect(agents[0].systemPrompt).toBe('');
+    });
+
+    it('parses agent .md without frontmatter', async () => {
+      const pluginDir = path.join(tempDir, 'no-fm-agent');
+      const agentDir = path.join(pluginDir, 'agents');
+      fs.mkdirSync(agentDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(agentDir, 'plain.md'),
+        'You are a plain agent.',
+      );
+
+      const agents = await installer.parseAgentFiles(pluginDir, 'my-plugin');
+      expect(agents).toHaveLength(1);
+      expect(agents[0].name).toBe('plain');
+      expect(agents[0].systemPrompt).toBe('You are a plain agent.');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // checkGitAvailable
   // -------------------------------------------------------------------------
 

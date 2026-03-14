@@ -6,6 +6,7 @@ import type {
   IPluginService,
   InstallProgress,
   PluginSkillRegistration,
+  PluginAgentRegistration,
   PluginSettingsStore,
 } from '../common/pluginService.js';
 import type { PluginCatalogFetcher } from './pluginCatalogFetcher.js';
@@ -81,8 +82,10 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       | 'countAgents'
       | 'countCommands'
       | 'deleteCache'
+      | 'parseAgentFiles'
     >,
     private readonly _skillRegistration: PluginSkillRegistration,
+    private readonly _agentRegistration: PluginAgentRegistration,
     private readonly _configStore: IConnectorConfigStore,
     private readonly _settings: PluginSettingsStore,
   ) {
@@ -213,6 +216,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     const agentCount = await this._installer.countAgents(pluginRoot, manifest.agents);
     const commandCount = await this._installer.countCommands(pluginRoot, manifest.commands);
 
+    // Parse agents
+    const agentDefs = await this._installer.parseAgentFiles(pluginRoot, name, manifest.agents);
+
     // Parse MCP servers
     const mcpServerMap = await this._installer.parseMcpServers(pluginRoot, manifest.mcpServers);
 
@@ -223,6 +229,12 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     const registeredServerNames: string[] = [];
 
     try {
+      // Register agents
+      for (const agent of agentDefs) {
+        this._agentRegistration.register(agent);
+      }
+      const agentIds = agentDefs.map((a) => a.id);
+
       // Register skill source
       if (skillCount > 0 || manifest.skills !== undefined) {
         const skillPath = this._resolveSkillPath(pluginRoot, manifest.skills);
@@ -274,7 +286,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
         agentCount,
         mcpServerNames,
         commandCount,
-        agentIds: [],
+        agentIds,
         hookCount: 0,
       };
 
@@ -311,6 +323,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     if (plugin === undefined) {
       throw new Error(`Plugin "${name}" is not installed.`);
     }
+
+    // Deregister agents
+    this._agentRegistration.unregisterPlugin(name);
 
     // Deregister skill and commands sources
     this._skillRegistration.removeSource(`plugin:${name}`);
@@ -350,8 +365,14 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
 
     const pluginRoot = this._resolvePluginRoot(plugin.cachePath, plugin.catalogMeta.location);
 
-    // Re-register skill and commands sources
+    // Re-register skill and commands sources (also needed for agent paths from manifest)
     const manifest = await this._installer.parseManifest(pluginRoot);
+
+    // Re-register agents
+    const agents = await this._installer.parseAgentFiles(pluginRoot, name, manifest.agents);
+    for (const agent of agents) {
+      this._agentRegistration.register(agent);
+    }
     if (plugin.skillCount > 0) {
       const skillPath = this._resolveSkillPath(pluginRoot, manifest.skills);
       this._skillRegistration.addSource({ id: `plugin:${name}`, path: skillPath, priority: 10 });
@@ -402,6 +423,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     if (!plugin.enabled) {
       return; // already disabled
     }
+
+    // Deregister agents
+    this._agentRegistration.unregisterPlugin(name);
 
     // Deregister skill and commands sources
     this._skillRegistration.removeSource(`plugin:${name}`);
