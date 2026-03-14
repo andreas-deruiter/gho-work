@@ -330,10 +330,10 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     }
 
     // Re-register MCP servers
+    const enableManifest = await this._installer.parseManifest(plugin.cachePath);
+    const enableServers = await this._installer.parseMcpServers(plugin.cachePath, enableManifest.mcpServers);
     for (const serverName of plugin.mcpServerNames) {
-      const manifest = await this._installer.parseManifest(plugin.cachePath);
-      const servers = await this._installer.parseMcpServers(plugin.cachePath, manifest.mcpServers);
-      const serverConfig = servers.get(serverName);
+      const serverConfig = enableServers.get(serverName);
       if (serverConfig !== undefined) {
         const mcpConfig: MCPServerConfig = {
           type: 'stdio',

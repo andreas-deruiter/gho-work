@@ -13,7 +13,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'appearance', label: 'Appearance' },
+  { id: 'appearance', label: 'General' },
   { id: 'skills', label: 'Skills' },
   { id: 'plugins', label: 'Plugins' },
   { id: 'connectors', label: 'Connectors' },

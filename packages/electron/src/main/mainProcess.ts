@@ -837,12 +837,16 @@ export function createMainProcess(
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_LIST, async () => {
     const servers = configStore.getServers();
-    const result = Array.from(servers.entries()).map(([name, config]) => ({
-      name,
-      type: config.type,
-      status: mcpClientManager.getServerStatus(name),
-    }));
-    return { servers: result };
+    return Array.from(servers.entries()).map(([name, config]) => {
+      const status = mcpClientManager.getServerStatus(name);
+      return {
+        name,
+        type: config.type,
+        connected: status === 'connected',
+        error: status === 'error' ? 'Connection failed' : undefined,
+        source: config.source,
+      };
+    });
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.CONNECTOR_REMOVE, async (...args: unknown[]) => {

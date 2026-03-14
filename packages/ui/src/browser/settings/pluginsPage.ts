@@ -175,7 +175,8 @@ export class PluginsPage extends Widget {
       const matchesSearch =
         !query ||
         entry.name.toLowerCase().includes(query) ||
-        entry.description.toLowerCase().includes(query);
+        entry.description.toLowerCase().includes(query) ||
+        (entry.keywords ?? []).some(k => k.toLowerCase().includes(query));
       const matchesCategory =
         this._activeCategory === 'All' || entry.category === this._activeCategory;
       return matchesSearch && matchesCategory;
