@@ -60,7 +60,7 @@ class FileTreeRenderer implements ITreeRenderer<FileEntry> {
 
     // Name
     const nameSpan = document.createElement('span');
-    nameSpan.classList.add('tree-label');
+    nameSpan.classList.add('tree-name');
     nameSpan.textContent = entry.name;
     container.appendChild(nameSpan);
 

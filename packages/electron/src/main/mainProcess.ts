@@ -890,7 +890,8 @@ export function createMainProcess(
 
   function validatePath(targetPath: string): void {
     const resolved = path.resolve(targetPath);
-    if (!resolved.startsWith(path.resolve(workspaceRoot))) {
+    const resolvedRoot = path.resolve(workspaceRoot) + path.sep;
+    if (resolved !== path.resolve(workspaceRoot) && !resolved.startsWith(resolvedRoot)) {
       throw new Error('Path traversal detected: path is outside workspace');
     }
   }
