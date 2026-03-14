@@ -16,7 +16,8 @@ const DEFAULT_CATALOG_URL =
 type RawSourceObject =
   | { source: 'github'; repo: string; ref?: string; sha?: string }
   | { source: 'url'; url: string; ref?: string; sha?: string }
-  | { source: 'git-subdir'; url: string; path: string; ref?: string; sha?: string };
+  | { source: 'git-subdir'; url: string; path: string; ref?: string; sha?: string }
+  | { source: 'npm'; package: string; version?: string; registry?: string };
 
 type RawSource = string | RawSourceObject;
 
@@ -28,13 +29,23 @@ interface RawPlugin {
   source: RawSource;
   keywords?: string[];
   category?: string;
-  skills?: string[];
-  commands?: string[];
-  mcpServers?: Record<string, unknown>;
+  tags?: string[];
+  homepage?: string;
+  repository?: string;
+  license?: string;
+  strict?: boolean;
+  // Component declarations
+  skills?: string | string[];
+  commands?: string | string[];
+  agents?: string | string[];
+  hooks?: string | Record<string, unknown>;
+  mcpServers?: string | Record<string, unknown>;
 }
 
 interface RawMarketplace {
-  metadata?: { pluginRoot?: string };
+  name?: string;
+  owner?: { name: string; email?: string };
+  metadata?: { pluginRoot?: string; description?: string; version?: string };
   plugins: RawPlugin[];
 }
 
@@ -86,6 +97,35 @@ export class PluginCatalogFetcher {
 
   /** Maps a raw marketplace plugin entry to a CatalogEntry. */
   _toEntry(plugin: RawPlugin, pluginRoot: string | undefined): CatalogEntry {
+    const hasSkills = _hasValue(plugin.skills) || _hasValue(plugin.commands);
+    const hasCommands = _hasValue(plugin.commands);
+    const hasAgents = _hasValue(plugin.agents);
+    const hasHooks = _hasValue(plugin.hooks);
+    const hasMcpServers =
+      typeof plugin.mcpServers === 'string'
+        ? plugin.mcpServers.length > 0
+        : plugin.mcpServers !== undefined &&
+          plugin.mcpServers !== null &&
+          Object.keys(plugin.mcpServers).length > 0;
+
+    // Build componentPaths only when at least one component field is present
+    const hasAnyComponent =
+      plugin.skills !== undefined ||
+      plugin.commands !== undefined ||
+      plugin.agents !== undefined ||
+      plugin.hooks !== undefined ||
+      plugin.mcpServers !== undefined;
+
+    const componentPaths: CatalogEntry['componentPaths'] = hasAnyComponent
+      ? {
+          ...(plugin.skills !== undefined && { skills: plugin.skills }),
+          ...(plugin.commands !== undefined && { commands: plugin.commands }),
+          ...(plugin.agents !== undefined && { agents: plugin.agents }),
+          ...(plugin.hooks !== undefined && { hooks: plugin.hooks }),
+          ...(plugin.mcpServers !== undefined && { mcpServers: plugin.mcpServers }),
+        }
+      : undefined;
+
     return {
       name: plugin.name,
       description: plugin.description,
@@ -94,16 +134,17 @@ export class PluginCatalogFetcher {
       location: this._resolveLocation(plugin.source, pluginRoot),
       ...(plugin.keywords !== undefined && { keywords: plugin.keywords }),
       ...(plugin.category !== undefined && { category: plugin.category }),
-      hasSkills:
-        (Array.isArray(plugin.skills) && plugin.skills.length > 0) ||
-        (Array.isArray(plugin.commands) && plugin.commands.length > 0),
-      hasMcpServers:
-        plugin.mcpServers !== undefined &&
-        plugin.mcpServers !== null &&
-        Object.keys(plugin.mcpServers).length > 0,
-      hasCommands: Array.isArray(plugin.commands) && plugin.commands.length > 0,
-      hasAgents: false,
-      hasHooks: false,
+      ...(plugin.tags !== undefined && { tags: plugin.tags }),
+      ...(plugin.homepage !== undefined && { homepage: plugin.homepage }),
+      ...(plugin.repository !== undefined && { repository: plugin.repository }),
+      ...(plugin.license !== undefined && { license: plugin.license }),
+      strict: plugin.strict ?? true,
+      hasSkills,
+      hasMcpServers,
+      hasCommands,
+      hasAgents,
+      hasHooks,
+      ...(componentPaths !== undefined && { componentPaths }),
     };
   }
 
@@ -112,7 +153,7 @@ export class PluginCatalogFetcher {
    *
    * - Bare string: treated as a path relative to `pluginRoot` within the
    *   official marketplace repo, resolved to a `git-subdir` location.
-   * - Object with `type: 'github'`, `'url'`, or `'git-subdir'`: passed through.
+   * - Object with `type: 'github'`, `'url'`, `'git-subdir'`, or `'npm'`: passed through.
    */
   _resolveLocation(source: RawSource, pluginRoot: string | undefined): PluginLocation {
     if (typeof source === 'string') {
@@ -144,6 +185,30 @@ export class PluginCatalogFetcher {
           path: source.path,
           ...(source.ref !== undefined && { ref: source.ref }),
         };
+      case 'npm':
+        return {
+          type: 'npm',
+          package: source.package,
+          ...(source.version !== undefined && { version: source.version }),
+          ...(source.registry !== undefined && { registry: source.registry }),
+        };
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when a component field has a non-empty value.
+ * Handles string (non-empty), string[] (non-empty), and object (non-empty keys).
+ */
+function _hasValue(
+  value: string | string[] | Record<string, unknown> | undefined,
+): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value === 'string') return value.length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  return Object.keys(value).length > 0;
 }
