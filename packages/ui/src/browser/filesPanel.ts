@@ -28,6 +28,61 @@ function isHiddenByDefault(entry: FileEntry): boolean {
   return DEFAULT_HIDDEN_PATTERNS.some(pattern => pattern.test(entry.name));
 }
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function createSVGButton(paths: string[], size = 16): SVGElement {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  const STROKE_ATTRS: Record<string, string> = { stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+  for (const d of paths) {
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', d);
+    for (const [k, v] of Object.entries(STROKE_ATTRS)) { path.setAttribute(k, v); }
+    svg.appendChild(path);
+  }
+  return svg;
+}
+
+function createEyeIcon(): SVGElement {
+  const svg = createSVGButton(['M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z']);
+  const circle = document.createElementNS(SVG_NS, 'circle');
+  circle.setAttribute('cx', '12');
+  circle.setAttribute('cy', '12');
+  circle.setAttribute('r', '3');
+  circle.setAttribute('stroke', 'currentColor');
+  circle.setAttribute('stroke-width', '2');
+  svg.appendChild(circle);
+  return svg;
+}
+
+function createEyeOffIcon(): SVGElement {
+  return createSVGButton([
+    'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94',
+    'M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19',
+    'M14.12 14.12a3 3 0 1 1-4.24-4.24',
+    'M1 1l22 22',
+  ]);
+}
+
+function createRefreshIcon(): SVGElement {
+  const svg = createSVGButton(['M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15']);
+  const STROKE_ATTRS: Record<string, string> = { stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', fill: 'none' };
+  for (const points of ['23,4 23,10 17,10', '1,20 1,14 7,14']) {
+    const poly = document.createElementNS(SVG_NS, 'polyline');
+    poly.setAttribute('points', points);
+    for (const [k, v] of Object.entries(STROKE_ATTRS)) { poly.setAttribute(k, v); }
+    svg.appendChild(poly);
+  }
+  return svg;
+}
+
+function createSortIcon(): SVGElement {
+  return createSVGButton(['M12 5v14', 'M19 12l-7 7-7-7']);
+}
+
 class FileTreeDataSource implements ITreeDataSource<FileEntry> {
   constructor(
     private readonly _workspacePath: string,
@@ -62,21 +117,20 @@ class FileTreeRenderer implements ITreeRenderer<FileEntry> {
     const nameSpan = document.createElement('span');
     nameSpan.classList.add('tree-name');
     nameSpan.textContent = entry.name;
+    nameSpan.setAttribute('title', entry.name);
     container.appendChild(nameSpan);
 
-    // Attach button (files only)
-    if (entry.type === 'file') {
-      const attachBtn = document.createElement('button');
-      attachBtn.classList.add('tree-attach-btn');
-      attachBtn.setAttribute('aria-label', `Attach ${entry.name}`);
-      attachBtn.setAttribute('title', 'Attach to chat');
-      attachBtn.textContent = '+';
-      attachBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._onAttach(entry);
-      });
-      container.appendChild(attachBtn);
-    }
+    // Attach button (files and folders)
+    const attachBtn = document.createElement('button');
+    attachBtn.classList.add('tree-attach-btn');
+    attachBtn.setAttribute('aria-label', `Attach ${entry.name}`);
+    attachBtn.setAttribute('title', 'Attach to chat');
+    attachBtn.textContent = '+';
+    attachBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._onAttach(entry);
+    });
+    container.appendChild(attachBtn);
 
     return { dispose: () => {} };
   }
@@ -163,23 +217,15 @@ export class FilesPanel extends Disposable {
     const actions = document.createElement('div');
     actions.classList.add('files-actions');
 
-    // New file button
-    const newFileBtn = document.createElement('button');
-    newFileBtn.setAttribute('aria-label', 'New file');
-    newFileBtn.setAttribute('title', 'New file');
-    newFileBtn.textContent = '+';
-    newFileBtn.addEventListener('click', () => {
-      void this._handleNewFile();
-    });
-    actions.appendChild(newFileBtn);
-
     // Toggle hidden button
     const toggleHiddenBtn = document.createElement('button');
     toggleHiddenBtn.setAttribute('aria-label', 'Toggle hidden files');
     toggleHiddenBtn.setAttribute('title', 'Toggle hidden files');
-    toggleHiddenBtn.textContent = 'H';
+    toggleHiddenBtn.appendChild(this._showHidden ? createEyeIcon() : createEyeOffIcon());
     toggleHiddenBtn.addEventListener('click', () => {
       this._showHidden = !this._showHidden;
+      while (toggleHiddenBtn.firstChild) { toggleHiddenBtn.removeChild(toggleHiddenBtn.firstChild); }
+      toggleHiddenBtn.appendChild(this._showHidden ? createEyeIcon() : createEyeOffIcon());
       this._tree.setFilter((entry) => this._applyFilter(entry));
       void this._tree.refresh();
     });
@@ -189,14 +235,14 @@ export class FilesPanel extends Disposable {
     const sortBtn = document.createElement('button');
     sortBtn.setAttribute('aria-label', 'Sort');
     sortBtn.setAttribute('title', 'Sort');
-    sortBtn.textContent = 'A\u2193';
+    sortBtn.appendChild(createSortIcon());
     actions.appendChild(sortBtn);
 
     // Refresh button
     const refreshBtn = document.createElement('button');
     refreshBtn.setAttribute('aria-label', 'Refresh');
     refreshBtn.setAttribute('title', 'Refresh');
-    refreshBtn.textContent = '\u21BB';
+    refreshBtn.appendChild(createRefreshIcon());
     refreshBtn.addEventListener('click', () => {
       void this._tree.refresh();
     });
@@ -279,18 +325,6 @@ export class FilesPanel extends Disposable {
     }).catch((err) => {
       console.warn('[FilesPanel] Failed to start file watching:', err);
     });
-  }
-
-  private async _handleNewFile(): Promise<void> {
-    const name = window.prompt('New file name:');
-    if (!name) { return; }
-    const filePath = `${this._workspacePath}/${name}`;
-    try {
-      await this._ipc.invoke(IPC_CHANNELS.FILES_CREATE, { path: filePath, type: 'file' });
-      await this._tree.refresh();
-    } catch (err) {
-      console.error('[FilesPanel] Failed to create file:', err);
-    }
   }
 
   private _showContextMenu(entry: FileEntry, event: MouseEvent): void {
