@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -327,6 +327,109 @@ describe('PluginInstaller', () => {
 
     it('does not throw when cache directory does not exist', async () => {
       await expect(installer.deleteCache('nonexistent', '1.0.0')).resolves.not.toThrow();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // installNpm
+  // -------------------------------------------------------------------------
+
+  describe('installNpm', () => {
+    // _run is a protected method on PluginInstaller; cast to access it for spying.
+    type InstallerWithRun = PluginInstaller & {
+      _run(cmd: string, args: string[]): Promise<{ stdout: string; stderr: string }>;
+    };
+
+    /**
+     * Sets up a vi.spyOn on installer._run.
+     * The mock creates node_modules/<packageName> inside the tmpDir
+     * (extracted from the '--prefix' arg) to simulate what npm would do.
+     */
+    function mockRunForNpm(
+      packageName: string,
+      extraFiles?: Record<string, string>,
+      captureArgs?: string[],
+    ) {
+      return vi
+        .spyOn(installer as InstallerWithRun, '_run')
+        .mockImplementation(async (_cmd: string, args: string[]) => {
+          if (captureArgs) {
+            captureArgs.push(...args);
+          }
+          const prefixIdx = args.indexOf('--prefix');
+          if (prefixIdx !== -1) {
+            const dir = args[prefixIdx + 1];
+            const pkgDir = path.join(dir, 'node_modules', ...packageName.split('/'));
+            fs.mkdirSync(pkgDir, { recursive: true });
+            fs.writeFileSync(path.join(pkgDir, 'index.js'), 'module.exports = {};');
+            if (extraFiles) {
+              for (const [name, content] of Object.entries(extraFiles)) {
+                fs.writeFileSync(path.join(pkgDir, name), content);
+              }
+            }
+          }
+          return { stdout: '', stderr: '' };
+        });
+    }
+
+    it('installs npm package to dest path', async () => {
+      const destPath = path.join(tempDir, 'install-dest');
+      const spy = mockRunForNpm('my-plugin');
+
+      await installer.installNpm('my-plugin', destPath);
+
+      expect(spy).toHaveBeenCalledOnce();
+      expect(fs.existsSync(destPath)).toBe(true);
+      expect(fs.existsSync(path.join(destPath, 'index.js'))).toBe(true);
+      spy.mockRestore();
+    });
+
+    it('supports scoped packages', async () => {
+      const destPath = path.join(tempDir, 'scoped-dest');
+      const spy = mockRunForNpm('@scope/plugin', {
+        'package.json': JSON.stringify({ name: '@scope/plugin' }),
+      });
+
+      await installer.installNpm('@scope/plugin', destPath);
+
+      expect(spy).toHaveBeenCalledOnce();
+      expect(fs.existsSync(destPath)).toBe(true);
+      expect(fs.existsSync(path.join(destPath, 'package.json'))).toBe(true);
+      spy.mockRestore();
+    });
+
+    it('passes version and registry when specified', async () => {
+      const destPath = path.join(tempDir, 'versioned-dest');
+      const capturedArgs: string[] = [];
+      const spy = mockRunForNpm('my-plugin', undefined, capturedArgs);
+
+      await installer.installNpm('my-plugin', destPath, '2.0.0', 'https://registry.example.com');
+
+      expect(capturedArgs).toContain('my-plugin@2.0.0');
+      expect(capturedArgs).toContain('--registry');
+      expect(capturedArgs).toContain('https://registry.example.com');
+      spy.mockRestore();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // clonePlugin — npm location type
+  // -------------------------------------------------------------------------
+
+  describe('clonePlugin (npm)', () => {
+    it('dispatches to installNpm for npm location type', async () => {
+      const destPath = path.join(tempDir, 'npm-clone-dest');
+      const installNpmSpy = vi.spyOn(installer, 'installNpm').mockResolvedValue(undefined);
+
+      const entry = makeCatalogEntry({
+        location: { type: 'npm', package: 'my-npm-plugin', version: '1.0.0' },
+      });
+
+      await installer.clonePlugin(entry, destPath);
+
+      expect(installNpmSpy).toHaveBeenCalledOnce();
+      expect(installNpmSpy).toHaveBeenCalledWith('my-npm-plugin', destPath, '1.0.0', undefined);
+      installNpmSpy.mockRestore();
     });
   });
 });

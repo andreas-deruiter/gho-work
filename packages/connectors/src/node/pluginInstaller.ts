@@ -1,9 +1,12 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { CatalogEntry } from '@gho-work/base';
 
+// Module-level async wrapper (promisified execFile).
+// All class calls go through this._run() so tests can spy on the instance method.
 const execFileAsync = promisify(execFile);
 
 // ---------------------------------------------------------------------------
@@ -38,6 +41,7 @@ export interface PluginManifest {
  *
  * Responsibilities:
  * - Clone plugins from git repositories (sparse clone, shallow clone)
+ * - Install plugins from npm packages
  * - Parse plugin manifests (.claude-plugin/plugin.json)
  * - Count skill files
  * - Manage cache directories
@@ -73,7 +77,7 @@ export class PluginInstaller {
    */
   async checkGitAvailable(): Promise<void> {
     try {
-      await execFileAsync('git', ['--version']);
+      await this._run('git', ['--version']);
     } catch (err) {
       throw new Error(
         'git is required to install plugins but was not found on your PATH. ' +
@@ -97,6 +101,10 @@ export class PluginInstaller {
     }
 
     switch (location.type) {
+      case 'npm':
+        await this.installNpm(location.package, destPath, location.version, location.registry);
+        break;
+
       case 'git-subdir':
         await this._sparseClone(location.url, location.path, destPath, location.ref);
         break;
@@ -112,6 +120,43 @@ export class PluginInstaller {
       case 'url':
         await this._shallowClone(location.url, destPath, location.ref);
         break;
+    }
+  }
+
+  /**
+   * Install a plugin from npm.
+   * Downloads the package to a temp dir, then copies plugin root to destPath.
+   */
+  async installNpm(
+    packageName: string,
+    destPath: string,
+    version?: string,
+    registry?: string,
+  ): Promise<void> {
+    const tmpDir = path.join(os.tmpdir(), `gho-npm-${Date.now()}`);
+    try {
+      await fs.promises.mkdir(tmpDir, { recursive: true });
+      const args = [
+        'install',
+        '--prefix',
+        tmpDir,
+        version ? `${packageName}@${version}` : packageName,
+      ];
+      if (registry) {
+        args.push('--registry', registry);
+      }
+      await this._run('npm', args);
+
+      // Find the installed package in node_modules
+      const pkgDir = path.join(tmpDir, 'node_modules', packageName);
+      if (!fs.existsSync(pkgDir)) {
+        throw new Error(`npm install succeeded but package not found at ${pkgDir}`);
+      }
+
+      // Copy to destination
+      await fs.promises.cp(pkgDir, destPath, { recursive: true });
+    } finally {
+      await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
     }
   }
 
@@ -269,6 +314,19 @@ export class PluginInstaller {
   }
 
   // -------------------------------------------------------------------------
+  // Protected helpers (overridable in tests)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Thin wrapper around the module-level execFileAsync.
+   * Exposed as a protected method so tests can spy on it via vi.spyOn(installer, '_run')
+   * without needing to mock ESM native module namespaces.
+   */
+  protected _run(cmd: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+    return execFileAsync(cmd, args);
+  }
+
+  // -------------------------------------------------------------------------
   // Private helpers
   // -------------------------------------------------------------------------
 
@@ -281,7 +339,7 @@ export class PluginInstaller {
       args.push('--branch', ref);
     }
     args.push(url, destPath);
-    await execFileAsync('git', args);
+    await this._run('git', args);
   }
 
   /**
@@ -300,10 +358,10 @@ export class PluginInstaller {
       cloneArgs.push('--branch', ref);
     }
     cloneArgs.push(repoUrl, destPath);
-    await execFileAsync('git', cloneArgs);
+    await this._run('git', cloneArgs);
 
-    await execFileAsync('git', ['-C', destPath, 'sparse-checkout', 'set', subPath]);
-    await execFileAsync('git', ['-C', destPath, 'checkout']);
+    await this._run('git', ['-C', destPath, 'sparse-checkout', 'set', subPath]);
+    await this._run('git', ['-C', destPath, 'checkout']);
   }
 
   /**
