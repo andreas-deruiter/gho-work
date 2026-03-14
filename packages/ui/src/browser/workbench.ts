@@ -8,7 +8,7 @@ import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { h } from './dom.js';
 import { ActivityBar } from './activityBar.js';
 import { Sidebar } from './sidebar.js';
-import { StatusBar } from './statusBar.js';
+import { StatusBar } from './statusBar/statusBar.js';
 import { KeyboardShortcuts } from './keyboardShortcuts.js';
 import { ChatPanel } from './chatPanel.js';
 import { ConversationListPanel } from './conversationList.js';
@@ -193,9 +193,8 @@ export class Workbench extends Disposable {
     this._container.appendChild(titleBar.root);
     this._container.appendChild(wrapper.root);
 
-    // Status bar items
-    this._statusBar.addLeftItem('Ready');
-    this._statusBar.addRightItem('Copilot SDK');
+    // Status bar initial state
+    this._statusBar.updateAgentState({ state: 'idle' });
   }
 
   private async _createNewConversation(): Promise<void> {

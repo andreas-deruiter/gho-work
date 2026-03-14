@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { ActivityBar } from '../../browser/activityBar.js';
-import { StatusBar } from '../../browser/statusBar.js';
+import { StatusBar } from '../../browser/statusBar/statusBar.js';
 
 describe('ActivityBar', () => {
   it('should render all activity items', () => {
@@ -49,7 +49,7 @@ describe('ActivityBar', () => {
   });
 });
 
-describe('StatusBar', () => {
+describe('StatusBar (workbench)', () => {
   it('should render left and right sections', () => {
     const bar = new StatusBar();
     const el = bar.getDomNode();
@@ -58,14 +58,11 @@ describe('StatusBar', () => {
     bar.dispose();
   });
 
-  it('should add and update items', () => {
+  it('should update agent state', () => {
     const bar = new StatusBar();
-    const item = bar.addLeftItem('Ready', 'System status');
-    expect(item.textContent).toBe('Ready');
-    expect(item.title).toBe('System status');
-
-    bar.updateItem(item, 'Processing...');
-    expect(item.textContent).toBe('Processing...');
+    bar.updateAgentState({ state: 'idle' });
+    const label = bar.getDomNode().querySelector('.sb-agent-label');
+    expect(label?.textContent).toBe('Agent idle');
     bar.dispose();
   });
 });

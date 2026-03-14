@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { StatusBar } from '../../browser/statusBar/statusBar.js';
 import { WorkspaceItem } from '../../browser/statusBar/workspaceItem.js';
 import { ConnectorStatusItem } from '../../browser/statusBar/connectorStatusItem.js';
 import { ModelItem } from '../../browser/statusBar/modelItem.js';
@@ -494,5 +495,62 @@ describe('UserAvatarItem', () => {
     item.onDidClick(listener);
     item.element.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// StatusBar
+// ---------------------------------------------------------------------------
+
+describe('StatusBar', () => {
+  it('should render left and right sections with all items', () => {
+    const bar = new StatusBar();
+    const el = bar.getDomNode();
+    expect(el.querySelector('.status-bar-left')).toBeTruthy();
+    expect(el.querySelector('.status-bar-right')).toBeTruthy();
+    expect(el.querySelector('.sb-workspace')).toBeTruthy();
+    expect(el.querySelector('.sb-connectors')).toBeTruthy();
+    expect(el.querySelector('.sb-model')).toBeTruthy();
+    expect(el.querySelector('.sb-agent-state')).toBeTruthy();
+    expect(el.querySelector('.sb-usage')).toBeTruthy();
+    expect(el.querySelector('.sb-user')).toBeTruthy();
+    bar.dispose();
+  });
+
+  it('should emit onDidClickItem with correct item ID', () => {
+    const bar = new StatusBar();
+    const listener = vi.fn();
+    bar.onDidClickItem(listener);
+
+    const connectors = bar.getDomNode().querySelector('.sb-connectors') as HTMLElement;
+    connectors.click();
+    expect(listener).toHaveBeenCalledWith('connectors');
+
+    const workspace = bar.getDomNode().querySelector('.sb-workspace') as HTMLElement;
+    workspace.click();
+    expect(listener).toHaveBeenCalledWith('workspace');
+
+    bar.dispose();
+  });
+
+  it('should have status role and aria-label', () => {
+    const bar = new StatusBar();
+    const el = bar.getDomNode();
+    expect(el.getAttribute('role')).toBe('status');
+    expect(el.getAttribute('aria-label')).toBe('Status bar');
+    bar.dispose();
+  });
+
+  it('should proxy update methods to sub-widgets', () => {
+    const bar = new StatusBar();
+    bar.updateWorkspace({ path: '/Users/test/project' });
+    bar.updateModel({ modelName: 'Claude 4.5' });
+    bar.updateAgentState({ state: 'working' });
+
+    const el = bar.getDomNode();
+    expect(el.querySelector('.sb-workspace')?.textContent).toContain('project');
+    expect(el.querySelector('.sb-model')?.textContent).toContain('Claude 4.5');
+    expect(el.querySelector('.sb-agent-label')?.textContent).toContain('Agent working');
+    bar.dispose();
   });
 });
