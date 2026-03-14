@@ -40,7 +40,8 @@ export type PluginLocation =
       path: string;
       /** Git ref (branch, tag, commit SHA). Defaults to the default branch if omitted. */
       ref?: string;
-    };
+    }
+  | { type: 'npm'; package: string; version?: string; registry?: string };
 
 // --- Catalog Entry ---
 
@@ -73,6 +74,30 @@ export interface CatalogEntry {
   hasSkills: boolean;
   /** Whether the plugin registers any MCP servers. */
   hasMcpServers: boolean;
+  /** Whether the plugin contributes any commands. */
+  hasCommands: boolean;
+  /** Whether the plugin bundles any agents. */
+  hasAgents: boolean;
+  /** Whether the plugin registers any hooks. */
+  hasHooks: boolean;
+  /** Searchable tags for the plugin (distinct from keywords). */
+  tags?: string[];
+  /** Plugin homepage URL. */
+  homepage?: string;
+  /** Source repository URL. */
+  repository?: string;
+  /** SPDX license identifier. */
+  license?: string;
+  /** Whether the plugin declares strict mode. */
+  strict?: boolean;
+  /** Component path overrides from marketplace entry. */
+  componentPaths?: {
+    commands?: string | string[];
+    agents?: string | string[];
+    skills?: string | string[];
+    hooks?: string | object;
+    mcpServers?: string | object;
+  };
 }
 
 // --- Installed Plugin ---
@@ -100,4 +125,14 @@ export interface InstalledPlugin {
   agentCount: number;
   /** Names of MCP servers registered by this plugin. */
   mcpServerNames: string[];
+  /** Number of commands contributed by this plugin. */
+  commandCount: number;
+  /** IDs of agents contributed by this plugin. */
+  agentIds: string[];
+  /** Number of hooks registered by this plugin. */
+  hookCount: number;
+  /** Human-readable name from the marketplace catalog. */
+  marketplaceName?: string;
+  /** Where the plugin came from. */
+  source?: 'marketplace' | 'local';
 }

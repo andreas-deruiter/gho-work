@@ -256,6 +256,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
         skillCount,
         agentCount,
         mcpServerNames,
+        commandCount: 0,
+        agentIds: [],
+        hookCount: 0,
       };
 
       this._installed.set(name, plugin);

@@ -101,6 +101,9 @@ export class PluginCatalogFetcher {
         plugin.mcpServers !== undefined &&
         plugin.mcpServers !== null &&
         Object.keys(plugin.mcpServers).length > 0,
+      hasCommands: Array.isArray(plugin.commands) && plugin.commands.length > 0,
+      hasAgents: false,
+      hasHooks: false,
     };
   }
 

@@ -15,6 +15,9 @@ function makeCatalogEntry(name: string): CatalogEntry {
     location: { type: 'github', repo: `owner/${name}` },
     hasSkills: true,
     hasMcpServers: false,
+    hasCommands: false,
+    hasAgents: false,
+    hasHooks: false,
   };
 }
 

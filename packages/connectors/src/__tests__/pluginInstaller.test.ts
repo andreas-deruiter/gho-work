@@ -26,6 +26,9 @@ function makeCatalogEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     location: { type: 'github', repo: 'owner/test-plugin' },
     hasSkills: false,
     hasMcpServers: false,
+    hasCommands: false,
+    hasAgents: false,
+    hasHooks: false,
     ...overrides,
   };
 }
