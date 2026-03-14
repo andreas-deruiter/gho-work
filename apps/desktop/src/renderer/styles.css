@@ -123,6 +123,12 @@ html, body {
   overflow: hidden;
 }
 
+.workbench-chat-container {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
 /* Activity Bar — narrow icon column on the far left */
 .workbench-activity-bar {
   flex-shrink: 0;
