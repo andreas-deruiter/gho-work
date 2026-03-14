@@ -13,6 +13,18 @@ interface CatalogEntryDTO {
   category?: string;
   hasSkills: boolean;
   hasMcpServers: boolean;
+  hasCommands?: boolean;
+  hasAgents?: boolean;
+  hasHooks?: boolean;
+  marketplace?: string;
+}
+
+interface MarketplaceEntryDTO {
+  name: string;
+  source: { type: string; repo?: string; url?: string; path?: string; ref?: string };
+  owner?: { name: string; email?: string };
+  lastUpdated?: string;
+  isDefault?: boolean;
 }
 
 interface InstalledPluginDTO {
@@ -41,17 +53,20 @@ export class PluginsPage extends Widget {
   private readonly _ipc: IIPCRenderer;
   private _catalog: CatalogEntryDTO[] = [];
   private _installed: InstalledPluginDTO[] = [];
-  private _activeTab: 'discover' | 'installed' | 'log' = 'discover';
+  private _activeTab: 'discover' | 'installed' | 'log' | 'marketplaces' = 'discover';
   private _searchQuery = '';
   private _activeCategory = 'All';
+  private _activeMarketplace = 'All';
   private _installing = new Map<string, string>(); // name → progress message
   private _installErrors = new Map<string, string>(); // name → error message
   private _logs: LogEntry[] = [];
+  private _marketplaces: MarketplaceEntryDTO[] = [];
 
   // DOM refs — stable across renders
   private readonly _discoverTab: HTMLElement;
   private readonly _installedTab: HTMLElement;
   private readonly _logTab: HTMLElement;
+  private readonly _marketplacesTab: HTMLElement;
   private readonly _controlsEl: HTMLElement;
   private readonly _scrollEl: HTMLElement;
 
@@ -89,9 +104,15 @@ export class PluginsPage extends Widget {
     this._logTab.textContent = 'Log';
     this.listen(this._logTab, 'click', () => this._switchTab('log'));
 
+    this._marketplacesTab = document.createElement('button');
+    this._marketplacesTab.className = 'plugin-tab';
+    this._marketplacesTab.textContent = 'Marketplaces';
+    this.listen(this._marketplacesTab, 'click', () => this._switchTab('marketplaces'));
+
     layout.tabBar.appendChild(this._discoverTab);
     layout.tabBar.appendChild(this._installedTab);
     layout.tabBar.appendChild(this._logTab);
+    layout.tabBar.appendChild(this._marketplacesTab);
 
     this._controlsEl = layout.controls;
     this._scrollEl = layout.scroll;
@@ -142,12 +163,14 @@ export class PluginsPage extends Widget {
 
   async load(): Promise<void> {
     try {
-      const [catalog, installed] = await Promise.all([
+      const [catalog, installed, marketplaces] = await Promise.all([
         this._ipc.invoke<CatalogEntryDTO[]>(IPC_CHANNELS.PLUGIN_CATALOG),
         this._ipc.invoke<InstalledPluginDTO[]>(IPC_CHANNELS.PLUGIN_LIST),
+        this._ipc.invoke<MarketplaceEntryDTO[]>(IPC_CHANNELS.MARKETPLACE_LIST),
       ]);
       this._catalog = catalog;
       this._installed = installed;
+      this._marketplaces = marketplaces;
       this._updateInstalledCount();
       this._showDiscover();
     } catch (err) {
@@ -160,12 +183,13 @@ export class PluginsPage extends Widget {
   // Tab switching
   // ---------------------------------------------------------------------------
 
-  private _switchTab(tab: 'discover' | 'installed' | 'log'): void {
+  private _switchTab(tab: 'discover' | 'installed' | 'log' | 'marketplaces'): void {
     this._activeTab = tab;
 
     this._discoverTab.classList.toggle('active', tab === 'discover');
     this._installedTab.classList.toggle('active', tab === 'installed');
     this._logTab.classList.toggle('active', tab === 'log');
+    this._marketplacesTab.classList.toggle('active', tab === 'marketplaces');
 
     if (tab === 'discover') {
       this._showDiscover();
@@ -175,8 +199,10 @@ export class PluginsPage extends Widget {
       this._chipsEl = undefined;
       if (tab === 'installed') {
         this._renderInstalled();
-      } else {
+      } else if (tab === 'log') {
         this._renderLog();
+      } else {
+        this._renderMarketplaces();
       }
     }
   }
@@ -211,12 +237,55 @@ export class PluginsPage extends Widget {
     this._controlsEl.appendChild(searchInput);
     this._searchInput = searchInput;
 
+    // Marketplace filter chips (only shown if there are multiple marketplaces)
+    if (this._marketplaces.length > 1) {
+      const marketplaceBar = document.createElement('div');
+      marketplaceBar.className = 'plugin-marketplace-bar';
+
+      const label = document.createElement('span');
+      label.className = 'plugin-marketplace-bar-label';
+      label.textContent = 'Source:';
+      marketplaceBar.appendChild(label);
+
+      const allChip = document.createElement('button');
+      allChip.className = 'plugin-marketplace-chip' + (this._activeMarketplace === 'All' ? ' active' : '');
+      allChip.textContent = 'All';
+      this.listen(allChip, 'click', () => {
+        this._activeMarketplace = 'All';
+        this._buildDiscoverControlsRefresh();
+        this._renderDiscoverGrid();
+      });
+      marketplaceBar.appendChild(allChip);
+
+      for (const mp of this._marketplaces) {
+        const chip = document.createElement('button');
+        chip.className = 'plugin-marketplace-chip' + (this._activeMarketplace === mp.name ? ' active' : '');
+        chip.textContent = mp.owner?.name ?? mp.name;
+        this.listen(chip, 'click', () => {
+          this._activeMarketplace = mp.name;
+          this._buildDiscoverControlsRefresh();
+          this._renderDiscoverGrid();
+        });
+        marketplaceBar.appendChild(chip);
+      }
+
+      this._controlsEl.appendChild(marketplaceBar);
+    }
+
     // Category chips
     const chipsEl = document.createElement('div');
     chipsEl.className = 'plugin-category-chips';
     this._buildCategoryChips(chipsEl);
     this._controlsEl.appendChild(chipsEl);
     this._chipsEl = chipsEl;
+  }
+
+  /** Rebuild controls in-place (e.g. to update marketplace chip active state). */
+  private _buildDiscoverControlsRefresh(): void {
+    this._clearControls();
+    this._searchInput = undefined;
+    this._chipsEl = undefined;
+    this._buildDiscoverControls();
   }
 
   /** Build category chips from catalog data. */
@@ -268,7 +337,9 @@ export class PluginsPage extends Widget {
         (entry.keywords ?? []).some(k => k.toLowerCase().includes(query));
       const matchesCategory =
         this._activeCategory === 'All' || entry.category === this._activeCategory;
-      return matchesSearch && matchesCategory;
+      const matchesMarketplace =
+        this._activeMarketplace === 'All' || entry.marketplace === this._activeMarketplace;
+      return matchesSearch && matchesCategory && matchesMarketplace;
     });
 
     // Plugin card grid
@@ -405,6 +476,27 @@ export class PluginsPage extends Widget {
       skillsBadge.className = 'plugin-badge skills';
       skillsBadge.textContent = 'Skills';
       badges.appendChild(skillsBadge);
+    }
+
+    if (entry.hasCommands) {
+      const commandsBadge = document.createElement('span');
+      commandsBadge.className = 'plugin-badge commands';
+      commandsBadge.textContent = 'Commands';
+      badges.appendChild(commandsBadge);
+    }
+
+    if (entry.hasAgents) {
+      const agentsBadge = document.createElement('span');
+      agentsBadge.className = 'plugin-badge agents';
+      agentsBadge.textContent = 'Agents';
+      badges.appendChild(agentsBadge);
+    }
+
+    if (entry.hasHooks) {
+      const hooksBadge = document.createElement('span');
+      hooksBadge.className = 'plugin-badge hooks';
+      hooksBadge.textContent = 'Hooks';
+      badges.appendChild(hooksBadge);
     }
 
     card.appendChild(badges);
@@ -588,6 +680,191 @@ export class PluginsPage extends Widget {
     });
     footer.appendChild(clearBtn);
     this._scrollEl.appendChild(footer);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Marketplaces tab
+  // ---------------------------------------------------------------------------
+
+  private _renderMarketplaces(): void {
+    this._clearScroll();
+
+    // Section header
+    const sectionTitle = document.createElement('h3');
+    sectionTitle.className = 'plugin-section-title';
+    sectionTitle.textContent = 'Configured Marketplaces';
+    this._scrollEl.appendChild(sectionTitle);
+
+    // Marketplace list
+    if (this._marketplaces.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'plugin-empty-state';
+      empty.textContent = 'No marketplaces configured.';
+      this._scrollEl.appendChild(empty);
+    } else {
+      const list = document.createElement('div');
+      list.className = 'plugin-marketplace-list';
+
+      for (const mp of this._marketplaces) {
+        const item = document.createElement('div');
+        item.className = 'plugin-marketplace-item';
+
+        const info = document.createElement('div');
+        info.className = 'plugin-marketplace-info';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'plugin-marketplace-name';
+        nameEl.textContent = mp.owner?.name ?? mp.name;
+        info.appendChild(nameEl);
+
+        const sourceEl = document.createElement('div');
+        sourceEl.className = 'plugin-marketplace-source';
+        if (mp.source.type === 'github' && mp.source.repo) {
+          sourceEl.textContent = `github: ${mp.source.repo}`;
+        } else if (mp.source.type === 'url' && mp.source.url) {
+          sourceEl.textContent = mp.source.url;
+        } else if (mp.source.type === 'local' && mp.source.path) {
+          sourceEl.textContent = `local: ${mp.source.path}`;
+        }
+        info.appendChild(sourceEl);
+
+        if (mp.lastUpdated) {
+          const updatedEl = document.createElement('div');
+          updatedEl.className = 'plugin-marketplace-updated';
+          updatedEl.textContent = `Last updated: ${new Date(mp.lastUpdated).toLocaleString()}`;
+          info.appendChild(updatedEl);
+        }
+
+        item.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'plugin-marketplace-actions';
+
+        const refreshBtn = document.createElement('button');
+        refreshBtn.className = 'plugin-refresh-btn';
+        refreshBtn.textContent = '\u21bb Refresh';
+        refreshBtn.setAttribute('aria-label', `Refresh ${mp.name}`);
+        this.listen(refreshBtn, 'click', () => void this._refreshMarketplace(mp.name));
+        actions.appendChild(refreshBtn);
+
+        if (!mp.isDefault) {
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'plugin-uninstall-btn';
+          removeBtn.textContent = 'Remove';
+          removeBtn.setAttribute('aria-label', `Remove ${mp.name}`);
+          this.listen(removeBtn, 'click', () => void this._removeMarketplace(mp.name));
+          actions.appendChild(removeBtn);
+        }
+
+        item.appendChild(actions);
+        list.appendChild(item);
+      }
+
+      this._scrollEl.appendChild(list);
+    }
+
+    // Add Marketplace form
+    const addSection = document.createElement('div');
+    addSection.className = 'plugin-marketplace-add-section';
+
+    const addTitle = document.createElement('h3');
+    addTitle.className = 'plugin-section-title';
+    addTitle.textContent = 'Add Marketplace';
+    addSection.appendChild(addTitle);
+
+    const addDesc = document.createElement('p');
+    addDesc.className = 'plugin-marketplace-add-desc';
+    addDesc.textContent = 'Enter a GitHub repo (e.g. team/plugins) or a URL to a marketplace.json file.';
+    addSection.appendChild(addDesc);
+
+    const addRow = document.createElement('div');
+    addRow.className = 'plugin-marketplace-add-row';
+
+    const addInput = document.createElement('input');
+    addInput.type = 'text';
+    addInput.className = 'plugin-search-input';
+    addInput.placeholder = 'team/plugins or https://example.com/marketplace.json';
+    addInput.setAttribute('aria-label', 'Marketplace URL or GitHub repo');
+    addRow.appendChild(addInput);
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'plugin-card-install-btn';
+    addBtn.textContent = 'Add';
+    addBtn.setAttribute('aria-label', 'Add marketplace');
+    this.listen(addBtn, 'click', () => {
+      const value = addInput.value.trim();
+      if (!value) return;
+      void this._addMarketplace(value, addInput, addBtn);
+    });
+    this.listen(addInput, 'keydown', (e: Event) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key === 'Enter') {
+        const value = addInput.value.trim();
+        if (!value) return;
+        void this._addMarketplace(value, addInput, addBtn);
+      }
+    });
+    addRow.appendChild(addBtn);
+    addSection.appendChild(addRow);
+
+    this._scrollEl.appendChild(addSection);
+  }
+
+  private async _addMarketplace(value: string, input: HTMLInputElement, btn: HTMLButtonElement): Promise<void> {
+    const source = value.includes('://')
+      ? { type: 'url' as const, url: value }
+      : { type: 'github' as const, repo: value };
+
+    btn.disabled = true;
+    btn.textContent = 'Adding\u2026';
+
+    try {
+      await this._ipc.invoke(IPC_CHANNELS.MARKETPLACE_ADD, { source });
+      input.value = '';
+      this._addLog('marketplace', `Added: ${value}`, 'info');
+      // Reload marketplaces
+      const marketplaces = await this._ipc.invoke<MarketplaceEntryDTO[]>(IPC_CHANNELS.MARKETPLACE_LIST);
+      this._marketplaces = marketplaces;
+      this._renderMarketplaces();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[PluginsPage] Add marketplace failed:', err);
+      this._addLog('marketplace', `Add failed: ${message}`, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Add';
+    }
+  }
+
+  private async _refreshMarketplace(name: string): Promise<void> {
+    try {
+      await this._ipc.invoke(IPC_CHANNELS.MARKETPLACE_UPDATE, { name });
+      this._addLog(name, 'Marketplace refreshed', 'info');
+      const marketplaces = await this._ipc.invoke<MarketplaceEntryDTO[]>(IPC_CHANNELS.MARKETPLACE_LIST);
+      this._marketplaces = marketplaces;
+      if (this._activeTab === 'marketplaces') {
+        this._renderMarketplaces();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[PluginsPage] Refresh marketplace failed:', err);
+      this._addLog(name, `Refresh failed: ${message}`, 'error');
+    }
+  }
+
+  private async _removeMarketplace(name: string): Promise<void> {
+    try {
+      await this._ipc.invoke(IPC_CHANNELS.MARKETPLACE_REMOVE, { name });
+      this._addLog(name, 'Marketplace removed', 'info');
+      const marketplaces = await this._ipc.invoke<MarketplaceEntryDTO[]>(IPC_CHANNELS.MARKETPLACE_LIST);
+      this._marketplaces = marketplaces;
+      if (this._activeTab === 'marketplaces') {
+        this._renderMarketplaces();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[PluginsPage] Remove marketplace failed:', err);
+      this._addLog(name, `Remove failed: ${message}`, 'error');
+    }
   }
 
   private _addLog(name: string, message: string, level: 'info' | 'error'): void {

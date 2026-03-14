@@ -61,8 +61,9 @@ import {
   PluginServiceImpl,
   PluginCatalogFetcher,
   PluginInstaller,
+  MarketplaceRegistryImpl,
 } from '@gho-work/connectors';
-import type { PluginSettingsStore, PluginAgentRegistration, PluginHookRegistration } from '@gho-work/connectors';
+import type { PluginSettingsStore, PluginAgentRegistration, PluginHookRegistration, MarketplaceSource } from '@gho-work/connectors';
 import type {
   ConnectorRemoveRequest,
   ConnectorConnectRequest,
@@ -420,6 +421,31 @@ export function createMainProcess(
   app.on('will-quit', () => {
     pluginService.dispose();
   });
+
+  // --- Marketplace Registry ---
+  function createFetcher(source: MarketplaceSource): { fetch(): Promise<import('@gho-work/base').CatalogEntry[]> } {
+    if (source.type === 'url') {
+      return new PluginCatalogFetcher(source.url);
+    } else if (source.type === 'github') {
+      const url = `https://raw.githubusercontent.com/${source.repo}/${source.ref ?? 'main'}/.claude-plugin/marketplace.json`;
+      return new PluginCatalogFetcher(url);
+    }
+    // local: use default fetcher (no-op, local files not supported via HTTP)
+    return new PluginCatalogFetcher();
+  }
+
+  const marketplaceSettings = {
+    get: (key: string): unknown => {
+      const raw = storageService?.getSetting(key);
+      if (raw === undefined) return undefined;
+      try { return JSON.parse(raw); } catch { return raw; }
+    },
+    set: (key: string, value: unknown) => {
+      storageService?.setSetting(key, JSON.stringify(value));
+    },
+  };
+
+  const marketplaceRegistry = new MarketplaceRegistryImpl(createFetcher, marketplaceSettings);
 
   // Auto-reconcile on startup — connect all configured servers (non-blocking)
   void (async () => {
@@ -1089,6 +1115,25 @@ export function createMainProcess(
   ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_UPDATE, async (...args: unknown[]) => {
     const { name } = args[0] as { name: string };
     await pluginService.update(name);
+  });
+
+  // --- Marketplace IPC handlers ---
+
+  ipcMainAdapter.handle(IPC_CHANNELS.MARKETPLACE_LIST, async () => marketplaceRegistry.list());
+
+  ipcMainAdapter.handle(IPC_CHANNELS.MARKETPLACE_ADD, async (...args: unknown[]) => {
+    const { source } = args[0] as { source: MarketplaceSource };
+    return marketplaceRegistry.add(source);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.MARKETPLACE_REMOVE, async (...args: unknown[]) => {
+    const { name } = args[0] as { name: string };
+    await marketplaceRegistry.remove(name);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.MARKETPLACE_UPDATE, async (...args: unknown[]) => {
+    const { name } = args[0] as { name: string };
+    return marketplaceRegistry.update(name);
   });
 
   // --- Connector add/update IPC handlers ---
