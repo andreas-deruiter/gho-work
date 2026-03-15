@@ -19,6 +19,7 @@ import {
   SkillToggleRequestSchema,
 } from '@gho-work/platform';
 import { createDIContainer } from './diContainer.js';
+import { startSDKLifecycle, isOnboardingComplete } from './sdkLifecycle.js';
 import type {
   SendMessageRequest,
   ConversationGetRequest,
@@ -107,65 +108,12 @@ export function createMainProcess(
   const execFileAsync = promisify(execFile);
   const onboardingFilePath = path.join(app.getPath('userData'), 'onboarding-complete.json');
 
-  function isOnboardingComplete(): boolean {
-    try {
-      const data = JSON.parse(fs.readFileSync(onboardingFilePath, 'utf-8'));
-      return data?.complete === true;
-    } catch {
-      return false;
-    }
-  }
-
   // --- Agent service (runs in main process for now, will move to utility process later) ---
   const useMock = options?.useMockSDK === true;
   const sdk = new CopilotSDKImpl({ cwd: os.homedir(), useMock });
 
   // Start SDK async — store promise so IPC handlers can await readiness.
-  // - If --mock flag: start in mock mode immediately
-  // - If onboarding complete: start with real gh token
-  // - If onboarding incomplete: defer start until ONBOARDING_COMPLETE handler
-  let _sdkReadyResolve: (() => void) | undefined;
-  const sdkReady = new Promise<void>((resolve) => { _sdkReadyResolve = resolve; });
-
-  void (async () => {
-    if (useMock) {
-      await sdk.start();
-      console.warn('[main] Agent started in Mock mode (--mock flag)');
-      _sdkReadyResolve?.();
-      return;
-    }
-
-    if (isOnboardingComplete()) {
-      try {
-        const { stdout: token } = await execFileAsync('gh', ['auth', 'token']);
-        if (token.trim()) {
-          (sdk as any)._options.githubToken = token.trim();
-        }
-      } catch (err) {
-        console.warn('[main] Could not get gh auth token, SDK will use default auth:', err instanceof Error ? err.message : String(err));
-      }
-
-      try {
-        await sdk.start();
-        console.warn('[main] Agent started in Copilot SDK mode');
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error('[main] CRITICAL: Copilot SDK failed to start:', msg);
-        // Show error to user — never silently degrade to a broken state
-        const { dialog } = await import('electron');
-        dialog.showErrorBox(
-          'GHO Work — Agent Unavailable',
-          'The Copilot SDK failed to start. The AI agent will not work.\n\n'
-          + 'This usually means GitHub authentication is missing or expired.\n'
-          + 'Try: gh auth login\n\n'
-          + `Error: ${msg}`,
-        );
-      }
-    } else {
-      console.warn('[main] SDK start deferred — waiting for onboarding to complete');
-    }
-    _sdkReadyResolve?.();
-  })();
+  const { sdkReady } = startSDKLifecycle(sdk, useMock, onboardingFilePath);
 
   // Skill registry: multi-source skill discovery with priority-based deduplication.
   // In development, electron-vite outputs to apps/desktop/out/main/index.js,
@@ -751,7 +699,7 @@ export function createMainProcess(
   // --- Onboarding handlers ---
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_STATUS, async (): Promise<OnboardingStatusResponse> => {
-    return { complete: isOnboardingComplete() };
+    return { complete: isOnboardingComplete(onboardingFilePath) };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.ONBOARDING_CHECK_GH, async (): Promise<GhCheckResponse> => {
