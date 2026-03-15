@@ -1,10 +1,17 @@
 /**
  * AgentService — orchestrates task execution.
  * Creates SDK sessions, injects context, maps SDK events to AgentEvents via AsyncQueue.
+ *
+ * Composes system message from:
+ *   1. Bundled persona (gho-instructions skill)
+ *   2. User/project instructions (InstructionResolver)
+ *   3. Per-conversation ephemeral context (context.systemPrompt)
+ *
+ * Registers plugin agents as customAgents on the SDK session.
  */
 import * as os from 'node:os';
 import { generateUUID, Emitter } from '@gho-work/base';
-import type { AgentContext, AgentEvent, Event } from '@gho-work/base';
+import type { AgentContext, AgentEvent, Event, InstalledPlugin, PluginAgentDefinition } from '@gho-work/base';
 import type { AgentState, QuotaSnapshot } from '../common/agent.js';
 import type { IAgentService } from '../common/agent.js';
 import type { IConversationService } from '../common/conversation.js';
@@ -18,6 +25,22 @@ interface SetupSessionOverrides {
   systemContent: string;
   workingDirectory?: string;
   excludedTools?: string[];
+}
+
+/** Interface for the instruction resolver dependency. */
+export interface IInstructionResolverLike {
+  resolve(): Promise<{
+    content: string;
+    sources: Array<{ path: string; origin: string; format: string }>;
+  }>;
+}
+
+/** Interface for the plugin agent loader dependency. */
+export interface IPluginAgentLoaderLike {
+  loadAll(plugins: InstalledPlugin[]): Promise<Array<{
+    pluginName: string;
+    definition: PluginAgentDefinition;
+  }>>;
 }
 
 export class AgentServiceImpl implements IAgentService {
@@ -37,8 +60,10 @@ export class AgentServiceImpl implements IAgentService {
     private readonly _sdk: ICopilotSDK,
     private readonly _conversationService: IConversationService | null,
     private readonly _skillRegistry: ISkillRegistry,
-    private readonly _readContextFiles?: () => Promise<string>,
+    private readonly _instructionResolver: IInstructionResolverLike,
+    private readonly _pluginAgentLoader: IPluginAgentLoaderLike,
     private readonly _getDisabledSkills?: () => string[],
+    private readonly _getEnabledPlugins?: () => InstalledPlugin[],
   ) {}
 
   async *executeTask(prompt: string, context: AgentContext, mcpServers?: Record<string, SdkMcpServerConfig>, attachments?: MessageOptions['attachments']): AsyncIterable<AgentEvent> {
@@ -52,14 +77,30 @@ export class AgentServiceImpl implements IAgentService {
       // Reuse existing session for this conversation, or create a new one
       let session = this._sessions.get(context.conversationId);
       if (!session) {
-        // Build system message from context files
-        let systemContent = '';
-        if (this._readContextFiles) {
-          systemContent = await this._readContextFiles();
-        }
-        if (context.systemPrompt) {
-          systemContent += (systemContent ? '\n\n' : '') + context.systemPrompt;
-        }
+        // 1. Load bundled persona (always present)
+        const persona = await this._skillRegistry.getSkill('system', 'gho-instructions') ?? '';
+
+        // 2. Resolve user/project instructions
+        const instructions = await this._instructionResolver.resolve();
+
+        // 3. Load plugin agents
+        const enabledPlugins = this._getEnabledPlugins?.() ?? [];
+        const pluginAgents = await this._pluginAgentLoader.loadAll(enabledPlugins);
+
+        // 4. Map PluginAgentDefinition → SDK customAgents format
+        const customAgents = pluginAgents.map(a => ({
+          name: a.definition.name,
+          displayName: a.definition.displayName,
+          description: a.definition.description,
+          prompt: a.definition.prompt,
+          tools: a.definition.tools,
+          infer: a.definition.infer ?? true,
+          ...(a.definition.mcpServers ? { mcpServers: a.definition.mcpServers } : {}),
+        }));
+
+        // 5. Compose system message — no hardcoded model
+        const systemParts = [persona, instructions.content, context.systemPrompt].filter(Boolean);
+        let systemContent = systemParts.join('\n\n');
 
         // Apply setup overrides if this is a setup conversation
         const setupOverrides = this._installContexts.get(context.conversationId);
@@ -70,7 +111,7 @@ export class AgentServiceImpl implements IAgentService {
         const disabledSkills = this._getDisabledSkills?.() ?? [];
 
         session = await this._sdk.createSession({
-          model: context.model ?? 'gpt-4o',
+          model: context.model || undefined,
           sessionId: context.conversationId,
           systemMessage: systemContent ? { mode: 'append', content: systemContent } : undefined,
           streaming: true,
@@ -78,8 +119,23 @@ export class AgentServiceImpl implements IAgentService {
           workingDirectory: setupOverrides?.workingDirectory,
           excludedTools: setupOverrides?.excludedTools,
           disabledSkills: disabledSkills.length > 0 ? disabledSkills : undefined,
+          customAgents: customAgents.length > 0 ? customAgents : undefined,
         });
         this._sessions.set(context.conversationId, session);
+
+        // 6. Emit context_loaded for transparency (once per session)
+        queue.push({
+          type: 'context_loaded',
+          sources: instructions.sources.map(s => ({
+            path: s.path,
+            origin: s.origin as 'user' | 'project',
+            format: s.format,
+          })),
+          agents: pluginAgents.map(a => ({
+            name: a.definition.displayName ?? a.definition.name,
+            plugin: a.pluginName,
+          })),
+        });
       }
       this._activeSession = session;
 
@@ -226,6 +282,27 @@ export class AgentServiceImpl implements IAgentService {
           startedAt: data.state === 'running' ? Date.now() : undefined,
           completedAt: data.state === 'completed' ? Date.now() : undefined,
           error: (data.error as string) ?? undefined,
+        };
+      case 'subagent.started':
+        return {
+          type: 'subagent_started',
+          parentToolCallId: (data.parentToolCallId as string) ?? '',
+          name: (data.name as string) ?? '',
+          displayName: (data.displayName as string) ?? (data.name as string) ?? '',
+        };
+      case 'subagent.completed':
+        return {
+          type: 'subagent_completed',
+          parentToolCallId: (data.parentToolCallId as string) ?? '',
+          name: (data.name as string) ?? '',
+          displayName: (data.displayName as string) ?? (data.name as string) ?? '',
+        };
+      case 'subagent.failed':
+        return {
+          type: 'subagent_failed',
+          parentToolCallId: (data.parentToolCallId as string) ?? '',
+          name: (data.name as string) ?? '',
+          error: (data.error as string) ?? 'Unknown error',
         };
       case 'session.idle':
         return { type: 'done', messageId: generateUUID() };

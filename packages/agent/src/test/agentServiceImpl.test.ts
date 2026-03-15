@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AgentServiceImpl } from '../node/agentServiceImpl.js';
 
+const noopInstructionResolver = { resolve: async () => ({ content: '', sources: [] }) };
+const noopPluginAgentLoader = { loadAll: async () => [] };
+
 describe('AgentServiceImpl.onDidChangeAgentState', () => {
   it('should fire working when task starts and idle when done', async () => {
     const mockSDK = {
@@ -19,6 +22,8 @@ describe('AgentServiceImpl.onDidChangeAgentState', () => {
       mockSDK as any,
       null,
       mockSkillRegistry as any,
+      noopInstructionResolver,
+      noopPluginAgentLoader,
     );
 
     const states: string[] = [];
@@ -42,6 +47,8 @@ describe('AgentServiceImpl.onDidChangeAgentState', () => {
       mockSDK as any,
       null,
       mockSkillRegistry as any,
+      noopInstructionResolver,
+      noopPluginAgentLoader,
     );
 
     const states: string[] = [];

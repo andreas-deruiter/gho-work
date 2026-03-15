@@ -45,6 +45,7 @@ import {
   SkillRegistryImpl,
   buildSkillSources,
   toSdkMcpConfig,
+  InstructionResolver,
 } from '@gho-work/agent';
 import * as os from 'node:os';
 import type { AgentContext } from '@gho-work/base';
@@ -59,6 +60,7 @@ import {
   PluginServiceImpl,
   PluginCatalogFetcher,
   PluginInstaller,
+  PluginAgentLoader,
 } from '@gho-work/connectors';
 import type { PluginSettingsStore } from '@gho-work/connectors';
 import type {
@@ -305,7 +307,6 @@ export function createMainProcess(
   };
 
   const DEFAULT_INSTRUCTIONS_PATH = path.join(os.homedir(), '.gho-work', 'gho-instructions.md');
-  const MAX_INSTRUCTIONS_SIZE = 50 * 1024; // 50KB
 
   const getInstructionsPath = (): string => {
     const custom = storageService?.getSetting('instructions.filePath');
@@ -323,21 +324,36 @@ export function createMainProcess(
     }
   };
 
-  const readInstructionsFile = async (): Promise<string> => {
-    const filePath = getInstructionsPath();
+  // InstructionResolver: discovers and merges user/project instruction files
+  const userInstructionsDir = path.join(os.homedir(), '.gho-work');
+  const projectDirsRaw = storageService?.getSetting('instructions.projectDirs');
+  let projectDirs: string[] = [];
+  if (projectDirsRaw) {
     try {
-      const content = await fs.promises.readFile(filePath, { encoding: 'utf-8' });
-      if (content.length > MAX_INSTRUCTIONS_SIZE) {
-        console.warn(`Instructions file exceeds 50KB (${content.length} bytes), truncating`);
-        return content.slice(0, MAX_INSTRUCTIONS_SIZE) + '\n\n[Instructions truncated — file exceeds 50KB]';
-      }
-      return content;
-    } catch {
-      return '';
+      projectDirs = JSON.parse(projectDirsRaw);
+    } catch (err) {
+      console.warn('[main] Failed to parse instructions.projectDirs:', err);
     }
-  };
+  }
+  const instructionResolver = new InstructionResolver(userInstructionsDir, projectDirs);
 
-  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, readInstructionsFile, getDisabledSkills);
+  // PluginAgentLoader: reads agent .md files from installed plugins
+  const pluginAgentLoader = new PluginAgentLoader();
+
+  // getEnabledPlugins callback — pluginService is initialized later in setup,
+  // but this callback is only called at runtime during executeTask().
+  let _pluginServiceRef: { getInstalled(): import('@gho-work/base').InstalledPlugin[] } | null = null;
+  const getEnabledPlugins = () => _pluginServiceRef?.getInstalled().filter(p => p.enabled) ?? [];
+
+  const agentService = new AgentServiceImpl(
+    sdk,
+    conversationService,
+    skillRegistry,
+    instructionResolver,
+    pluginAgentLoader,
+    getDisabledSkills,
+    getEnabledPlugins,
+  );
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
@@ -436,6 +452,7 @@ export function createMainProcess(
     configStore,
     pluginSettings,
   );
+  _pluginServiceRef = pluginService;
 
   // Re-register skill sources for enabled installed plugins on startup.
   // Uses the default skills path convention (<cachePath>/skills); a full re-enable

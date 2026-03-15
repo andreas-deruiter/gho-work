@@ -125,6 +125,7 @@ function mapSessionConfig(
 		disabledSkills: config.disabledSkills,
 		mcpServers: config.mcpServers as import('@github/copilot-sdk').SessionConfig['mcpServers'],
 		onPermissionRequest: approveAll,
+		...(config.customAgents ? { customAgents: config.customAgents as import('@github/copilot-sdk').SessionConfig['customAgents'] } : {}),
 	};
 }
 

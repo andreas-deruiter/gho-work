@@ -12,8 +12,10 @@ import { h } from '../dom.js';
 import { ProgressSection } from './progressSection.js';
 import { InputSection } from './inputSection.js';
 import { OutputSection } from './outputSection.js';
+import { ContextSection } from './contextSection.js';
 import { InfoPanelState, isInputTool, extractInputName } from './infoPanelState.js';
 import type { InputEntry, OutputEntry } from './infoPanelState.js';
+import { processSubagentEvent } from './subagentProgressBridge.js';
 
 /** Remove all child nodes from an element. */
 function clearChildren(el: HTMLElement): void {
@@ -37,11 +39,13 @@ export class InfoPanel extends Widget {
   private _progressSection: ProgressSection;
   private _inputSection: InputSection;
   private _outputSection: OutputSection;
+  private _contextSection: ContextSection;
 
   // --- Section wrappers (for CSS targeting / test queries) ---
   private readonly _progressWrap: HTMLElement;
   private readonly _inputWrap: HTMLElement;
   private readonly _outputWrap: HTMLElement;
+  private readonly _contextWrap: HTMLElement;
   private readonly _emptyEl: HTMLElement;
 
   // --- Per-conversation state ---
@@ -54,6 +58,7 @@ export class InfoPanel extends Widget {
 
   constructor() {
     const layout = h('div.info-panel@root', [
+      h('div.info-panel-context@context'),
       h('div.info-panel-progress@progress'),
       h('div.info-panel-input@input'),
       h('div.info-panel-output@output'),
@@ -62,6 +67,7 @@ export class InfoPanel extends Widget {
 
     super(layout.root);
 
+    this._contextWrap = layout['context'];
     this._progressWrap = layout['progress'];
     this._inputWrap = layout['input'];
     this._outputWrap = layout['output'];
@@ -75,6 +81,7 @@ export class InfoPanel extends Widget {
     this._emptyEl.textContent = 'Panel will populate as the agent works';
 
     // Create child sections
+    this._contextSection = this._createContextSection();
     this._progressSection = this._createProgressSection();
     this._inputSection = this._createInputSection();
     this._outputSection = this._createOutputSection();
@@ -171,6 +178,36 @@ export class InfoPanel extends Widget {
         break;
       }
 
+      case 'context_loaded': {
+        this._currentState.setContextSources(event.sources);
+        this._currentState.setRegisteredAgents(event.agents);
+        this._contextSection.setSources(event.sources);
+        this._contextSection.setAgents(event.agents);
+        this._updateEmptyState();
+        break;
+      }
+
+      case 'subagent_started':
+      case 'subagent_completed':
+      case 'subagent_failed': {
+        const result = processSubagentEvent(event, this._currentState);
+        if (result?.step) {
+          const { id, state, agentName, error } = result.step;
+          this._currentState.updateStep(id, state, { error });
+          if (agentName) {
+            // Set agentName on the plan step directly
+            const planStep = this._currentState.plan?.steps.find(s => s.id === id);
+            if (planStep) {
+              planStep.agentName = agentName;
+            }
+          }
+          this._progressSection.updateStep(id, state, { error });
+        }
+        // standalone subagent case: the progress section can show it if needed
+        // For now, we don't render standalone subagent indicators in the stepper.
+        break;
+      }
+
       // Other event types (text, thinking, error, done) are not handled by InfoPanel
       default:
         break;
@@ -206,6 +243,12 @@ export class InfoPanel extends Widget {
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
+
+  private _createContextSection(): ContextSection {
+    const section = this._sectionStore.add(new ContextSection());
+    this._contextWrap.appendChild(section.getDomNode());
+    return section;
+  }
 
   private _createProgressSection(): ProgressSection {
     const section = this._sectionStore.add(new ProgressSection());
@@ -253,17 +296,27 @@ export class InfoPanel extends Widget {
     this._sectionStore.clear();
 
     // Clear DOM wrappers
+    clearChildren(this._contextWrap);
     clearChildren(this._progressWrap);
     clearChildren(this._inputWrap);
     clearChildren(this._outputWrap);
 
     // Recreate section widgets
+    this._contextSection = this._createContextSection();
     this._progressSection = this._createProgressSection();
     this._inputSection = this._createInputSection();
     this._outputSection = this._createOutputSection();
 
     // Replay state into sections
     const state = this._currentState;
+
+    // Context data survives clear() — replay it
+    if (state.contextSources.length > 0) {
+      this._contextSection.setSources([...state.contextSources]);
+    }
+    if (state.registeredAgents.length > 0) {
+      this._contextSection.setAgents([...state.registeredAgents]);
+    }
 
     if (state.plan) {
       this._progressSection.setPlan(state.plan);
@@ -281,7 +334,7 @@ export class InfoPanel extends Widget {
   /** Show or hide the empty state message based on section data. */
   private _updateEmptyState(): void {
     const state = this._currentState;
-    const hasData = state.plan !== null || state.inputs.length > 0 || state.outputs.length > 0;
+    const hasData = state.plan !== null || state.inputs.length > 0 || state.outputs.length > 0 || state.contextSources.length > 0 || state.registeredAgents.length > 0;
     this._emptyEl.style.display = hasData ? 'none' : '';
   }
 }

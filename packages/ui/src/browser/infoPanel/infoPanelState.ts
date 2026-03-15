@@ -47,6 +47,7 @@ export type StepState = 'completed' | 'active' | 'pending' | 'failed';
 export interface PlanStep {
   id: string; label: string; state: StepState;
   startedAt?: number; completedAt?: number; error?: string; messageId?: string;
+  agentName?: string;
 }
 
 export interface PlanState { id: string; steps: PlanStep[]; }
@@ -59,15 +60,39 @@ export interface OutputEntry {
   name: string; path: string; size: number; action: 'created' | 'modified'; messageId: string;
 }
 
+export interface ContextSourceEntry {
+  path: string;
+  origin: 'user' | 'project' | string;
+  format: string;
+}
+
+export interface RegisteredAgentEntry {
+  name: string;
+  plugin: string;
+}
+
 export class InfoPanelState {
   private _plan: PlanState | null = null;
   private _inputs: InputEntry[] = [];
   private _outputs: OutputEntry[] = [];
   private _toolCalls = new Map<string, { toolName: string; serverName: string }>();
+  /** Per-session context — survives clear() calls. */
+  private _contextSources: ContextSourceEntry[] = [];
+  private _registeredAgents: RegisteredAgentEntry[] = [];
 
   get plan(): PlanState | null { return this._plan; }
   get inputs(): readonly InputEntry[] { return this._inputs; }
   get outputs(): readonly OutputEntry[] { return this._outputs; }
+  get contextSources(): readonly ContextSourceEntry[] { return this._contextSources; }
+  get registeredAgents(): readonly RegisteredAgentEntry[] { return this._registeredAgents; }
+
+  setContextSources(sources: ContextSourceEntry[]): void {
+    this._contextSources = [...sources];
+  }
+
+  setRegisteredAgents(agents: RegisteredAgentEntry[]): void {
+    this._registeredAgents = [...agents];
+  }
 
   setPlan(plan: { id: string; steps: Array<{ id: string; label: string }> }): void {
     this._plan = { id: plan.id, steps: plan.steps.map(s => ({ ...s, state: 'pending' as StepState })) };

@@ -11,3 +11,5 @@ export * from './node/agentServiceImpl.js';
 export { SkillRegistryImpl } from './node/skillRegistryImpl.js';
 export { buildSkillSources } from './node/buildSkillSources.js';
 export type { BuildSkillSourcesOptions } from './node/buildSkillSources.js';
+export { InstructionResolver } from './node/instructionResolver.js';
+export type { InstructionSource, InstructionResult } from './node/instructionResolver.js';

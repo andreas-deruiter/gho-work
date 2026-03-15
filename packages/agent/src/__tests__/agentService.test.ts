@@ -4,6 +4,9 @@ import { MockCopilotSDK } from '../node/mockCopilotSDK.js';
 import { AgentServiceImpl } from '../node/agentServiceImpl.js';
 import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
 
+const noopInstructionResolver = { resolve: async () => ({ content: '', sources: [] }) };
+const noopPluginAgentLoader = { loadAll: async () => [] };
+
 describe('AgentServiceImpl', () => {
   let sdk: MockCopilotSDK;
   let service: AgentServiceImpl;
@@ -14,7 +17,7 @@ describe('AgentServiceImpl', () => {
     await sdk.start();
     registry = new SkillRegistryImpl([]);
     await registry.scan();
-    service = new AgentServiceImpl(sdk, null, registry);
+    service = new AgentServiceImpl(sdk, null, registry, noopInstructionResolver, noopPluginAgentLoader);
   });
 
   afterEach(async () => {
@@ -134,8 +137,9 @@ describe('AgentServiceImpl', () => {
     expect(types).toContain('done');
   });
 
-  it('uses context file reader when provided', async () => {
-    const serviceWithContext = new AgentServiceImpl(sdk, null, registry, async () => 'Context from files');
+  it('uses instruction resolver when provided', async () => {
+    const resolver = { resolve: async () => ({ content: 'Context from files', sources: [] }) };
+    const serviceWithContext = new AgentServiceImpl(sdk, null, registry, resolver, noopPluginAgentLoader);
 
     const context: AgentContext = {
       conversationId: 'test-conv',
@@ -154,7 +158,7 @@ describe('AgentServiceImpl', () => {
   it('emits error event when SDK fails', async () => {
     const badSdk = new MockCopilotSDK();
     // Don't call start() — createSession will throw
-    const badService = new AgentServiceImpl(badSdk, null, registry);
+    const badService = new AgentServiceImpl(badSdk, null, registry, noopInstructionResolver, noopPluginAgentLoader);
 
     const context: AgentContext = {
       conversationId: 'test-conv',

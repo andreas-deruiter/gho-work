@@ -212,6 +212,14 @@ export class ProgressSection extends Widget {
     el.appendChild(track);
     el.appendChild(label);
 
+    // Subagent badge — shows which agent is working on this step
+    if (step.agentName) {
+      const badge = document.createElement('span');
+      badge.className = 'info-step-agent-badge';
+      badge.textContent = step.agentName;
+      el.appendChild(badge);
+    }
+
     if (step.error) {
       const errorEl = document.createElement('span');
       errorEl.className = 'info-step-error';

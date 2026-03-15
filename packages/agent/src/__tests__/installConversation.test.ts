@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as os from 'node:os';
 import { AgentServiceImpl } from '../node/agentServiceImpl.js';
+import type { IInstructionResolverLike, IPluginAgentLoaderLike } from '../node/agentServiceImpl.js';
 import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
+
+const noopInstructionResolver: IInstructionResolverLike = { resolve: async () => ({ content: '', sources: [] }) };
+const noopPluginAgentLoader: IPluginAgentLoaderLike = { loadAll: async () => [] };
 
 function createMockConversationService() {
 	const conversations = new Map<string, { id: string; title: string }>();
@@ -64,6 +68,8 @@ describe('createSetupConversation', () => {
 			createMockCopilotSDK() as any,
 			conversationService as any,
 			registry,
+			noopInstructionResolver,
+			noopPluginAgentLoader,
 		);
 	});
 
@@ -109,6 +115,8 @@ describe('createSetupConversation', () => {
 			sdk as any,
 			conversationService as any,
 			registry,
+			noopInstructionResolver,
+			noopPluginAgentLoader,
 		);
 		const convId = await svc.createSetupConversation();
 		const events = [];
@@ -130,6 +138,8 @@ describe('createSetupConversation', () => {
 			sdk as any,
 			conversationService as any,
 			registry,
+			noopInstructionResolver,
+			noopPluginAgentLoader,
 		);
 		const events = [];
 		for await (const event of svc.executeTask('hello', { conversationId: 'regular-conv', workspaceId: 'default' })) {
@@ -145,6 +155,8 @@ describe('createSetupConversation', () => {
 			createMockCopilotSDK() as any,
 			null,
 			registry,
+			noopInstructionResolver,
+			noopPluginAgentLoader,
 		);
 		await expect(noConvService.createSetupConversation()).rejects.toThrow('conversation service');
 	});
@@ -155,7 +167,8 @@ describe('createSetupConversation', () => {
 			createMockCopilotSDK() as any,
 			conversationService as any,
 			registry,
-			undefined,
+			noopInstructionResolver,
+			noopPluginAgentLoader,
 			() => disabledSkills,
 		);
 		const convId = await svc.createSetupConversation();

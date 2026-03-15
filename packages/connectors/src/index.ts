@@ -17,3 +17,5 @@ export * from './node/agentTools.js';
 export { PluginServiceImpl } from './node/pluginServiceImpl.js';
 export { PluginCatalogFetcher } from './node/pluginCatalogFetcher.js';
 export { PluginInstaller } from './node/pluginInstaller.js';
+export { PluginAgentLoader } from './node/pluginAgentLoader.js';
+export type { LoadedAgent } from './node/pluginAgentLoader.js';

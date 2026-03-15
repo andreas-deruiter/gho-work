@@ -10,6 +10,15 @@ export interface SessionConfig {
   availableTools?: string[];
   excludedTools?: string[];
   disabledSkills?: string[];
+  customAgents?: Array<{
+    name: string;
+    displayName?: string;
+    description: string;
+    prompt: string;
+    tools?: string[] | null;
+    infer?: boolean;
+    mcpServers?: Record<string, unknown>;
+  }>;
 }
 
 export type SystemMessageConfig =

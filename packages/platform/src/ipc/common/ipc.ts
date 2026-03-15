@@ -170,6 +170,36 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
       source: z.string(),
     }),
   }),
+  z.object({
+    type: z.literal('subagent_started'),
+    parentToolCallId: z.string(),
+    name: z.string(),
+    displayName: z.string(),
+  }),
+  z.object({
+    type: z.literal('subagent_completed'),
+    parentToolCallId: z.string(),
+    name: z.string(),
+    displayName: z.string(),
+  }),
+  z.object({
+    type: z.literal('subagent_failed'),
+    parentToolCallId: z.string(),
+    name: z.string(),
+    error: z.string(),
+  }),
+  z.object({
+    type: z.literal('context_loaded'),
+    sources: z.array(z.object({
+      path: z.string(),
+      origin: z.enum(['user', 'project']),
+      format: z.string(),
+    })),
+    agents: z.array(z.object({
+      name: z.string(),
+      plugin: z.string(),
+    })),
+  }),
 ]);
 export type AgentEvent = z.infer<typeof AgentEventSchema>;
 

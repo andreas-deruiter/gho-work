@@ -158,6 +158,14 @@ export type AgentEvent =
       type: 'attachment_added';
       messageId: string;
       attachment: { name: string; path: string; source: string };
+    }
+  | { type: 'subagent_started'; parentToolCallId: string; name: string; displayName: string }
+  | { type: 'subagent_completed'; parentToolCallId: string; name: string; displayName: string }
+  | { type: 'subagent_failed'; parentToolCallId: string; name: string; error: string }
+  | {
+      type: 'context_loaded';
+      sources: Array<{ path: string; origin: 'user' | 'project'; format: string }>;
+      agents: Array<{ name: string; plugin: string }>;
     };
 
 // --- Agent Context ---

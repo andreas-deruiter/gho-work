@@ -101,3 +101,20 @@ export interface InstalledPlugin {
   /** Names of MCP servers registered by this plugin. */
   mcpServerNames: string[];
 }
+
+// --- Plugin Agent Definition ---
+
+/**
+ * Describes a custom agent contributed by a plugin.
+ * Produced by PluginAgentLoader (connectors), consumed by AgentServiceImpl (agent)
+ * which maps it to the SDK's CustomAgentConfig at session creation.
+ */
+export interface PluginAgentDefinition {
+  name: string;
+  displayName?: string;
+  description: string;
+  prompt: string;
+  tools?: string[] | null;
+  infer?: boolean;
+  mcpServers?: Record<string, unknown>;
+}
