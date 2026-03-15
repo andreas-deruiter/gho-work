@@ -2,57 +2,19 @@ import { describe, it, expect } from 'vitest';
 import type { AgentEvent, FileMeta } from './types.js';
 
 describe('AgentEvent new types', () => {
-  it('plan_created event has correct shape', () => {
+  it('todo_list_updated event has correct shape', () => {
     const event: AgentEvent = {
-      type: 'plan_created',
-      plan: {
-        id: 'plan-1',
-        steps: [
-          { id: 'step-1', label: 'First step' },
-          { id: 'step-2', label: 'Second step' },
-        ],
-      },
+      type: 'todo_list_updated',
+      todos: [
+        { id: 1, title: 'Research files', status: 'completed' },
+        { id: 2, title: 'Implement changes', status: 'in-progress' },
+        { id: 3, title: 'Write tests', status: 'not-started' },
+      ],
     };
-    expect(event.type).toBe('plan_created');
-    if (event.type === 'plan_created') {
-      expect(event.plan.id).toBe('plan-1');
-      expect(event.plan.steps).toHaveLength(2);
-      expect(event.plan.steps[0].label).toBe('First step');
-    }
-  });
-
-  it('plan_step_updated event has correct shape', () => {
-    const event: AgentEvent = {
-      type: 'plan_step_updated',
-      planId: 'plan-1',
-      stepId: 'step-1',
-      state: 'completed',
-      startedAt: 1000,
-      completedAt: 2000,
-    };
-    expect(event.type).toBe('plan_step_updated');
-    if (event.type === 'plan_step_updated') {
-      expect(event.planId).toBe('plan-1');
-      expect(event.stepId).toBe('step-1');
-      expect(event.state).toBe('completed');
-      expect(event.startedAt).toBe(1000);
-      expect(event.completedAt).toBe(2000);
-    }
-  });
-
-  it('plan_step_updated supports optional fields', () => {
-    const event: AgentEvent = {
-      type: 'plan_step_updated',
-      planId: 'plan-1',
-      stepId: 'step-2',
-      state: 'failed',
-      error: 'Something went wrong',
-      messageId: 'msg-1',
-    };
-    expect(event.type).toBe('plan_step_updated');
-    if (event.type === 'plan_step_updated') {
-      expect(event.error).toBe('Something went wrong');
-      expect(event.messageId).toBe('msg-1');
+    expect(event.type).toBe('todo_list_updated');
+    if (event.type === 'todo_list_updated') {
+      expect(event.todos).toHaveLength(3);
+      expect(event.todos[0].status).toBe('completed');
     }
   });
 
