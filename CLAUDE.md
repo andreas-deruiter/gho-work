@@ -72,10 +72,11 @@ Every code change must pass before moving on:
 - **Catch blocks must not silently swallow errors** — always log with `console.error` or `console.warn`.
 - **Verify DOM elements exist before styling them** — CSS for non-existent elements is dead code.
 - **Evidence over assertions** — never claim "it works" without proof. Show test/build/runtime output.
+- **Default URLs/configs must work end-to-end** — if code hardcodes a default URL (marketplace, API endpoint), verify that the resource at that URL is compatible with the code that consumes it. A catalog that lists plugins which can't be installed is a broken default.
 
 ### Verification (details in `.claude/skills/verify-task.md`)
 - **HARD GATE**: Launch the app before declaring UI/IPC work complete. Use Playwright screenshots for self-verification.
-- **Boss gate**: Invoke the boss agent (`subagent_type: "boss"`) before declaring any task complete.
+- **Boss gate**: Invoke the boss agent (`subagent_type: "boss"`) before declaring any task complete. The boss MUST run `npx playwright test` for any work touching UI, IPC, or preload — unit tests passing ≠ app works.
 - **Run artifacts in their actual runtime** — `turbo build` passing ≠ app launches. `vitest` passing ≠ tsx works.
 - **Test both mock and real SDK paths** — mock SDK has different stream semantics than real SDK.
 

@@ -555,30 +555,38 @@ export class ChatPanel extends Disposable {
         break;
       }
       case 'tool_call_start': {
-        // Also add to thinking section for the collapsed summary count
+        // Show tool calls only in the thinking section
         this._currentThinkingSection.value?.addToolCall(
           event.toolCall.id,
           event.toolCall.toolName,
         );
-        // Add inline tool call widget in the message flow
-        this._addInlineToolCall(event.toolCall.id, event.toolCall.toolName);
         this._scrollToBottom();
         break;
       }
       case 'tool_call_result': {
         const state = event.result.success ? 'completed' : 'failed';
         this._currentThinkingSection.value?.updateToolCall(event.toolCallId, state);
-        // Update inline widget too
-        const inlineItem = this._inlineToolCalls.get(event.toolCallId);
-        if (inlineItem) {
-          inlineItem.setState(state);
-        }
         this._scrollToBottom();
         break;
       }
       case 'error': {
         this._showErrorBanner(event.error);
         this._finishStreaming();
+        break;
+      }
+      case 'skill_invoked': {
+        this._currentThinkingSection.value?.addSkillInvocation(event.skillName, event.state);
+        this._scrollToBottom();
+        break;
+      }
+      case 'subagent_started': {
+        this._currentThinkingSection.value?.addSubagent(event.subagentId, event.subagentName);
+        this._scrollToBottom();
+        break;
+      }
+      case 'subagent_completed': {
+        this._currentThinkingSection.value?.updateSubagent(event.subagentId, event.state);
+        this._scrollToBottom();
         break;
       }
       case 'done': {
@@ -686,6 +694,11 @@ export class ChatPanel extends Disposable {
       this._updateLastTextPart();
     }
     this._currentThinkingSection.value?.setActive(false);
+    // Belt-and-suspenders: ensure no thinking section in the DOM stays active
+    // (guards against race conditions between IPC events and DOM updates)
+    for (const el of this._messageListEl.querySelectorAll('.chat-thinking-section.thinking-active')) {
+      el.classList.remove('thinking-active');
+    }
     // Don't clear the MutableDisposable — the section stays in the DOM for scrollback.
     // It will be disposed when the next message creates a new section.
     this._currentAssistantMessage = null;

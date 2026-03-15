@@ -158,7 +158,10 @@ export type AgentEvent =
       type: 'attachment_added';
       messageId: string;
       attachment: { name: string; path: string; source: string };
-    };
+    }
+  | { type: 'skill_invoked'; skillName: string; state: 'running' | 'completed' | 'failed' }
+  | { type: 'subagent_started'; subagentId: string; subagentName: string }
+  | { type: 'subagent_completed'; subagentId: string; state: 'completed' | 'failed' };
 
 // --- Agent Context ---
 

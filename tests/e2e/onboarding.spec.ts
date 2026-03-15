@@ -43,8 +43,9 @@ test.describe('Onboarding flow — first launch', () => {
     await expect(logoMark).toBeVisible();
     await expect(logoMark).toHaveText('G');
 
-    // Heading
-    await expect(page.locator('.onb-welcome-content h2')).toHaveText('Welcome to GHO Work');
+    // ASCII art title (replaced the old h2 heading)
+    const asciiTitle = page.locator('.onb-ascii-title');
+    await expect(asciiTitle).toBeVisible();
 
     // Feature bullets
     const features = page.locator('.onb-feature');

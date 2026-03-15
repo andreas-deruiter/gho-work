@@ -163,6 +163,22 @@ class MockSDKSession implements ISDKSession {
       if (signal.aborted) { return; }
     }
 
+    // Skill invocation
+    if (isComplex) {
+      this.emit({
+        type: 'skill.invoked',
+        data: { skillName: 'productivity', state: 'running' },
+      });
+      await this.delay(60, signal);
+      if (signal.aborted) { return; }
+      this.emit({
+        type: 'skill.invoked',
+        data: { skillName: 'productivity', state: 'completed' },
+      });
+      await this.delay(30, signal);
+      if (signal.aborted) { return; }
+    }
+
     // Tool calls — read a file (triggers Input section)
     const readToolCallId = generateUUID();
     this.emit({
@@ -214,6 +230,23 @@ class MockSDKSession implements ISDKSession {
           result: { content: 'File written successfully' },
           fileMeta: { path: './src/output.ts', size: 1248, action: 'created' },
         },
+      });
+      await this.delay(30, signal);
+      if (signal.aborted) { return; }
+    }
+
+    // Subagent simulation for complex prompts
+    if (isComplex) {
+      const subagentId = generateUUID();
+      this.emit({
+        type: 'subagent.started',
+        data: { subagentId, subagentName: 'research' },
+      });
+      await this.delay(120, signal);
+      if (signal.aborted) { return; }
+      this.emit({
+        type: 'subagent.completed',
+        data: { subagentId },
       });
       await this.delay(30, signal);
       if (signal.aborted) { return; }

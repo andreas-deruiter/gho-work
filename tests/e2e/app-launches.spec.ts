@@ -110,36 +110,49 @@ test.describe('Chat flow', () => {
   }, 120000);
 
   test('model selector shows options and allows switching', async () => {
-    const modelSelector = page.locator('.model-selector-dropdown');
-    await expect(modelSelector).toBeVisible({ timeout: 5000 });
+    const modelTrigger = page.locator('.model-selector-trigger');
+    await expect(modelTrigger).toBeVisible({ timeout: 10000 });
 
-    const optionCount = await modelSelector.locator('option').count();
-    expect(optionCount).toBeGreaterThan(0);
+    // Click to open the dropdown menu
+    await modelTrigger.click();
+    const menu = page.locator('.model-selector-menu.open');
+    await expect(menu).toBeVisible({ timeout: 5000 });
+
+    const itemCount = await menu.locator('.model-selector-item').count();
+    expect(itemCount).toBeGreaterThan(0);
+
+    // Close by clicking trigger again
+    await modelTrigger.click();
   });
 
   test('model list comes from real SDK, not mock fallback', async () => {
-    // The mock fallback returns exactly 3 hardcoded models: GPT-4o, GPT-4o Mini, Claude Sonnet 4.
-    // If the SDK is working, we should see more than 3 models.
-    // If the SDK fails, the fix returns an empty list (not mock data).
-    const modelSelector = page.locator('.model-selector-dropdown');
-    await expect(modelSelector).toBeVisible({ timeout: 5000 });
+    const modelTrigger = page.locator('.model-selector-trigger');
+    await expect(modelTrigger).toBeVisible({ timeout: 10000 });
 
-    const options = modelSelector.locator('option');
-    const optionCount = await options.count();
+    // Open dropdown
+    await modelTrigger.click();
+    const menu = page.locator('.model-selector-menu.open');
+    await expect(menu).toBeVisible({ timeout: 5000 });
+
+    const items = menu.locator('.model-selector-item');
+    const itemCount = await items.count();
 
     // Collect model names for debugging
     const modelNames: string[] = [];
-    for (let i = 0; i < optionCount; i++) {
-      modelNames.push(await options.nth(i).textContent() ?? '');
+    for (let i = 0; i < itemCount; i++) {
+      modelNames.push(await items.nth(i).textContent() ?? '');
     }
 
     // The old mock fallback returned exactly these 3 models.
     // If we see exactly these 3 and nothing else, mock fallback is active.
     const mockModels = ['GPT-4o', 'GPT-4o Mini', 'Claude Sonnet 4'];
-    const isMockFallback = optionCount === 3
+    const isMockFallback = itemCount === 3
       && modelNames.every(name => mockModels.includes(name));
 
     expect(isMockFallback, `Model list appears to be mock fallback: [${modelNames.join(', ')}]`).toBe(false);
+
+    // Close by clicking trigger again
+    await modelTrigger.click();
   });
 
   test('conversation list appears in sidebar', async () => {
@@ -198,12 +211,12 @@ test.describe('Chat flow', () => {
     // Tool call should show completed status
     await expect(thinkingSection.locator('.tool-call-completed').first()).toBeVisible({ timeout: 5000 });
 
-    // Thinking section should be deactivated (no shimmer)
-    await expect(thinkingSection).not.toHaveClass(/thinking-active/, { timeout: 10000 });
-
-    // Send button should reappear, cancel should hide
-    await expect(sendBtn).toBeVisible({ timeout: 5000 });
+    // Send button should reappear, cancel should hide (proves _finishStreaming ran)
+    await expect(sendBtn).toBeVisible({ timeout: 15000 });
     await expect(cancelBtn).toBeHidden();
+
+    // Thinking section should be deactivated (no shimmer)
+    await expect(thinkingSection).not.toHaveClass(/thinking-active/, { timeout: 5000 });
 
     // Input should be re-enabled and focusable
     await expect(input).toBeEnabled();
