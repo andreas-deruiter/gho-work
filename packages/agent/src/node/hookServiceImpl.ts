@@ -36,7 +36,7 @@ export class HookServiceImpl implements IHookService {
             pluginName,
             pluginRoot,
             event,
-            matcher: matcherDef.matcher ? new RegExp(matcherDef.matcher) : undefined,
+            matcher: matcherDef.matcher ? this._safeRegex(matcherDef.matcher, pluginName) : undefined,
             type: action.type,
             command: action.command,
             timeout: action.timeout ?? DEFAULT_TIMEOUT,
@@ -67,6 +67,15 @@ export class HookServiceImpl implements IHookService {
       } catch (err) {
         console.warn(`[HookService] Hook from ${hook.pluginName} failed:`, err);
       }
+    }
+  }
+
+  private _safeRegex(pattern: string, pluginName: string): RegExp | undefined {
+    try {
+      return new RegExp(pattern);
+    } catch (err) {
+      console.warn(`[HookService] Invalid matcher regex from ${pluginName}: ${pattern}`);
+      return undefined;
     }
   }
 
