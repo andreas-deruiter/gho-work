@@ -1,5 +1,12 @@
 import type { SdkMcpServerConfig } from './mcpConfigMapping.js';
 
+export interface ToolDefinition {
+  name: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+  handler: (args: any) => Promise<unknown> | unknown;
+}
+
 export interface SessionConfig {
   model?: string;
   sessionId?: string;
@@ -19,6 +26,7 @@ export interface SessionConfig {
     infer?: boolean;
     mcpServers?: Record<string, unknown>;
   }>;
+  tools?: ToolDefinition[];
 }
 
 export type SystemMessageConfig =
