@@ -8,13 +8,12 @@
  * Tool calls appear between text segments so the user can see tool invocations
  * in context as the response streams.
  */
-import { Disposable, DisposableStore, Emitter, generateUUID, MutableDisposable } from '@gho-work/base';
+import { Disposable, Emitter, generateUUID, MutableDisposable } from '@gho-work/base';
 import type { Event, AgentEvent } from '@gho-work/base';
 import type { IIPCRenderer, FileEntry } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { ModelSelector } from './modelSelector.js';
 import { ChatThinkingSection } from './chatThinkingSection.js';
-import { ChatToolCallItem } from './chatToolCallItem.js';
 import { renderChatMarkdown } from './chatMarkdownRenderer.js';
 
 interface ChatMessage {
@@ -28,8 +27,7 @@ interface ChatMessage {
 
 /** A content part in the assistant response stream. */
 type ContentPart =
-  | { type: 'text'; content: string }
-  | { type: 'tool_call'; toolCallId: string; toolName: string };
+  | { type: 'text'; content: string };
 
 export interface SendMessageEvent {
   conversationId: string;
@@ -50,10 +48,6 @@ export class ChatPanel extends Disposable {
 
   /** Ordered content parts for the current streaming assistant message. */
   private _contentParts: ContentPart[] = [];
-  /** Inline tool call widgets keyed by toolCallId. */
-  private _inlineToolCalls = new Map<string, ChatToolCallItem>();
-  /** Disposable store for inline tool call widgets (cleared per message). */
-  private _inlineToolCallDisposables = this._register(new DisposableStore());
 
   private _modelSelector!: ModelSelector;
   private _conversationId: string = generateUUID();
@@ -468,9 +462,6 @@ export class ChatPanel extends Disposable {
 
     // Reset parts-based state for the new assistant message
     this._contentParts = [];
-    this._inlineToolCallDisposables.clear();
-    this._inlineToolCalls.clear();
-
     // Create a placeholder assistant message for streaming
     this._currentAssistantMessage = {
       id: generateUUID(),
@@ -611,29 +602,6 @@ export class ChatPanel extends Disposable {
       this._appendTextPartDom();
     }
     this._updateLastTextPart();
-  }
-
-  /**
-   * Adds an inline tool call widget to the message flow.
-   * Creates a tool_call content part and inserts the widget DOM.
-   */
-  private _addInlineToolCall(toolCallId: string, toolName: string): void {
-    this._contentParts.push({ type: 'tool_call', toolCallId, toolName });
-
-    const item = new ChatToolCallItem(toolCallId, toolName, 'executing');
-    this._inlineToolCallDisposables.add(item);
-    this._inlineToolCalls.set(toolCallId, item);
-
-    // Wrap in an inline container for styling
-    const wrapper = document.createElement('div');
-    wrapper.className = 'chat-inline-tool-call';
-    wrapper.dataset.toolCallId = toolCallId;
-    wrapper.appendChild(item.getDomNode());
-
-    const partsContainer = this._getPartsContainer();
-    if (partsContainer) {
-      partsContainer.appendChild(wrapper);
-    }
   }
 
   /** Creates a new empty text segment DOM element in the parts container. */
