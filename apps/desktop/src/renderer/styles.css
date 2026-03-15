@@ -2327,107 +2327,69 @@ html, body {
   max-height: 0;
 }
 
-/* Progress stepper */
-.info-step {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
+/* --- Todo List --- */
+.info-todo-section {
+  margin-bottom: 12px;
 }
-.info-step-track {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.info-step-circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+
+.info-todo-section .info-section-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.info-todo-chevron {
+  font-size: 10px;
+  width: 14px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.info-todo-list {
+  margin: 0;
+  padding: 0;
+}
+
+.info-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 4px 20px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.info-todo-icon {
   flex-shrink: 0;
-  font-size: 10px;
-}
-.info-step-circle--completed {
-  background: color-mix(in srgb, var(--fg-success) 20%, transparent);
-  color: var(--fg-success);
-}
-.info-step-circle--active {
-  background: var(--brand-primary);
-  color: #fff;
-  animation: info-pulse 1.5s infinite;
-}
-.info-step-circle--pending {
-  border: 2px solid var(--border-primary);
-  background: transparent;
-}
-.info-step-circle--failed {
-  background: color-mix(in srgb, var(--fg-error) 20%, transparent);
-  color: var(--fg-error);
-}
-.info-step-line {
-  width: 2px;
-  min-height: 16px;
-  flex: 1;
-}
-.info-step-line--completed { background: color-mix(in srgb, var(--fg-success) 30%, transparent); }
-.info-step-line--pending { background: var(--border-primary); }
-
-.info-step-label {
-  padding: 2px 0 8px;
+  width: 16px;
+  text-align: center;
   font-size: 12px;
-  color: var(--fg-primary);
-  cursor: pointer;
-}
-.info-step-label--completed { color: var(--fg-muted); }
-.info-step-label--active { font-weight: 600; }
-.info-step-label--pending { color: var(--fg-muted); }
-
-/* Collapsed step summary */
-.info-step-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: var(--bg-tertiary);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--fg-muted);
-  margin-bottom: 8px;
-}
-.info-step-summary:hover {
-  background: var(--bg-hover);
 }
 
-/* Progress bar */
-.info-progress-bar-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-secondary);
-  font-size: 10px;
-  color: var(--fg-muted);
+.info-todo-icon--not-started {
+  color: var(--text-tertiary);
 }
-.info-progress-bar {
+
+.info-todo-icon--in-progress {
+  color: var(--accent-blue, #3b82f6);
+}
+
+.info-todo-icon--completed {
+  color: var(--accent-green, #22c55e);
+}
+
+.info-todo-label {
   flex: 1;
-  height: 4px;
-  background: var(--border-secondary);
-  border-radius: 2px;
+  min-width: 0;
   overflow: hidden;
-}
-.info-progress-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: var(--brand-primary);
-  transition: width 300ms ease-out;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@keyframes info-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+.info-todo-item--completed .info-todo-label {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
 }
 
 /* Entry items (shared Input/Output) */
@@ -2511,10 +2473,8 @@ html, body {
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .info-step-circle--active { animation: none; }
   .info-panel-container { transition: none; }
   .info-section-body { transition: none; }
-  .info-progress-bar-fill { transition: none; }
 }
 
 /* Skill toggle styles moved to settings.css */
