@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ProgressSection } from './progressSection.js';
-import type { PlanState } from './infoPanelState.js';
+/** Local plan types for tests — PlanState was removed from infoPanelState, kept here for ProgressSection tests. */
+type StepState = 'completed' | 'active' | 'pending' | 'failed';
+type PlanState = { id: string; steps: Array<{ id: string; label: string; state: StepState }> };
 
 // Minimal DOM shim — Vitest with jsdom
 describe('ProgressSection', () => {

@@ -12,7 +12,16 @@ import { Emitter } from '@gho-work/base';
 import type { Event } from '@gho-work/base';
 import { Widget } from '../widget.js';
 import { h, addDisposableListener } from '../dom.js';
-import type { PlanState, PlanStep, StepState } from './infoPanelState.js';
+/** @deprecated Plan types — will be replaced by TodoListWidget in Task 5. */
+type StepState = 'completed' | 'active' | 'pending' | 'failed';
+/** @deprecated Plan types — will be replaced by TodoListWidget in Task 5. */
+interface PlanStep {
+  id: string; label: string; state: StepState;
+  startedAt?: number; completedAt?: number; error?: string; messageId?: string;
+  agentName?: string;
+}
+/** @deprecated Plan types — will be replaced by TodoListWidget in Task 5. */
+interface PlanState { id: string; steps: PlanStep[]; }
 
 /** Threshold above which smart-collapse activates. */
 const COLLAPSE_THRESHOLD = 4;

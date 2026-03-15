@@ -32,9 +32,6 @@ export class InfoPanel extends Widget {
   private readonly _onDidRequestRevealFile = this._register(new Emitter<string>());
   readonly onDidRequestRevealFile: Event<string> = this._onDidRequestRevealFile.event;
 
-  private readonly _onDidPlanCreated = this._register(new Emitter<void>());
-  readonly onDidPlanCreated: Event<void> = this._onDidPlanCreated.event;
-
   // --- Child sections ---
   private _progressSection: ProgressSection;
   private _inputSection: InputSection;
@@ -94,29 +91,9 @@ export class InfoPanel extends Widget {
   /** Dispatch an agent event to the appropriate section(s). */
   handleEvent(event: AgentEvent): void {
     switch (event.type) {
-      case 'plan_created': {
-        this._currentState.setPlan(event.plan);
-        this._progressSection.setPlan(this._currentState.plan!);
+      case 'todo_list_updated': {
+        this._currentState.setTodos(event.todos);
         this._updateEmptyState();
-        this._onDidPlanCreated.fire();
-        break;
-      }
-
-      case 'plan_step_updated': {
-        // Map 'running' from AgentEvent to 'active' for StepState
-        const stepState = event.state === 'running' ? 'active' : event.state;
-        this._currentState.updateStep(event.stepId, stepState, {
-          startedAt: event.startedAt,
-          completedAt: event.completedAt,
-          error: event.error,
-          messageId: event.messageId,
-        });
-        this._progressSection.updateStep(event.stepId, stepState, {
-          startedAt: event.startedAt,
-          completedAt: event.completedAt,
-          error: event.error,
-          messageId: event.messageId,
-        });
         break;
       }
 
@@ -190,21 +167,9 @@ export class InfoPanel extends Widget {
       case 'subagent_started':
       case 'subagent_completed':
       case 'subagent_failed': {
-        const result = processSubagentEvent(event, this._currentState);
-        if (result?.step) {
-          const { id, state, agentName, error } = result.step;
-          this._currentState.updateStep(id, state, { error });
-          if (agentName) {
-            // Set agentName on the plan step directly
-            const planStep = this._currentState.plan?.steps.find(s => s.id === id);
-            if (planStep) {
-              planStep.agentName = agentName;
-            }
-          }
-          this._progressSection.updateStep(id, state, { error });
-        }
-        // standalone subagent case: the progress section can show it if needed
-        // For now, we don't render standalone subagent indicators in the stepper.
+        // Subagent events are processed but standalone indicators are not yet
+        // rendered in the progress section. Reserved for future TodoListWidget use.
+        processSubagentEvent(event, this._currentState);
         break;
       }
 
@@ -318,10 +283,6 @@ export class InfoPanel extends Widget {
       this._contextSection.setAgents([...state.registeredAgents]);
     }
 
-    if (state.plan) {
-      this._progressSection.setPlan(state.plan);
-    }
-
     for (const input of state.inputs) {
       this._inputSection.addEntry(input);
     }
@@ -334,7 +295,7 @@ export class InfoPanel extends Widget {
   /** Show or hide the empty state message based on section data. */
   private _updateEmptyState(): void {
     const state = this._currentState;
-    const hasData = state.plan !== null || state.inputs.length > 0 || state.outputs.length > 0 || state.contextSources.length > 0 || state.registeredAgents.length > 0;
+    const hasData = state.todos.length > 0 || state.inputs.length > 0 || state.outputs.length > 0 || state.contextSources.length > 0 || state.registeredAgents.length > 0;
     this._emptyEl.style.display = hasData ? 'none' : '';
   }
 }

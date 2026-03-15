@@ -42,15 +42,11 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export type StepState = 'completed' | 'active' | 'pending' | 'failed';
-
-export interface PlanStep {
-  id: string; label: string; state: StepState;
-  startedAt?: number; completedAt?: number; error?: string; messageId?: string;
-  agentName?: string;
+export interface TodoItem {
+  id: number;
+  title: string;
+  status: 'not-started' | 'in-progress' | 'completed';
 }
-
-export interface PlanState { id: string; steps: PlanStep[]; }
 
 export interface InputEntry {
   name: string; path: string; messageId: string; kind: 'file' | 'tool'; count: number;
@@ -72,7 +68,7 @@ export interface RegisteredAgentEntry {
 }
 
 export class InfoPanelState {
-  private _plan: PlanState | null = null;
+  private _todos: TodoItem[] = [];
   private _inputs: InputEntry[] = [];
   private _outputs: OutputEntry[] = [];
   private _toolCalls = new Map<string, { toolName: string; serverName: string }>();
@@ -80,7 +76,7 @@ export class InfoPanelState {
   private _contextSources: ContextSourceEntry[] = [];
   private _registeredAgents: RegisteredAgentEntry[] = [];
 
-  get plan(): PlanState | null { return this._plan; }
+  get todos(): readonly TodoItem[] { return this._todos; }
   get inputs(): readonly InputEntry[] { return this._inputs; }
   get outputs(): readonly OutputEntry[] { return this._outputs; }
   get contextSources(): readonly ContextSourceEntry[] { return this._contextSources; }
@@ -94,20 +90,7 @@ export class InfoPanelState {
     this._registeredAgents = [...agents];
   }
 
-  setPlan(plan: { id: string; steps: Array<{ id: string; label: string }> }): void {
-    this._plan = { id: plan.id, steps: plan.steps.map(s => ({ ...s, state: 'pending' as StepState })) };
-  }
-
-  updateStep(stepId: string, state: StepState, meta?: { startedAt?: number; completedAt?: number; error?: string; messageId?: string }): void {
-    if (!this._plan) { return; }
-    const step = this._plan.steps.find(s => s.id === stepId);
-    if (!step) { return; }
-    step.state = state;
-    if (meta?.startedAt !== undefined) { step.startedAt = meta.startedAt; }
-    if (meta?.completedAt !== undefined) { step.completedAt = meta.completedAt; }
-    if (meta?.error !== undefined) { step.error = meta.error; }
-    if (meta?.messageId !== undefined) { step.messageId = meta.messageId; }
-  }
+  setTodos(todos: TodoItem[]): void { this._todos = [...todos]; }
 
   addInput(entry: Omit<InputEntry, 'count'>): void {
     const existing = this._inputs.find(e => e.path === entry.path);
@@ -130,6 +113,6 @@ export class InfoPanelState {
   }
 
   clear(): void {
-    this._plan = null; this._inputs = []; this._outputs = []; this._toolCalls.clear();
+    this._todos = []; this._inputs = []; this._outputs = []; this._toolCalls.clear();
   }
 }
