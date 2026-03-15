@@ -259,12 +259,13 @@ export function createMainProcess(
   })();
 
   // Skill registry: multi-source skill discovery with priority-based deduplication.
-  // In development, app.getAppPath() returns apps/desktop (the package directory).
-  // Bundled skills live at <repo-root>/skills/, which is 2 levels up.
+  // In development, electron-vite outputs to apps/desktop/out/main/index.js,
+  // so app.getAppPath() returns apps/desktop/out/main — 4 levels below repo root.
+  // Bundled skills live at <repo-root>/skills/.
   // In packaged builds, they're copied to resources/skills/.
   const bundledSkillsPath = app.isPackaged
     ? path.join(process.resourcesPath, 'skills')
-    : path.join(app.getAppPath(), '..', '..', 'skills');
+    : path.join(app.getAppPath(), '..', '..', '..', '..', 'skills');
   const skillSources = buildSkillSources({
     bundledPath: bundledSkillsPath,
     userPath: path.join(os.homedir(), '.gho-work', 'skills'),

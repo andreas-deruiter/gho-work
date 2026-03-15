@@ -16,6 +16,7 @@ const MAX_FILE_SIZE = 50 * 1024;
 /** File names to look for, in priority order within each directory. */
 const INSTRUCTION_FILES: Array<{ name: string; subdir?: string; format: string }> = [
   { name: 'GHO.md', format: 'gho' },
+  { name: 'gho-instructions.md', format: 'gho' },  // legacy name, still supported
   { name: 'CLAUDE.md', format: 'claude' },
   { name: 'copilot-instructions.md', subdir: '.github', format: 'copilot' },
   { name: '.cursorrules', format: 'cursor' },
