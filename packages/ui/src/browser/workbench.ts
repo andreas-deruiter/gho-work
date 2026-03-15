@@ -218,7 +218,7 @@ export class Workbench extends Disposable {
     this._infoPanel.onDidRequestRevealFile(filePath => {
       void this._ipc.invoke(IPC_CHANNELS.SHELL_SHOW_ITEM_IN_FOLDER, { path: filePath });
     });
-    this._infoPanel.onDidPlanCreated(() => this._autoShowInfoPanel());
+    this._infoPanel.onDidTodosReceived(() => this._autoShowInfoPanel());
 
     // Store reference to main element for settings panel injection
     this._mainEl = layout.main;

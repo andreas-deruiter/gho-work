@@ -31,6 +31,9 @@ export class InfoPanel extends Widget {
   private readonly _onDidRequestRevealFile = this._register(new Emitter<string>());
   readonly onDidRequestRevealFile: Event<string> = this._onDidRequestRevealFile.event;
 
+  private readonly _onDidTodosReceived = this._register(new Emitter<void>());
+  readonly onDidTodosReceived: Event<void> = this._onDidTodosReceived.event;
+
   // --- Child sections ---
   private _todoSection: TodoListWidget;
   private _inputSection: InputSection;
@@ -91,9 +94,13 @@ export class InfoPanel extends Widget {
   handleEvent(event: AgentEvent): void {
     switch (event.type) {
       case 'todo_list_updated': {
+        const hadTodos = this._currentState.todos.length > 0;
         this._currentState.setTodos(event.todos);
         this._todoSection.setTodos(event.todos);
         this._updateEmptyState();
+        if (!hadTodos && event.todos.length > 0) {
+          this._onDidTodosReceived.fire();
+        }
         break;
       }
 
