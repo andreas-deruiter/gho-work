@@ -9,6 +9,12 @@ const INPUT_TOOL_NAMES = new Set([
   'getFileContents', 'get_file_contents',
 ]);
 
+/** Internal tools that should never appear in the Input/Output sections. */
+const HIDDEN_TOOL_NAMES = new Set([
+  'manage_todo_list',
+  'report_intent',
+]);
+
 const OUTPUT_TOOL_NAMES = new Set([
   'writeFile', 'write_file', 'createFile', 'create_file',
   'editFile', 'edit_file', 'updateFile', 'update_file',
@@ -16,6 +22,7 @@ const OUTPUT_TOOL_NAMES = new Set([
 ]);
 
 export function isInputTool(toolName: string, serverName: string): boolean {
+  if (HIDDEN_TOOL_NAMES.has(toolName)) { return false; }
   if (serverName) { return true; }
   return INPUT_TOOL_NAMES.has(toolName);
 }

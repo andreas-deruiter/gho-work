@@ -2296,18 +2296,23 @@ html, body {
   background: var(--brand-primary);
 }
 
-/* Section headers (shared by all three sections) */
+/* Section headers (shared by all sections) */
 .info-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 0;
+  padding: 6px 0 4px;
   cursor: pointer;
   user-select: none;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fg-secondary);
 }
 .info-section-title {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--fg-secondary);
 }
 .info-section-chevron {
@@ -2329,7 +2334,7 @@ html, body {
 
 /* --- Todo List --- */
 .info-todo-section {
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 
 .info-todo-section .info-section-header {
@@ -2337,46 +2342,53 @@ html, body {
   align-items: center;
   gap: 6px;
   user-select: none;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fg-secondary);
 }
 
 .info-todo-chevron {
-  font-size: 10px;
-  width: 14px;
+  font-size: 8px;
+  width: 12px;
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--fg-muted);
+  transition: transform 150ms ease-out;
 }
 
 .info-todo-list {
   margin: 0;
-  padding: 0;
+  padding: 2px 0 0;
 }
 
 .info-todo-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 4px 0 4px 20px;
-  font-size: 13px;
-  line-height: 1.4;
+  padding: 3px 0 3px 4px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .info-todo-icon {
   flex-shrink: 0;
-  width: 16px;
+  width: 14px;
   text-align: center;
-  font-size: 12px;
+  font-size: 10px;
+  margin-top: 2px;
 }
 
 .info-todo-icon--not-started {
-  color: var(--text-tertiary);
+  color: var(--fg-muted);
 }
 
 .info-todo-icon--in-progress {
-  color: var(--accent-blue, #3b82f6);
+  color: var(--fg-accent);
 }
 
 .info-todo-icon--completed {
-  color: var(--accent-green, #22c55e);
+  color: var(--fg-success);
 }
 
 .info-todo-label {
@@ -2385,11 +2397,11 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--fg-primary);
 }
 
 .info-todo-item--completed .info-todo-label {
-  text-decoration: line-through;
-  color: var(--text-tertiary);
+  color: var(--fg-muted);
 }
 
 /* Entry items (shared Input/Output) */

@@ -57,10 +57,10 @@ export class InfoPanel extends Widget {
 
   constructor() {
     const layout = h('div.info-panel@root', [
-      h('div.info-panel-context@context'),
       h('div.info-panel-todo@todo'),
       h('div.info-panel-input@input'),
       h('div.info-panel-output@output'),
+      h('div.info-panel-context@context'),
       h('div.info-panel-empty@empty'),
     ]);
 
