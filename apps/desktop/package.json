@@ -16,8 +16,6 @@
   "dependencies": {
     "@gho-work/base": "*",
     "@gho-work/platform": "*",
-    "@gho-work/agent": "*",
-    "@gho-work/connectors": "*",
     "@gho-work/ui": "*",
     "@gho-work/electron": "*"
   },
