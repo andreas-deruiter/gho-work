@@ -399,18 +399,45 @@ export function createMainProcess(
     pluginSettings,
   );
 
-  // Re-register skill sources for enabled installed plugins on startup.
-  // Uses the default skills path convention (<cachePath>/skills); a full re-enable
-  // via pluginService.enable() would parse the manifest but requires async I/O.
-  for (const plugin of pluginService.getInstalled()) {
-    if (plugin.enabled && plugin.skillCount > 0) {
-      skillRegistry.addSource({
-        id: `plugin:${plugin.name}`,
-        basePath: path.join(plugin.cachePath, 'skills'),
-        priority: 10,
-      });
+  // Re-register all capabilities for enabled installed plugins on startup.
+  // Uses parseManifest() for full capability registration (skills, commands, agents, hooks).
+  // MCP servers are already persisted in config store and auto-loaded.
+  void (async () => {
+    for (const plugin of pluginService.getInstalled()) {
+      if (!plugin.enabled) continue;
+      const pluginRoot = plugin.cachePath;
+
+      try {
+        const manifest = await pluginInstaller.parseManifest(pluginRoot);
+
+        // Skills
+        if (manifest.skills) {
+          const skillPath = path.join(pluginRoot, typeof manifest.skills === 'string' ? manifest.skills : 'skills');
+          skillRegistry.addSource({ id: `plugin:${plugin.name}`, basePath: skillPath, priority: 10 });
+        }
+
+        // Commands
+        if (manifest.commands) {
+          const cmdPath = path.join(pluginRoot, typeof manifest.commands === 'string' ? manifest.commands : 'commands');
+          skillRegistry.addSource({ id: `plugin:${plugin.name}:commands`, basePath: cmdPath, priority: 10 });
+        }
+
+        // Agents
+        const agents = await pluginInstaller.parseAgentFiles(pluginRoot, plugin.name, manifest.agents);
+        for (const agent of agents) {
+          pluginAgentRegistry.register(agent);
+        }
+
+        // Hooks
+        const hooks = await pluginInstaller.parseHooks(pluginRoot, manifest.hooks);
+        if (hooks) {
+          hookService.registerHooks(plugin.name, pluginRoot, hooks);
+        }
+      } catch (err) {
+        console.warn(`[Plugins] Failed to re-register ${plugin.name}:`, err);
+      }
     }
-  }
+  })();
 
   // Forward plugin events to renderer
   pluginService.onDidChangePlugins((plugins) => {
