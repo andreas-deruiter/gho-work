@@ -93,6 +93,7 @@ function makeInstaller() {
     countCommands: vi.fn().mockResolvedValue(0),
     deleteCache: vi.fn().mockResolvedValue(undefined),
     parseAgentFiles: vi.fn().mockResolvedValue([]),
+    parseSettings: vi.fn().mockResolvedValue(undefined),
   };
 }
 
