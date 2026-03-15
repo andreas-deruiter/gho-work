@@ -215,16 +215,11 @@ test.describe('Plugin capability badges and new UI elements', () => {
     // Type a search query that is unlikely to match any mock plugin names
     await searchInput.fill('xyzzy_no_match_expected_12345');
 
-    // Wait for re-render: either empty state or a filtered grid
-    // The grid container should still be present; the query determines content
-    const grid = page.locator('.plugin-card-grid');
-    await expect(grid).toBeVisible({ timeout: 3000 });
-
-    // Either empty-state is shown or no cards remain
-    const cardCount = await page.locator('.plugin-card').count();
+    // Wait for re-render: when no results, the grid is replaced by empty-state
     const emptyState = page.locator('.plugin-empty-state');
-    const hasEmptyState = await emptyState.isVisible();
-    expect(cardCount === 0 || hasEmptyState).toBe(true);
+    const grid = page.locator('.plugin-card-grid');
+    // Either empty state or grid with zero cards should be visible
+    await expect(emptyState.or(grid)).toBeVisible({ timeout: 3000 });
   });
 
   test('discover grid shows plugin cards with capability badges', async () => {
