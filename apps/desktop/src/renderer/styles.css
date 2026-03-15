@@ -972,11 +972,6 @@ html, body {
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
 /* Shimmer effect for in-progress labels */
 .shimmer {
   background: linear-gradient(
@@ -1934,10 +1929,6 @@ html, body {
   border-radius: 50%;
   margin: 0 auto 20px;
   animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 .onb-auth-content h3 {

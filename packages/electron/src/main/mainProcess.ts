@@ -224,7 +224,7 @@ export function createMainProcess(
   void (async () => {
     if (useMock) {
       await sdk.start();
-      console.log('[main] Agent started in Mock mode (--mock flag)');
+      console.warn('[main] Agent started in Mock mode (--mock flag)');
       _sdkReadyResolve?.();
       return;
     }
@@ -241,7 +241,7 @@ export function createMainProcess(
 
       try {
         await sdk.start();
-        console.log('[main] Agent started in Copilot SDK mode');
+        console.warn('[main] Agent started in Copilot SDK mode');
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('[main] CRITICAL: Copilot SDK failed to start:', msg);
@@ -256,7 +256,7 @@ export function createMainProcess(
         );
       }
     } else {
-      console.log('[main] SDK start deferred — waiting for onboarding to complete');
+      console.warn('[main] SDK start deferred — waiting for onboarding to complete');
     }
     _sdkReadyResolve?.();
   })();
@@ -386,7 +386,7 @@ export function createMainProcess(
 ## Conventions
 <!-- Add any conventions, tools, or workflows the agent should follow -->
 `, { encoding: 'utf-8' });
-      console.log('Created default instructions file at', DEFAULT_INSTRUCTIONS_PATH);
+      console.warn('[main] Created default instructions file at', DEFAULT_INSTRUCTIONS_PATH);
     }
   } catch (err) {
     console.warn('Failed to create default instructions template:', err);
@@ -550,7 +550,7 @@ export function createMainProcess(
             });
           }
 
-          console.log(`[Plugins] Loaded local plugin: ${name} from ${dir}`);
+          console.warn(`[Plugins] Loaded local plugin: ${name} from ${dir}`);
         } catch (err) {
           console.warn(`[Plugins] Failed to load local plugin from ${dir}:`, err);
         }
@@ -589,7 +589,7 @@ export function createMainProcess(
       const servers = configStore.getServers();
       if (servers.size > 0) {
         await mcpClientManager.reconcile(servers);
-        console.log(`[main] Reconciled ${servers.size} MCP server(s) on startup`);
+        console.warn(`[main] Reconciled ${servers.size} MCP server(s) on startup`);
       }
     } catch (err) {
       console.error('[main] Error reconciling MCP servers on startup:', err instanceof Error ? err.message : String(err));
@@ -1034,7 +1034,7 @@ export function createMainProcess(
           const sdkModels = await sdk.listModels();
           models = sdkModels.map((m) => ({ id: m.id, name: m.name }));
           hasSubscription = sdkModels.length > 0;
-          console.log(`[main] Copilot check: ${sdkModels.length} models available`);
+          console.warn(`[main] Copilot check: ${sdkModels.length} models available`);
         } catch (err) {
           console.warn('[main] Failed to list models from SDK:', err instanceof Error ? err.message : String(err));
           // Copilot scope present but SDK can't list models — user may not have an active subscription
@@ -1533,7 +1533,7 @@ export function createMainProcess(
         const tokenStr = token.trim();
         if (tokenStr) {
           await sdk.restart({ githubToken: tokenStr, useMock: false });
-          console.log('[main] SDK restarted in real mode after onboarding');
+          console.warn('[main] SDK restarted in real mode after onboarding');
         }
       } catch (err) {
         console.error('[main] Failed to restart SDK with real token:', err instanceof Error ? err.message : String(err));
