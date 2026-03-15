@@ -90,16 +90,19 @@ describe('PluginLocation', () => {
         expect(location.repo).toBeDefined();
       } else if (location.type === 'url') {
         expect(location.url).toBeDefined();
-      } else {
-        // git-subdir
+      } else if (location.type === 'git-subdir') {
         expect(location.url).toBeDefined();
         expect(location.path).toBeDefined();
+      } else {
+        // npm
+        expect(location.package).toBeDefined();
       }
     }
 
     checkLocation({ type: 'github', repo: 'owner/repo' });
     checkLocation({ type: 'url', url: 'https://example.com/plugin.zip' });
     checkLocation({ type: 'git-subdir', url: 'https://github.com/owner/repo.git', path: 'plugins/my-plugin' });
+    checkLocation({ type: 'npm', package: 'my-plugin' });
   });
 });
 
@@ -112,6 +115,9 @@ describe('CatalogEntry', () => {
       location: 'https://github.com/owner/my-plugin',
       hasSkills: true,
       hasMcpServers: false,
+      hasCommands: false,
+      hasAgents: false,
+      hasHooks: false,
     };
     expect(entry.name).toBe('my-plugin');
     expect(entry.hasSkills).toBe(true);
@@ -126,6 +132,9 @@ describe('CatalogEntry', () => {
       location: 'https://github.com/owner/plugin-a',
       hasSkills: false,
       hasMcpServers: true,
+      hasCommands: false,
+      hasAgents: false,
+      hasHooks: false,
     };
     expect(typeof entry.location).toBe('string');
   });
@@ -139,6 +148,9 @@ describe('CatalogEntry', () => {
       location,
       hasSkills: true,
       hasMcpServers: true,
+      hasCommands: false,
+      hasAgents: false,
+      hasHooks: false,
     };
     expect(typeof entry.location).toBe('object');
   });
@@ -154,6 +166,9 @@ describe('CatalogEntry', () => {
       category: 'tools',
       hasSkills: true,
       hasMcpServers: true,
+      hasCommands: false,
+      hasAgents: false,
+      hasHooks: false,
     };
     expect(entry.author?.name).toBe('Jane Doe');
     expect(entry.author?.email).toBe('jane@example.com');
@@ -170,6 +185,9 @@ describe('CatalogEntry', () => {
       location: 'https://github.com/owner/plugin-c',
       hasSkills: false,
       hasMcpServers: false,
+      hasCommands: false,
+      hasAgents: false,
+      hasHooks: false,
     };
     expect(entry.author?.email).toBeUndefined();
   });
@@ -184,6 +202,9 @@ describe('InstalledPlugin', () => {
       location: { type: 'github', repo: 'owner/installed-plugin' },
       hasSkills: true,
       hasMcpServers: true,
+      hasCommands: false,
+      hasAgents: false,
+      hasHooks: false,
     };
 
     const installed: InstalledPlugin = {
@@ -196,6 +217,9 @@ describe('InstalledPlugin', () => {
       skillCount: 3,
       agentCount: 0,
       mcpServerNames: ['server-a', 'server-b'],
+      commandCount: 0,
+      agentIds: [],
+      hookCount: 0,
     };
 
     expect(installed.name).toBe('installed-plugin');
@@ -212,6 +236,9 @@ describe('InstalledPlugin', () => {
       location: 'https://example.com/disabled.zip',
       hasSkills: false,
       hasMcpServers: false,
+      hasCommands: false,
+      hasAgents: false,
+      hasHooks: false,
     };
 
     const installed: InstalledPlugin = {
@@ -224,6 +251,9 @@ describe('InstalledPlugin', () => {
       skillCount: 0,
       agentCount: 0,
       mcpServerNames: [],
+      commandCount: 0,
+      agentIds: [],
+      hookCount: 0,
     };
 
     expect(installed.enabled).toBe(false);

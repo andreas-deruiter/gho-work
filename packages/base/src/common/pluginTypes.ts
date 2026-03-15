@@ -3,6 +3,29 @@
  * Used across packages: base, platform, agent, connectors, ui, electron.
  */
 
+// --- Plugin Agent Definition ---
+
+/**
+ * Describes an agent contributed by a plugin.
+ * Used by IPluginAgentRegistry in packages/agent.
+ */
+export interface PluginAgentDefinition {
+  /** Fully qualified: plugin-name:agent-name */
+  id: string;
+  /** Display name */
+  name: string;
+  /** When to invoke this agent */
+  description: string;
+  /** System prompt (body of .md file) */
+  systemPrompt: string;
+  /** Source plugin */
+  pluginName: string;
+  /** Optional model override */
+  model?: string;
+  /** Optional tool restrictions */
+  allowedTools?: string[];
+}
+
 // --- Install Progress ---
 
 /** Progress status for a plugin installation operation. */
@@ -40,7 +63,8 @@ export type PluginLocation =
       path: string;
       /** Git ref (branch, tag, commit SHA). Defaults to the default branch if omitted. */
       ref?: string;
-    };
+    }
+  | { type: 'npm'; package: string; version?: string; registry?: string };
 
 // --- Catalog Entry ---
 
@@ -73,6 +97,30 @@ export interface CatalogEntry {
   hasSkills: boolean;
   /** Whether the plugin registers any MCP servers. */
   hasMcpServers: boolean;
+  /** Whether the plugin contributes any commands. */
+  hasCommands: boolean;
+  /** Whether the plugin bundles any agents. */
+  hasAgents: boolean;
+  /** Whether the plugin registers any hooks. */
+  hasHooks: boolean;
+  /** Searchable tags for the plugin (distinct from keywords). */
+  tags?: string[];
+  /** Plugin homepage URL. */
+  homepage?: string;
+  /** Source repository URL. */
+  repository?: string;
+  /** SPDX license identifier. */
+  license?: string;
+  /** Whether the plugin declares strict mode. */
+  strict?: boolean;
+  /** Component path overrides from marketplace entry. */
+  componentPaths?: {
+    commands?: string | string[];
+    agents?: string | string[];
+    skills?: string | string[];
+    hooks?: string | object;
+    mcpServers?: string | object;
+  };
 }
 
 // --- Installed Plugin ---
@@ -100,4 +148,14 @@ export interface InstalledPlugin {
   agentCount: number;
   /** Names of MCP servers registered by this plugin. */
   mcpServerNames: string[];
+  /** Number of commands contributed by this plugin. */
+  commandCount: number;
+  /** IDs of agents contributed by this plugin. */
+  agentIds: string[];
+  /** Number of hooks registered by this plugin. */
+  hookCount: number;
+  /** Human-readable name from the marketplace catalog. */
+  marketplaceName?: string;
+  /** Where the plugin came from. */
+  source?: 'marketplace' | 'local';
 }

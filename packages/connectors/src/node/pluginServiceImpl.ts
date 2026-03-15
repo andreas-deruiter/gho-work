@@ -1,10 +1,13 @@
+import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { Disposable, Emitter } from '@gho-work/base';
+import { Disposable, Emitter, expandPluginRoot, expandPluginRootInRecord } from '@gho-work/base';
 import type { CatalogEntry, InstalledPlugin, MCPServerConfig } from '@gho-work/base';
 import type {
   IPluginService,
   InstallProgress,
   PluginSkillRegistration,
+  PluginAgentRegistration,
+  PluginHookRegistration,
   PluginSettingsStore,
 } from '../common/pluginService.js';
 import type { PluginCatalogFetcher } from './pluginCatalogFetcher.js';
@@ -55,6 +58,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
   // -------------------------------------------------------------------------
 
   private _catalog: CatalogEntry[] = [];
+  private _catalogFetched = false;
   private _installed = new Map<string, InstalledPlugin>();
 
   /**
@@ -76,11 +80,17 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       | 'clonePlugin'
       | 'parseManifest'
       | 'parseMcpServers'
+      | 'parseHooks'
+      | 'parseSettings'
       | 'countSkills'
       | 'countAgents'
+      | 'countCommands'
       | 'deleteCache'
+      | 'parseAgentFiles'
     >,
     private readonly _skillRegistration: PluginSkillRegistration,
+    private readonly _agentRegistration: PluginAgentRegistration,
+    private readonly _hookRegistration: PluginHookRegistration,
     private readonly _configStore: IConnectorConfigStore,
     private readonly _settings: PluginSettingsStore,
   ) {
@@ -89,19 +99,105 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
   }
 
   // -------------------------------------------------------------------------
+  // Startup reconciliation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Re-registers skill, command, and agent sources for all enabled installed
+   * plugins. Must be called after construction because it is async (reads
+   * manifests from disk). Without this, plugin skills are lost on app restart.
+   */
+  async reconcileStartup(): Promise<void> {
+    let needsSave = false;
+    for (const plugin of this._installed.values()) {
+      if (!plugin.enabled) {
+        continue;
+      }
+      try {
+        const pluginRoot = this._resolvePluginRoot(plugin.cachePath, plugin.catalogMeta.location);
+        const manifest = await this._installer.parseManifest(pluginRoot);
+
+        // Re-register skills
+        if (plugin.skillCount > 0) {
+          const skillPath = this._resolveSkillPath(pluginRoot, manifest.skills);
+          this._skillRegistration.addSource({ id: `plugin:${plugin.name}`, path: skillPath, priority: 10 });
+        }
+
+        // Re-register commands
+        if (plugin.commandCount > 0) {
+          const commandPath = this._resolveComponentPath(pluginRoot, manifest.commands, 'commands');
+          if (commandPath !== undefined && fs.existsSync(commandPath)) {
+            this._skillRegistration.addSource({ id: `plugin:${plugin.name}:commands`, path: commandPath, priority: 10 });
+          }
+        }
+
+        // Re-register agents
+        const agents = await this._installer.parseAgentFiles(pluginRoot, plugin.name, manifest.agents);
+        for (const agent of agents) {
+          this._agentRegistration.register(agent);
+        }
+
+        // Re-register hooks
+        const hooks = await this._installer.parseHooks(pluginRoot, manifest.hooks);
+        if (hooks) {
+          this._hookRegistration.registerHooks(plugin.name, pluginRoot, hooks);
+        }
+
+        // Re-count components to fix stale persisted counts
+        const freshSkillCount = await this._installer.countSkills(pluginRoot, manifest.skills);
+        const freshCommandCount = await this._installer.countCommands(pluginRoot, manifest.commands);
+        const freshAgentCount = await this._installer.countAgents(pluginRoot, manifest.agents);
+        const freshHookCount = hooks
+          ? Object.values(hooks).flat().reduce((sum, m: any) => sum + (m.hooks?.length ?? 0), 0)
+          : 0;
+
+        let dirty = false;
+        if (plugin.skillCount !== freshSkillCount) { plugin.skillCount = freshSkillCount; dirty = true; }
+        if (plugin.commandCount !== freshCommandCount) { plugin.commandCount = freshCommandCount; dirty = true; }
+        if (plugin.agentCount !== freshAgentCount) { plugin.agentCount = freshAgentCount; dirty = true; }
+        if (plugin.hookCount !== freshHookCount) { plugin.hookCount = freshHookCount; dirty = true; }
+        if (dirty) { needsSave = true; }
+      } catch (err) {
+        console.warn(`[plugins] Failed to reconcile ${plugin.name} on startup:`, err instanceof Error ? err.message : String(err));
+      }
+    }
+
+    // Trigger a skill registry refresh so all re-registered sources are scanned
+    if (this._installed.size > 0) {
+      await this._skillRegistration.refresh();
+    }
+
+    // Persist updated counts and notify renderer
+    if (needsSave) {
+      this._saveToSettings();
+      this._onDidChangePlugins.fire(this.getInstalled());
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Catalog
   // -------------------------------------------------------------------------
 
   async fetchCatalog(forceRefresh = false): Promise<CatalogEntry[]> {
-    if (!forceRefresh && this._catalog.length > 0) {
+    if (!forceRefresh && this._catalogFetched && this._catalog.length > 0) {
       return this._catalog;
     }
 
-    const entries = await this._fetcher.fetch();
-    this._catalog = entries;
-    this._settings.set(KEY_CATALOG, JSON.stringify(entries));
-    this._onDidChangeCatalog.fire(entries);
-    return entries;
+    try {
+      const entries = await this._fetcher.fetch();
+      this._catalog = entries;
+      this._catalogFetched = true;
+      this._settings.set(KEY_CATALOG, JSON.stringify(entries));
+      this._onDidChangeCatalog.fire(entries);
+      return entries;
+    } catch (err) {
+      // If network fetch fails and we have cached data, use it as fallback
+      if (this._catalog.length > 0) {
+        console.warn('PluginService: network fetch failed, using cached catalog:', err instanceof Error ? err.message : String(err));
+        return this._catalog;
+      }
+      throw err;
+    }
   }
 
   getCachedCatalog(): CatalogEntry[] {
@@ -139,6 +235,23 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       await this._doInstall(pluginName);
     });
     return this._installQueue;
+  }
+
+  async checkForUpdates(): Promise<Array<{ name: string; installed: string; available: string }>> {
+    const updates: Array<{ name: string; installed: string; available: string }> = [];
+    const catalog = await this.fetchCatalog();
+
+    for (const plugin of this.getInstalled()) {
+      const catalogEntry = catalog.find(e => e.name === plugin.name);
+      if (catalogEntry?.version && plugin.version && catalogEntry.version !== plugin.version) {
+        updates.push({
+          name: plugin.name,
+          installed: plugin.version,
+          available: catalogEntry.version,
+        });
+      }
+    }
+    return updates;
   }
 
   // -------------------------------------------------------------------------
@@ -206,12 +319,25 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       throw err;
     }
 
-    // Count skills and agents
+    // Count skills, agents, and commands
     const skillCount = await this._installer.countSkills(pluginRoot, manifest.skills);
     const agentCount = await this._installer.countAgents(pluginRoot, manifest.agents);
+    const commandCount = await this._installer.countCommands(pluginRoot, manifest.commands);
+
+    // Parse agents
+    const agentDefs = await this._installer.parseAgentFiles(pluginRoot, name, manifest.agents);
 
     // Parse MCP servers
     const mcpServerMap = await this._installer.parseMcpServers(pluginRoot, manifest.mcpServers);
+
+    // Parse hooks
+    const hooks = await this._installer.parseHooks(pluginRoot, manifest.hooks);
+
+    // Parse settings (currently only 'agent' key is supported — store for future use)
+    const settings = await this._installer.parseSettings(pluginRoot);
+    if (settings !== undefined) {
+      console.log(`[PluginService] ${name}: settings.json loaded (keys: ${Object.keys(settings).join(', ')})`);
+    }
 
     // Register
     this._emitProgress(name, 'registering', 'Registering skills and MCP servers…');
@@ -220,6 +346,20 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     const registeredServerNames: string[] = [];
 
     try {
+      // Register hooks
+      if (hooks) {
+        this._hookRegistration.registerHooks(name, pluginRoot, hooks);
+      }
+      const hookCount = hooks
+        ? Object.values(hooks).flat().reduce((sum, m: any) => sum + (m.hooks?.length ?? 0), 0)
+        : 0;
+
+      // Register agents
+      for (const agent of agentDefs) {
+        this._agentRegistration.register(agent);
+      }
+      const agentIds = agentDefs.map((a) => a.id);
+
       // Register skill source
       if (skillCount > 0 || manifest.skills !== undefined) {
         const skillPath = this._resolveSkillPath(pluginRoot, manifest.skills);
@@ -229,17 +369,45 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
         await this._skillRegistration.refresh();
       }
 
+      // Register commands source
+      const commandPath = this._resolveComponentPath(pluginRoot, manifest.commands, 'commands');
+      if (commandPath !== undefined && fs.existsSync(commandPath)) {
+        const commandSourceId = `plugin:${name}:commands`;
+        this._skillRegistration.addSource({ id: commandSourceId, path: commandPath, priority: 10 });
+        registeredSourceIds.push(commandSourceId);
+      }
+
       // Register MCP servers
       const mcpServerNames: string[] = [];
       for (const [serverKey, serverConfig] of mcpServerMap.entries()) {
-        const mcpConfig: MCPServerConfig = {
-          type: 'stdio',
-          command: serverConfig.command,
-          ...(serverConfig.args !== undefined && { args: serverConfig.args }),
-          ...(serverConfig.env !== undefined && { env: serverConfig.env }),
-          ...(serverConfig.cwd !== undefined && { cwd: serverConfig.cwd }),
-          source: `plugin:${name}`,
-        };
+        const isHttp = serverConfig.type === 'http' || (serverConfig.url !== undefined && serverConfig.command === undefined);
+        const mcpConfig: MCPServerConfig = isHttp
+          ? {
+              type: 'http',
+              url: serverConfig.url,
+              ...(serverConfig.headers !== undefined && { headers: serverConfig.headers }),
+              source: `plugin:${name}`,
+            }
+          : {
+              type: 'stdio',
+              command: expandPluginRoot(serverConfig.command!, pluginRoot),
+              ...(serverConfig.args !== undefined && {
+                args: serverConfig.args.map((a) => expandPluginRoot(a, pluginRoot)),
+              }),
+              ...(serverConfig.env !== undefined && {
+                env: expandPluginRootInRecord(serverConfig.env, pluginRoot),
+              }),
+              ...(serverConfig.cwd !== undefined && {
+                cwd: expandPluginRoot(serverConfig.cwd, pluginRoot),
+              }),
+              source: `plugin:${name}`,
+            };
+        // Skip if this server is already registered (shared MCP servers like Slack
+        // appear in multiple plugins' .mcp.json files)
+        if (this._configStore.getServer(serverKey) !== undefined) {
+          mcpServerNames.push(serverKey);
+          continue;
+        }
         await this._configStore.addServer(serverKey, mcpConfig);
         registeredServerNames.push(serverKey);
         mcpServerNames.push(serverKey);
@@ -256,6 +424,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
         skillCount,
         agentCount,
         mcpServerNames,
+        commandCount,
+        agentIds,
+        hookCount,
       };
 
       this._installed.set(name, plugin);
@@ -292,8 +463,15 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       throw new Error(`Plugin "${name}" is not installed.`);
     }
 
-    // Deregister skill source
+    // Deregister hooks
+    this._hookRegistration.unregisterHooks(name);
+
+    // Deregister agents
+    this._agentRegistration.unregisterPlugin(name);
+
+    // Deregister skill and commands sources
     this._skillRegistration.removeSource(`plugin:${name}`);
+    this._skillRegistration.removeSource(`plugin:${name}:commands`);
     await this._skillRegistration.refresh();
 
     // Remove MCP servers registered by this plugin
@@ -329,30 +507,71 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
 
     const pluginRoot = this._resolvePluginRoot(plugin.cachePath, plugin.catalogMeta.location);
 
-    // Re-register skill source
+    // Re-register skill and commands sources (also needed for agent paths from manifest)
+    const manifest = await this._installer.parseManifest(pluginRoot);
+
+    // Re-register agents
+    const agents = await this._installer.parseAgentFiles(pluginRoot, name, manifest.agents);
+    for (const agent of agents) {
+      this._agentRegistration.register(agent);
+    }
     if (plugin.skillCount > 0) {
-      const manifest = await this._installer.parseManifest(pluginRoot);
       const skillPath = this._resolveSkillPath(pluginRoot, manifest.skills);
       this._skillRegistration.addSource({ id: `plugin:${name}`, path: skillPath, priority: 10 });
       await this._skillRegistration.refresh();
     }
 
+    // Re-register commands source
+    if (plugin.commandCount > 0) {
+      const commandPath = this._resolveComponentPath(pluginRoot, manifest.commands, 'commands');
+      if (commandPath !== undefined && fs.existsSync(commandPath)) {
+        this._skillRegistration.addSource({ id: `plugin:${name}:commands`, path: commandPath, priority: 10 });
+      }
+    }
+
     // Re-register MCP servers
-    const enableManifest = await this._installer.parseManifest(pluginRoot);
-    const enableServers = await this._installer.parseMcpServers(pluginRoot, enableManifest.mcpServers);
+    const enableServers = await this._installer.parseMcpServers(pluginRoot, manifest.mcpServers);
     for (const serverName of plugin.mcpServerNames) {
       const serverConfig = enableServers.get(serverName);
       if (serverConfig !== undefined) {
-        const mcpConfig: MCPServerConfig = {
-          type: 'stdio',
-          command: serverConfig.command,
-          ...(serverConfig.args !== undefined && { args: serverConfig.args }),
-          ...(serverConfig.env !== undefined && { env: serverConfig.env }),
-          ...(serverConfig.cwd !== undefined && { cwd: serverConfig.cwd }),
-          source: `plugin:${name}`,
-        };
-        await this._configStore.addServer(serverName, mcpConfig);
+        const isHttp = serverConfig.type === 'http' || (serverConfig.url !== undefined && serverConfig.command === undefined);
+        const mcpConfig: MCPServerConfig = isHttp
+          ? {
+              type: 'http',
+              url: serverConfig.url,
+              ...(serverConfig.headers !== undefined && { headers: serverConfig.headers }),
+              source: `plugin:${name}`,
+            }
+          : {
+              type: 'stdio',
+              command: expandPluginRoot(serverConfig.command!, pluginRoot),
+              ...(serverConfig.args !== undefined && {
+                args: serverConfig.args.map((a) => expandPluginRoot(a, pluginRoot)),
+              }),
+              ...(serverConfig.env !== undefined && {
+                env: expandPluginRootInRecord(serverConfig.env, pluginRoot),
+              }),
+              ...(serverConfig.cwd !== undefined && {
+                cwd: expandPluginRoot(serverConfig.cwd, pluginRoot),
+              }),
+              source: `plugin:${name}`,
+            };
+        if (this._configStore.getServer(serverName) === undefined) {
+          await this._configStore.addServer(serverName, mcpConfig);
+        }
       }
+    }
+
+    // Re-register hooks
+    const hooks = await this._installer.parseHooks(pluginRoot, manifest.hooks);
+    if (hooks) {
+      this._hookRegistration.registerHooks(name, pluginRoot, hooks);
+    }
+
+    // Re-parse settings (currently only 'agent' key is supported — store for future use)
+    const settings = await this._installer.parseSettings(pluginRoot);
+    if (settings !== undefined) {
+      console.log(`[PluginService] ${name}: settings.json loaded on enable (keys: ${Object.keys(settings).join(', ')})`);
     }
 
     this._installed.set(name, { ...plugin, enabled: true });
@@ -369,8 +588,15 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       return; // already disabled
     }
 
-    // Deregister skill source
+    // Deregister hooks
+    this._hookRegistration.unregisterHooks(name);
+
+    // Deregister agents
+    this._agentRegistration.unregisterPlugin(name);
+
+    // Deregister skill and commands sources
     this._skillRegistration.removeSource(`plugin:${name}`);
+    this._skillRegistration.removeSource(`plugin:${name}:commands`);
     await this._skillRegistration.refresh();
 
     // Deregister MCP servers
@@ -408,6 +634,13 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       try {
         const parsed = JSON.parse(installedJson) as InstalledPlugin[];
         for (const plugin of parsed) {
+          // Backfill fields added after initial release to handle stale persisted data
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- backfill for missing fields in older persisted JSON
+          const p = plugin as Record<string, any>;
+          if (p.commandCount === undefined) { p.commandCount = 0; }
+          if (p.agentCount === undefined) { p.agentCount = 0; }
+          if (p.agentIds === undefined) { p.agentIds = []; }
+          if (p.hookCount === undefined) { p.hookCount = 0; }
           this._installed.set(plugin.name, plugin);
         }
       } catch (err) {
@@ -441,6 +674,25 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     }
     const first = Array.isArray(skills) ? skills[0] : skills;
     return path.join(cachePath, first.replace(/\/$/, ''));
+  }
+
+  /**
+   * Resolves a component source path from the manifest field.
+   * Returns undefined if `field` is undefined and the `defaultDir` doesn't exist.
+   * If a single string ending in '/', treats it as a directory relative to pluginRoot.
+   * If an array, uses the first entry.
+   */
+  private _resolveComponentPath(
+    pluginRoot: string,
+    field: string | string[] | undefined,
+    defaultDir: string,
+  ): string | undefined {
+    if (field === undefined) {
+      const defaultPath = path.join(pluginRoot, defaultDir);
+      return fs.existsSync(defaultPath) ? defaultPath : undefined;
+    }
+    const first = Array.isArray(field) ? field[0] : field;
+    return path.join(pluginRoot, first.replace(/\/$/, ''));
   }
 
   /**

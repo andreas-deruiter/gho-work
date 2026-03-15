@@ -1,9 +1,12 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { CatalogEntry } from '@gho-work/base';
+import type { CatalogEntry, PluginAgentDefinition } from '@gho-work/base';
 
+// Module-level async wrapper (promisified execFile).
+// All class calls go through this._run() so tests can spy on the instance method.
 const execFileAsync = promisify(execFile);
 
 // ---------------------------------------------------------------------------
@@ -11,10 +14,15 @@ const execFileAsync = promisify(execFile);
 // ---------------------------------------------------------------------------
 
 export interface MCPServerInlineConfig {
-  command: string;
+  type?: 'stdio' | 'http';
+  // stdio fields
+  command?: string;
   args?: string[];
   env?: Record<string, string>;
   cwd?: string;
+  // http fields
+  url?: string;
+  headers?: Record<string, string>;
 }
 
 export interface PluginManifest {
@@ -23,6 +31,9 @@ export interface PluginManifest {
   description?: string;
   skills?: string | string[];
   agents?: string | string[];
+  commands?: string | string[];
+  hooks?: string | Record<string, unknown>;
+  settings?: Record<string, unknown>;
   mcpServers?: string | Record<string, MCPServerInlineConfig>;
 }
 
@@ -35,6 +46,7 @@ export interface PluginManifest {
  *
  * Responsibilities:
  * - Clone plugins from git repositories (sparse clone, shallow clone)
+ * - Install plugins from npm packages
  * - Parse plugin manifests (.claude-plugin/plugin.json)
  * - Count skill files
  * - Manage cache directories
@@ -70,7 +82,7 @@ export class PluginInstaller {
    */
   async checkGitAvailable(): Promise<void> {
     try {
-      await execFileAsync('git', ['--version']);
+      await this._run('git', ['--version']);
     } catch (err) {
       throw new Error(
         'git is required to install plugins but was not found on your PATH. ' +
@@ -94,6 +106,10 @@ export class PluginInstaller {
     }
 
     switch (location.type) {
+      case 'npm':
+        await this.installNpm(location.package, destPath, location.version, location.registry);
+        break;
+
       case 'git-subdir':
         await this._sparseClone(location.url, location.path, destPath, location.ref);
         break;
@@ -109,6 +125,43 @@ export class PluginInstaller {
       case 'url':
         await this._shallowClone(location.url, destPath, location.ref);
         break;
+    }
+  }
+
+  /**
+   * Install a plugin from npm.
+   * Downloads the package to a temp dir, then copies plugin root to destPath.
+   */
+  async installNpm(
+    packageName: string,
+    destPath: string,
+    version?: string,
+    registry?: string,
+  ): Promise<void> {
+    const tmpDir = path.join(os.tmpdir(), `gho-npm-${Date.now()}`);
+    try {
+      await fs.promises.mkdir(tmpDir, { recursive: true });
+      const args = [
+        'install',
+        '--prefix',
+        tmpDir,
+        version ? `${packageName}@${version}` : packageName,
+      ];
+      if (registry) {
+        args.push('--registry', registry);
+      }
+      await this._run('npm', args);
+
+      // Find the installed package in node_modules
+      const pkgDir = path.join(tmpDir, 'node_modules', packageName);
+      if (!fs.existsSync(pkgDir)) {
+        throw new Error(`npm install succeeded but package not found at ${pkgDir}`);
+      }
+
+      // Copy to destination
+      await fs.promises.cp(pkgDir, destPath, { recursive: true });
+    } finally {
+      await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
     }
   }
 
@@ -152,10 +205,23 @@ export class PluginInstaller {
       }
     }
 
+    if (manifest.commands === undefined) {
+      const commandsDir = path.join(pluginDir, 'commands');
+      if (fs.existsSync(commandsDir) && fs.statSync(commandsDir).isDirectory()) {
+        manifest.commands = 'commands/';
+      }
+    }
+
     if (manifest.mcpServers === undefined) {
       const mcpJsonPath = path.join(pluginDir, '.mcp.json');
       if (fs.existsSync(mcpJsonPath)) {
         manifest.mcpServers = '.mcp.json';
+      }
+    }
+
+    if (manifest.hooks === undefined) {
+      if (fs.existsSync(path.join(pluginDir, 'hooks', 'hooks.json'))) {
+        manifest.hooks = 'hooks/hooks.json';
       }
     }
 
@@ -201,6 +267,61 @@ export class PluginInstaller {
     return new Map(Object.entries(mcpServers));
   }
 
+  /**
+   * Reads and parses `settings.json` from the plugin root directory.
+   *
+   * Returns the parsed settings object, or `undefined` if the file does not
+   * exist or cannot be parsed. Currently only the `agent` key is used by the
+   * caller; other keys are preserved for future use.
+   */
+  async parseSettings(pluginDir: string): Promise<Record<string, unknown> | undefined> {
+    const settingsPath = path.join(pluginDir, 'settings.json');
+    if (!fs.existsSync(settingsPath)) return undefined;
+    try {
+      return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    } catch (err) {
+      console.warn(`[PluginInstaller] Failed to parse settings.json at ${settingsPath}:`, err);
+      return undefined;
+    }
+  }
+
+  /**
+   * Parses hooks from a plugin manifest.
+   *
+   * Handles:
+   * - `inlineHooks` is an object → returns it directly as the hooks map
+   * - `inlineHooks` is a string → treats as a file path relative to pluginDir
+   * - `inlineHooks` is undefined → looks for `hooks/hooks.json` in pluginDir
+   *
+   * The returned object maps hook event names to arrays of hook definitions.
+   * Returns `undefined` if no hooks are found or the file cannot be parsed.
+   */
+  async parseHooks(
+    pluginDir: string,
+    inlineHooks?: string | Record<string, unknown>,
+  ): Promise<Record<string, any[]> | undefined> {
+    // Inline hooks from manifest take precedence
+    if (inlineHooks && typeof inlineHooks === 'object') {
+      return inlineHooks as Record<string, any[]>;
+    }
+
+    // Check for hooks/hooks.json file
+    const hooksPath =
+      typeof inlineHooks === 'string'
+        ? path.join(pluginDir, inlineHooks)
+        : path.join(pluginDir, 'hooks', 'hooks.json');
+
+    if (!fs.existsSync(hooksPath)) return undefined;
+
+    try {
+      const content = JSON.parse(fs.readFileSync(hooksPath, 'utf-8'));
+      return content.hooks ?? content;
+    } catch (err) {
+      console.warn(`[PluginInstaller] Failed to parse hooks at ${hooksPath}:`, err);
+      return undefined;
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Skill counting
   // -------------------------------------------------------------------------
@@ -212,14 +333,8 @@ export class PluginInstaller {
    * Otherwise, defaults to looking in the `skills/` directory.
    */
   async countSkills(pluginDir: string, skillPaths?: string | string[]): Promise<number> {
-    const dirs = this._resolveSkillDirs(pluginDir, skillPaths);
-    let count = 0;
-
-    for (const dir of dirs) {
-      count += this._countMdFilesRecursive(dir);
-    }
-
-    return count;
+    const dirs = this._resolveDirs(pluginDir, skillPaths, 'skills');
+    return dirs.reduce((sum, dir) => sum + this._countMdFilesRecursive(dir), 0);
   }
 
   /**
@@ -229,14 +344,110 @@ export class PluginInstaller {
    * Otherwise, defaults to looking in the `agents/` directory.
    */
   async countAgents(pluginDir: string, agentPaths?: string | string[]): Promise<number> {
-    const dirs = this._resolveAgentDirs(pluginDir, agentPaths);
-    let count = 0;
+    const dirs = this._resolveDirs(pluginDir, agentPaths, 'agents');
+    return dirs.reduce((sum, dir) => sum + this._countMdFilesSimple(dir), 0);
+  }
+
+  /**
+   * Counts the number of command files (.md) in the plugin's command directories.
+   *
+   * If `commandPaths` is specified, counts .md files in those directories (relative to pluginDir).
+   * Otherwise, defaults to looking in the `commands/` directory.
+   */
+  async countCommands(pluginDir: string, commandPaths?: string | string[]): Promise<number> {
+    const dirs = this._resolveDirs(pluginDir, commandPaths, 'commands');
+    return dirs.reduce((sum, dir) => sum + this._countMdFilesSimple(dir), 0);
+  }
+
+  // -------------------------------------------------------------------------
+  // Agent parsing
+  // -------------------------------------------------------------------------
+
+  /**
+   * Parses agent `.md` files from the plugin's agent directories.
+   *
+   * Each file may have YAML frontmatter between `---` delimiters.
+   * Recognised frontmatter fields: `name`, `description`, `model`, `allowed-tools` / `allowedTools`.
+   * The body (after the closing `---`) becomes the system prompt.
+   *
+   * Returns an empty array when no agent directories are found.
+   */
+  async parseAgentFiles(
+    pluginDir: string,
+    pluginName: string,
+    agentPaths?: string | string[],
+  ): Promise<PluginAgentDefinition[]> {
+    const dirs = this._resolveDirs(pluginDir, agentPaths, 'agents');
+    const agents: PluginAgentDefinition[] = [];
 
     for (const dir of dirs) {
-      count += this._countMdFilesRecursive(dir);
+      if (!fs.existsSync(dir)) { continue; }
+      const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
+      for (const file of files) {
+        const content = fs.readFileSync(path.join(dir, file), 'utf-8');
+        const { frontmatter, body } = this._parseFrontmatter(content);
+        const name = frontmatter['name'] ?? path.basename(file, '.md');
+        agents.push({
+          id: `${pluginName}:${name}`,
+          name,
+          description: frontmatter['description'] ?? '',
+          systemPrompt: body.trim(),
+          pluginName,
+          model: frontmatter['model'],
+          allowedTools:
+            frontmatter['allowed-tools'] !== undefined
+              ? frontmatter['allowed-tools'].split(',').map((s) => s.trim())
+              : frontmatter['allowedTools'] !== undefined
+                ? frontmatter['allowedTools'].split(',').map((s) => s.trim())
+                : undefined,
+        });
+      }
+    }
+    return agents;
+  }
+
+  // -------------------------------------------------------------------------
+  // Validation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Validates a local plugin directory for correctness.
+   *
+   * Checks:
+   * - `.claude-plugin/plugin.json` exists and is valid JSON (errors)
+   * - `name` field is present in the manifest (error)
+   * - `skills/`, `commands/`, and `agents/` directories exist (warnings)
+   *
+   * Returns an object with `errors` (blocking issues) and `warnings` (non-blocking suggestions).
+   */
+  async validatePlugin(pluginDir: string): Promise<{ errors: string[]; warnings: string[] }> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    const manifestPath = path.join(pluginDir, '.claude-plugin', 'plugin.json');
+    if (!fs.existsSync(manifestPath)) {
+      errors.push('Missing .claude-plugin/plugin.json');
+      return { errors, warnings };
     }
 
-    return count;
+    let manifest: Record<string, unknown>;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    } catch {
+      errors.push('Invalid JSON in plugin.json');
+      return { errors, warnings };
+    }
+
+    if (!manifest.name) errors.push('Missing required field: name');
+
+    // Check declared directories exist
+    for (const dir of ['skills', 'commands', 'agents']) {
+      if (!fs.existsSync(path.join(pluginDir, dir))) {
+        warnings.push(`No ${dir}/ directory found`);
+      }
+    }
+
+    return { errors, warnings };
   }
 
   // -------------------------------------------------------------------------
@@ -266,6 +477,19 @@ export class PluginInstaller {
   }
 
   // -------------------------------------------------------------------------
+  // Protected helpers (overridable in tests)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Thin wrapper around the module-level execFileAsync.
+   * Exposed as a protected method so tests can spy on it via vi.spyOn(installer, '_run')
+   * without needing to mock ESM native module namespaces.
+   */
+  protected _run(cmd: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+    return execFileAsync(cmd, args);
+  }
+
+  // -------------------------------------------------------------------------
   // Private helpers
   // -------------------------------------------------------------------------
 
@@ -278,7 +502,7 @@ export class PluginInstaller {
       args.push('--branch', ref);
     }
     args.push(url, destPath);
-    await execFileAsync('git', args);
+    await this._run('git', args);
   }
 
   /**
@@ -297,31 +521,51 @@ export class PluginInstaller {
       cloneArgs.push('--branch', ref);
     }
     cloneArgs.push(repoUrl, destPath);
-    await execFileAsync('git', cloneArgs);
+    await this._run('git', cloneArgs);
 
-    await execFileAsync('git', ['-C', destPath, 'sparse-checkout', 'set', subPath]);
-    await execFileAsync('git', ['-C', destPath, 'checkout']);
+    await this._run('git', ['-C', destPath, 'sparse-checkout', 'set', subPath]);
+    await this._run('git', ['-C', destPath, 'checkout']);
   }
 
   /**
-   * Resolves the list of skill directories to search.
+   * Resolves the list of component directories to search.
+   * If `paths` is undefined, defaults to `<pluginDir>/<defaultDir>` (only if it exists).
+   * If `paths` is a string or string[], resolves each relative to `pluginDir`.
    */
-  private _resolveSkillDirs(pluginDir: string, skillPaths?: string | string[]): string[] {
-    if (skillPaths === undefined) {
-      return [path.join(pluginDir, 'skills')];
+  private _resolveDirs(pluginDir: string, paths: string | string[] | undefined, defaultDir: string): string[] {
+    if (paths === undefined) {
+      const defaultPath = path.join(pluginDir, defaultDir);
+      return fs.existsSync(defaultPath) ? [defaultPath] : [];
     }
-
-    const paths = Array.isArray(skillPaths) ? skillPaths : [skillPaths];
-    return paths.map((p) => path.join(pluginDir, p.replace(/\/$/, '')));
+    const pathArray = Array.isArray(paths) ? paths : [paths];
+    return pathArray.map((p) => path.join(pluginDir, p.replace(/\/$/, '')));
   }
 
-  private _resolveAgentDirs(pluginDir: string, agentPaths?: string | string[]): string[] {
-    if (agentPaths === undefined) {
-      return [path.join(pluginDir, 'agents')];
+  /**
+   * Parses YAML frontmatter from a markdown file.
+   *
+   * Expects the content to start with `---`, followed by key-value pairs
+   * (`key: value`), terminated by another `---`. Returns the parsed fields
+   * and the remaining body text.
+   */
+  private _parseFrontmatter(content: string): { frontmatter: Record<string, string | undefined>; body: string } {
+    if (!content.startsWith('---')) {
+      return { frontmatter: {}, body: content };
     }
-
-    const paths = Array.isArray(agentPaths) ? agentPaths : [agentPaths];
-    return paths.map((p) => path.join(pluginDir, p.replace(/\/$/, '')));
+    const endIndex = content.indexOf('---', 3);
+    if (endIndex === -1) {
+      return { frontmatter: {}, body: content };
+    }
+    const yaml = content.substring(3, endIndex);
+    const body = content.substring(endIndex + 3);
+    const frontmatter: Record<string, string | undefined> = {};
+    for (const line of yaml.split('\n')) {
+      const match = line.match(/^(\w[\w-]*):\s*(.+)$/);
+      if (match) {
+        frontmatter[match[1]] = match[2].trim();
+      }
+    }
+    return { frontmatter, body };
   }
 
   /**
@@ -340,10 +584,45 @@ export class PluginInstaller {
       if (entry.isDirectory()) {
         count += this._countMdFilesRecursive(path.join(dir, entry.name));
       } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
-        count++;
+        // Only count files with valid frontmatter (--- block with description:)
+        // to match what the skill registry actually indexes
+        try {
+          const content = fs.readFileSync(path.join(dir, entry.name), 'utf-8');
+          if (content.startsWith('---')) {
+            const endIdx = content.indexOf('---', 3);
+            if (endIdx !== -1) {
+              const yaml = content.substring(3, endIdx);
+              if (/^description:\s*.+$/m.test(yaml)) {
+                count++;
+              }
+            }
+          }
+        } catch {
+          // Skip unreadable files
+        }
       }
     }
 
+    return count;
+  }
+
+  /**
+   * Counts all .md files recursively in a directory (no frontmatter check).
+   * Used for agents and commands which don't require `description:` frontmatter.
+   */
+  private _countMdFilesSimple(dir: string): number {
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+      return 0;
+    }
+    let count = 0;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        count += this._countMdFilesSimple(path.join(dir, entry.name));
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+        count++;
+      }
+    }
     return count;
   }
 }

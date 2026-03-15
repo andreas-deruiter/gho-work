@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { PluginServiceImpl } from '../../packages/connectors/src/node/pluginServiceImpl.js';
-import type { PluginSkillRegistration, PluginSettingsStore } from '../../packages/connectors/src/common/pluginService.js';
+import type { PluginSkillRegistration, PluginAgentRegistration, PluginHookRegistration, PluginSettingsStore } from '../../packages/connectors/src/common/pluginService.js';
 import type { CatalogEntry } from '@gho-work/base';
 
 // ---------------------------------------------------------------------------
@@ -20,6 +20,9 @@ function makeCatalogEntry(overrides?: Partial<CatalogEntry>): CatalogEntry {
     location: 'https://github.com/test/test-plugin',
     hasSkills: true,
     hasMcpServers: false,
+    hasCommands: false,
+    hasAgents: false,
+    hasHooks: false,
     ...overrides,
   };
 }
@@ -42,6 +45,21 @@ function makeSkillRegistration(): PluginSkillRegistration {
     addSource: vi.fn(),
     removeSource: vi.fn(),
     refresh: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+function makeAgentRegistration(): PluginAgentRegistration {
+  return {
+    register: vi.fn(),
+    unregister: vi.fn(),
+    unregisterPlugin: vi.fn(),
+  };
+}
+
+function makeHookRegistration(): PluginHookRegistration {
+  return {
+    registerHooks: vi.fn(),
+    unregisterHooks: vi.fn(),
   };
 }
 
@@ -69,8 +87,13 @@ function makeInstaller() {
     clonePlugin: vi.fn().mockResolvedValue(undefined),
     parseManifest: vi.fn().mockResolvedValue({ skills: 'skills/', mcpServers: undefined }),
     parseMcpServers: vi.fn().mockResolvedValue(new Map()),
+    parseHooks: vi.fn().mockResolvedValue(undefined),
     countSkills: vi.fn().mockResolvedValue(3),
+    countAgents: vi.fn().mockResolvedValue(0),
+    countCommands: vi.fn().mockResolvedValue(0),
     deleteCache: vi.fn().mockResolvedValue(undefined),
+    parseAgentFiles: vi.fn().mockResolvedValue([]),
+    parseSettings: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -97,7 +120,7 @@ describe('PluginServiceImpl — catalog', () => {
     skillReg = makeSkillRegistration();
     configStore = makeConfigStore();
     settings = makeSettingsStore();
-    service = new PluginServiceImpl(fetcher, installer, skillReg, configStore, settings);
+    service = new PluginServiceImpl(fetcher, installer, skillReg, makeAgentRegistration(), makeHookRegistration(), configStore, settings);
   });
 
   afterEach(() => {
@@ -189,6 +212,8 @@ describe('PluginServiceImpl — installed plugins (initial state)', () => {
       makeFetcher([]),
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
+      makeHookRegistration(),
       makeConfigStore(),
       makeSettingsStore(),
     );
@@ -220,6 +245,8 @@ describe('PluginServiceImpl — settings restoration', () => {
       makeFetcher([]),
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
+      makeHookRegistration(),
       makeConfigStore(),
       settings,
     );
@@ -240,6 +267,8 @@ describe('PluginServiceImpl — settings restoration', () => {
       fetcher,
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
+      makeHookRegistration(),
       makeConfigStore(),
       settings,
     );
@@ -260,6 +289,8 @@ describe('PluginServiceImpl — settings restoration', () => {
       makeFetcher([]),
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
+      makeHookRegistration(),
       makeConfigStore(),
       settings,
     );
@@ -277,11 +308,89 @@ describe('PluginServiceImpl — settings restoration', () => {
       makeFetcher([]),
       makeInstaller(),
       makeSkillRegistration(),
+      makeAgentRegistration(),
+      makeHookRegistration(),
       makeConfigStore(),
       settings,
     );
 
     expect(service.getInstalled()).toEqual([]);
     service.dispose();
+  });
+});
+
+describe('PluginServiceImpl — ${CLAUDE_PLUGIN_ROOT} expansion', () => {
+  let mockInstaller: ReturnType<typeof makeInstaller>;
+  let mockConfigStore: ReturnType<typeof makeConfigStore>;
+  let service: PluginServiceImpl;
+
+  const pluginCachePath = '/tmp/plugin-cache/test-plugin/1.0.0';
+
+  beforeEach(() => {
+    mockInstaller = makeInstaller();
+    mockInstaller.getCachePath.mockReturnValue(pluginCachePath);
+    mockInstaller.parseMcpServers.mockResolvedValue(
+      new Map([
+        [
+          'lint-server',
+          {
+            command: '${CLAUDE_PLUGIN_ROOT}/bin/lint-mcp',
+            args: ['--config', '${CLAUDE_PLUGIN_ROOT}/config.json'],
+            env: { PLUGIN_HOME: '${CLAUDE_PLUGIN_ROOT}' },
+            cwd: '${CLAUDE_PLUGIN_ROOT}',
+          },
+        ],
+      ]),
+    );
+
+    const settings = makeSettingsStore();
+    // Pre-load catalog so install() can find the plugin
+    settings.set(
+      'plugin.catalog',
+      JSON.stringify([makeCatalogEntry({ name: 'test-plugin', version: '1.0.0' })]),
+    );
+
+    mockConfigStore = makeConfigStore();
+    service = new PluginServiceImpl(
+      makeFetcher([]),
+      mockInstaller,
+      makeSkillRegistration(),
+      makeAgentRegistration(),
+      makeHookRegistration(),
+      mockConfigStore,
+      settings,
+    );
+  });
+
+  afterEach(() => {
+    service.dispose();
+  });
+
+  it('expands ${CLAUDE_PLUGIN_ROOT} in MCP server command during install', async () => {
+    await service.install('test-plugin');
+
+    expect(mockConfigStore.addServer).toHaveBeenCalledOnce();
+    const [, config] = mockConfigStore.addServer.mock.calls[0];
+    expect(config.command).not.toContain('${CLAUDE_PLUGIN_ROOT}');
+    expect(config.command).toBe(`${pluginCachePath}/bin/lint-mcp`);
+  });
+
+  it('expands ${CLAUDE_PLUGIN_ROOT} in MCP server args during install', async () => {
+    await service.install('test-plugin');
+
+    const [, config] = mockConfigStore.addServer.mock.calls[0];
+    expect(config.args[0]).toBe('--config');
+    expect(config.args[1]).not.toContain('${CLAUDE_PLUGIN_ROOT}');
+    expect(config.args[1]).toBe(`${pluginCachePath}/config.json`);
+  });
+
+  it('expands ${CLAUDE_PLUGIN_ROOT} in MCP server env and cwd during install', async () => {
+    await service.install('test-plugin');
+
+    const [, config] = mockConfigStore.addServer.mock.calls[0];
+    expect(config.env.PLUGIN_HOME).not.toContain('${CLAUDE_PLUGIN_ROOT}');
+    expect(config.env.PLUGIN_HOME).toBe(pluginCachePath);
+    expect(config.cwd).not.toContain('${CLAUDE_PLUGIN_ROOT}');
+    expect(config.cwd).toBe(pluginCachePath);
   });
 });

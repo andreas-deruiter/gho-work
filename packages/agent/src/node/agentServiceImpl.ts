@@ -13,6 +13,8 @@ import type { MessageOptions, SessionEvent } from '../common/types.js';
 import type { SdkMcpServerConfig } from '../common/mcpConfigMapping.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
 import type { ISkillRegistry } from '../common/skillRegistry.js';
+import type { IPluginAgentRegistry } from '../common/pluginAgentRegistry.js';
+import type { IHookService } from '../common/hookService.js';
 
 interface SetupSessionOverrides {
   systemContent: string;
@@ -39,6 +41,8 @@ export class AgentServiceImpl implements IAgentService {
     private readonly _skillRegistry: ISkillRegistry,
     private readonly _readContextFiles?: () => Promise<string>,
     private readonly _getDisabledSkills?: () => string[],
+    private readonly _pluginAgentRegistry?: IPluginAgentRegistry,
+    private readonly _hookService?: IHookService,
   ) {}
 
   async *executeTask(prompt: string, context: AgentContext, mcpServers?: Record<string, SdkMcpServerConfig>, attachments?: MessageOptions['attachments']): AsyncIterable<AgentEvent> {
@@ -80,6 +84,11 @@ export class AgentServiceImpl implements IAgentService {
           disabledSkills: disabledSkills.length > 0 ? disabledSkills : undefined,
         });
         this._sessions.set(context.conversationId, session);
+        if (this._hookService) {
+          this._hookService.fire('SessionStart', {}).catch(err =>
+            console.warn('[AgentService] SessionStart hook error:', err)
+          );
+        }
       }
       this._activeSession = session;
 
@@ -91,6 +100,16 @@ export class AgentServiceImpl implements IAgentService {
           if (mapped.type === 'done') {
             queue.end();
           }
+        }
+        // Fire PostToolUse hook after tool execution completes (non-blocking)
+        if (event.type === 'tool.execution_complete' && this._hookService) {
+          const d = (event.data ?? {}) as Record<string, unknown>;
+          const result = (d.result as { content?: string }) ?? {};
+          this._hookService.fire('PostToolUse', {
+            toolName: d.toolName as string | undefined,
+            toolInput: d.arguments,
+            toolResult: result.content,
+          }).catch(err => console.warn('[AgentService] Hook error:', err));
         }
       });
 

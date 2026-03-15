@@ -45,7 +45,13 @@ export const IPC_CHANNELS = {
   SKILL_TOGGLE: 'skill:toggle',
   SKILL_DISABLED_LIST: 'skill:disabled-list',
   SKILL_OPEN_FILE: 'skill:open-file',
+  // Marketplace channels
+  MARKETPLACE_LIST: 'marketplace:list',
+  MARKETPLACE_ADD: 'marketplace:add',
+  MARKETPLACE_REMOVE: 'marketplace:remove',
+  MARKETPLACE_UPDATE: 'marketplace:update',
   // Plugin channels
+  PLUGIN_AGENT_LIST: 'plugin:agent-list',
   PLUGIN_CATALOG: 'plugin:catalog',
   PLUGIN_INSTALL: 'plugin:install',
   PLUGIN_UNINSTALL: 'plugin:uninstall',
@@ -55,6 +61,9 @@ export const IPC_CHANNELS = {
   PLUGIN_UPDATE: 'plugin:update',
   PLUGIN_CHANGED: 'plugin:changed',
   PLUGIN_INSTALL_PROGRESS: 'plugin:install-progress',
+  PLUGIN_VALIDATE: 'plugin:validate',
+  PLUGIN_UPDATES_AVAILABLE: 'plugin:updates-available',
+  PLUGIN_SKILL_DETAILS: 'plugin:skill-details',
   // Additional connector channels
   CONNECTOR_ADD: 'connector:add',
   CONNECTOR_UPDATE: 'connector:update',

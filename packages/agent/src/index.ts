@@ -11,3 +11,7 @@ export * from './node/agentServiceImpl.js';
 export { SkillRegistryImpl } from './node/skillRegistryImpl.js';
 export { buildSkillSources } from './node/buildSkillSources.js';
 export type { BuildSkillSourcesOptions } from './node/buildSkillSources.js';
+export { PluginAgentRegistryImpl } from './node/pluginAgentRegistryImpl.js';
+export type { IPluginAgentRegistry } from './common/pluginAgentRegistry.js';
+export { HookServiceImpl } from './node/hookServiceImpl.js';
+export type { IHookService } from './common/hookService.js';

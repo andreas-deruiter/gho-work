@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
+import * as fssync from 'node:fs';
 import * as os from 'node:os';
 import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
 import type { SkillEntry } from '../common/skillRegistry.js';
@@ -173,6 +174,50 @@ describe('SkillRegistryImpl', () => {
       const fromSource = all.filter(e => e.sourceId === 'plugin-source');
       // One source, one skill file → exactly 1 entry
       expect(fromSource).toHaveLength(1);
+    });
+  });
+
+  describe('SkillRegistryImpl namespacing', () => {
+    let nsRegistry: SkillRegistryImpl;
+    let tmpDir: string;
+
+    beforeEach(() => {
+      nsRegistry = new SkillRegistryImpl([]);
+      tmpDir = fssync.mkdtempSync(path.join(os.tmpdir(), 'skill-ns-'));
+
+      // Create a skill file with valid frontmatter (description is required for registration)
+      const skillDir = path.join(tmpDir, 'draft-email');
+      fssync.mkdirSync(skillDir, { recursive: true });
+      fssync.writeFileSync(path.join(skillDir, 'SKILL.md'), [
+        '---',
+        'name: draft-email',
+        'description: Draft an email',
+        '---',
+        'Draft an email for the user.',
+      ].join('\n'));
+    });
+
+    afterEach(async () => {
+      nsRegistry.dispose();
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    });
+
+    it('prefixes plugin skill IDs with plugin name', async () => {
+      nsRegistry.addSource({ id: 'plugin:my-plugin', basePath: tmpDir, priority: 10 });
+      await nsRegistry.scan();
+      const skills = nsRegistry.list();
+      const pluginSkill = skills.find(s => s.sourceId === 'plugin:my-plugin');
+      expect(pluginSkill).toBeDefined();
+      expect(pluginSkill!.id).toMatch(/^my-plugin:/);
+    });
+
+    it('does not prefix non-plugin skill IDs', async () => {
+      nsRegistry.addSource({ id: 'user-skills', basePath: tmpDir, priority: 5 });
+      await nsRegistry.scan();
+      const skills = nsRegistry.list();
+      const userSkill = skills.find(s => s.sourceId === 'user-skills');
+      expect(userSkill).toBeDefined();
+      expect(userSkill!.id).not.toMatch(/:/);
     });
   });
 

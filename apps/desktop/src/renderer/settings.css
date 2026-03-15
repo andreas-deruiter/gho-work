@@ -455,6 +455,7 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
 }
 .settings-page-plugins .settings-page-title,
 .settings-page-plugins .settings-page-subtitle {
@@ -631,6 +632,77 @@
 .plugin-badge.agents {
   background: rgba(168, 85, 247, 0.1);
   color: var(--fg-accent);
+}
+.plugin-badge.commands {
+  background: rgba(234, 179, 8, 0.1);
+  color: var(--fg-warning, #d4a017);
+}
+.plugin-badge.hooks {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--fg-error, #e06c6c);
+}
+.plugin-badge[data-tooltip-type] {
+  cursor: pointer;
+}
+
+/* Badge tooltip */
+.plugin-badge-tooltip {
+  position: absolute;
+  z-index: 100;
+  background: var(--bg-tertiary, #333);
+  border: 1px solid var(--border-primary, #555);
+  border-radius: 8px;
+  padding: 12px 14px;
+  min-width: 280px;
+  max-width: 420px;
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 11px;
+  color: var(--fg-primary, #ccc);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.plugin-badge-tooltip.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.plugin-badge-tooltip-header {
+  font-weight: 600;
+  color: var(--fg-primary, #e0e0e0);
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.plugin-badge-tooltip-divider {
+  border: none;
+  border-top: 1px solid var(--border-secondary, #444);
+  margin: 0 0 4px;
+}
+.plugin-badge-tooltip-item {
+  padding: 1px 0;
+  color: var(--fg-primary, #ddd);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.plugin-badge-tooltip-item strong {
+  font-weight: 600;
+  font-size: 10.5px;
+}
+.plugin-badge-tooltip-item .desc {
+  color: var(--fg-secondary, #888);
+  font-size: 10px;
+}
+.plugin-badge-tooltip-more {
+  padding: 2px 0;
+  color: var(--fg-muted, #666);
+  font-size: 10px;
+  margin-top: 2px;
+}
+.plugin-badge-tooltip-placeholder {
+  color: var(--fg-muted, #888);
+  font-style: italic;
+  font-size: 11px;
 }
 
 /* Install button */
@@ -877,6 +949,114 @@
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
+}
+
+/* ---- Marketplace filter bar ---- */
+.plugin-marketplace-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.plugin-marketplace-bar-label {
+  font-size: 11px;
+  color: var(--fg-muted);
+  flex-shrink: 0;
+}
+.plugin-marketplace-chip {
+  padding: 3px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.plugin-marketplace-chip:hover {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
+}
+.plugin-marketplace-chip.active {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: #fff;
+}
+
+/* ---- Marketplaces tab ---- */
+.plugin-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-primary);
+  margin: 0 0 10px;
+}
+.plugin-marketplace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.plugin-marketplace-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.12s;
+}
+.plugin-marketplace-item:hover {
+  border-color: var(--border-primary);
+}
+.plugin-marketplace-info {
+  flex: 1;
+  min-width: 0;
+}
+.plugin-marketplace-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fg-primary);
+}
+.plugin-marketplace-source {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plugin-marketplace-updated {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-top: 1px;
+}
+.plugin-marketplace-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+.plugin-marketplace-add-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-secondary);
+}
+.plugin-marketplace-add-desc {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin: 0 0 10px;
+}
+.plugin-marketplace-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.plugin-marketplace-add-row .plugin-search-input {
+  flex: 1;
 }
 
 /* ============================================================

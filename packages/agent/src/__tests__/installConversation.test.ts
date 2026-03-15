@@ -51,7 +51,7 @@ describe('createSetupConversation', () => {
 		await fs.mkdir(path.join(tmpSkillsDir, 'connectors'), { recursive: true });
 		await fs.writeFile(
 			path.join(tmpSkillsDir, 'connectors', 'setup.md'),
-			'# Setup connector\nHelp the user set up a connector.',
+			'---\ndescription: Help the user set up a connector.\n---\n\n# Setup connector\nHelp the user set up a connector.',
 		);
 
 		registry = new SkillRegistryImpl([

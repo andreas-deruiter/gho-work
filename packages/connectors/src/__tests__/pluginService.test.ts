@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { CatalogEntry } from '@gho-work/base';
 import { PluginServiceImpl } from '../node/pluginServiceImpl.js';
-import type { PluginSkillRegistration, PluginSettingsStore } from '../common/pluginService.js';
+import type { PluginSkillRegistration, PluginAgentRegistration, PluginHookRegistration, PluginSettingsStore } from '../common/pluginService.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -15,6 +15,9 @@ function makeCatalogEntry(name: string): CatalogEntry {
     location: { type: 'github', repo: `owner/${name}` },
     hasSkills: true,
     hasMcpServers: false,
+    hasCommands: false,
+    hasAgents: false,
+    hasHooks: false,
   };
 }
 
@@ -67,7 +70,25 @@ function makeInstaller() {
     parseMcpServers: vi.fn().mockResolvedValue(new Map()),
     countSkills: vi.fn().mockResolvedValue(3),
     countAgents: vi.fn().mockResolvedValue(0),
+    countCommands: vi.fn().mockResolvedValue(0),
     deleteCache: vi.fn().mockResolvedValue(undefined),
+    parseAgentFiles: vi.fn().mockResolvedValue([]),
+    parseHooks: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+function makeAgentRegistration(): PluginAgentRegistration {
+  return {
+    register: vi.fn(),
+    unregister: vi.fn(),
+    unregisterPlugin: vi.fn(),
+  };
+}
+
+function makeHookRegistration(): PluginHookRegistration {
+  return {
+    registerHooks: vi.fn(),
+    unregisterHooks: vi.fn(),
   };
 }
 
@@ -97,6 +118,8 @@ describe('PluginServiceImpl', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       installer as any,
       skillRegistration,
+      makeAgentRegistration(),
+      makeHookRegistration(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       configStore as any,
       settings,
@@ -209,6 +232,116 @@ describe('PluginServiceImpl', () => {
 
     it('returns undefined before any installs', () => {
       expect(service.getPlugin('sentry')).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // checkForUpdates
+  // -------------------------------------------------------------------------
+
+  describe('checkForUpdates()', () => {
+    it('returns empty array when no plugins are installed', async () => {
+      await service.fetchCatalog();
+      const updates = await service.checkForUpdates();
+      expect(updates).toEqual([]);
+    });
+
+    it('detects when catalog has newer version than installed', async () => {
+      // Simulate installed plugin at 1.0.0
+      (service as any)._installed.set('sentry', {
+        name: 'sentry',
+        version: '1.0.0',
+        enabled: true,
+        cachePath: '/cache/sentry/1.0.0',
+        installedAt: new Date().toISOString(),
+        catalogMeta: makeCatalogEntry('sentry'),
+        skillCount: 3,
+        agentCount: 0,
+        mcpServerNames: [],
+        commandCount: 0,
+        agentIds: [],
+        hookCount: 0,
+      });
+
+      // Catalog has sentry at 1.1.0
+      fetcher.fetch = vi.fn().mockResolvedValue([
+        { ...makeCatalogEntry('sentry'), version: '1.1.0' },
+        makeCatalogEntry('github-tools'),
+      ]);
+      // Force catalog re-fetch
+      (service as any)._catalog = [];
+
+      const updates = await service.checkForUpdates();
+      expect(updates).toHaveLength(1);
+      expect(updates[0]).toEqual({ name: 'sentry', installed: '1.0.0', available: '1.1.0' });
+    });
+
+    it('does not report plugin as needing update when versions match', async () => {
+      // Simulate installed plugin at 1.0.0
+      (service as any)._installed.set('sentry', {
+        name: 'sentry',
+        version: '1.0.0',
+        enabled: true,
+        cachePath: '/cache/sentry/1.0.0',
+        installedAt: new Date().toISOString(),
+        catalogMeta: makeCatalogEntry('sentry'),
+        skillCount: 3,
+        agentCount: 0,
+        mcpServerNames: [],
+        commandCount: 0,
+        agentIds: [],
+        hookCount: 0,
+      });
+
+      // Catalog also has sentry at 1.0.0 (same version)
+      await service.fetchCatalog();
+
+      const updates = await service.checkForUpdates();
+      expect(updates).toEqual([]);
+    });
+
+    it('skips plugin when installed version is missing', async () => {
+      // Simulate installed plugin with no version
+      (service as any)._installed.set('sentry', {
+        name: 'sentry',
+        version: undefined,
+        enabled: true,
+        cachePath: '/cache/sentry/latest',
+        installedAt: new Date().toISOString(),
+        catalogMeta: makeCatalogEntry('sentry'),
+        skillCount: 0,
+        agentCount: 0,
+        mcpServerNames: [],
+        commandCount: 0,
+        agentIds: [],
+        hookCount: 0,
+      });
+
+      await service.fetchCatalog();
+      const updates = await service.checkForUpdates();
+      expect(updates).toEqual([]);
+    });
+
+    it('skips plugin not found in catalog', async () => {
+      // Simulate installed plugin not in catalog
+      (service as any)._installed.set('unknown-plugin', {
+        name: 'unknown-plugin',
+        version: '1.0.0',
+        enabled: true,
+        cachePath: '/cache/unknown-plugin/1.0.0',
+        installedAt: new Date().toISOString(),
+        catalogMeta: makeCatalogEntry('unknown-plugin'),
+        skillCount: 0,
+        agentCount: 0,
+        mcpServerNames: [],
+        commandCount: 0,
+        agentIds: [],
+        hookCount: 0,
+      });
+
+      await service.fetchCatalog();
+      const updates = await service.checkForUpdates();
+      expect(updates).toEqual([]);
     });
   });
 

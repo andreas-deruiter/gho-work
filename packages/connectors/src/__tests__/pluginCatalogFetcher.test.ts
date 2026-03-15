@@ -6,9 +6,9 @@ import { PluginCatalogFetcher } from '../node/pluginCatalogFetcher.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const MARKETPLACE_REPO_URL = 'https://github.com/anthropics/knowledge-work-plugins';
+const MARKETPLACE_REPO_URL = 'https://github.com/andreas-deruiter/gho-work';
 const DEFAULT_URL =
-  'https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/main/.claude-plugin/marketplace.json';
+  'https://raw.githubusercontent.com/andreas-deruiter/gho-work/main/.claude-plugin/marketplace.json';
 
 function makeJsonResponse(body: unknown, status = 200): Response {
   return {
@@ -118,12 +118,13 @@ describe('PluginCatalogFetcher', () => {
     expect(entry.hasSkills).toBe(true);
   });
 
-  it('sets hasSkills=true when commands field is present', async () => {
+  it('sets hasSkills=false when only commands field is present (no skills)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       makeJsonResponse({ plugins: [COMMANDS_ONLY_PLUGIN] }),
     ));
     const [entry] = await fetcher.fetch();
-    expect(entry.hasSkills).toBe(true);
+    expect(entry.hasSkills).toBe(false);
+    expect(entry.hasCommands).toBe(true);
   });
 
   it('sets hasSkills=true when both skills and commands fields are present', async () => {
@@ -200,7 +201,7 @@ describe('PluginCatalogFetcher', () => {
     expect(loc.type).toBe('git-subdir');
     if (loc.type === 'git-subdir') {
       expect(loc.path).toBe('plugins/sentry');
-      expect(loc.url).toContain('anthropics/knowledge-work-plugins');
+      expect(loc.url).toContain('andreas-deruiter/gho-work');
     }
   });
 
@@ -273,6 +274,95 @@ describe('PluginCatalogFetcher', () => {
       expect(loc.url).toBe('https://github.com/org/monorepo');
       expect(loc.path).toBe('plugins/foo');
     }
+  });
+
+  // --- Claude Code marketplace format ---
+
+  describe('Claude Code marketplace format', () => {
+    it('parses marketplace with name and owner fields', async () => {
+      const marketplace = {
+        name: 'official',
+        owner: { name: 'Anthropic', email: 'support@anthropic.com' },
+        metadata: { pluginRoot: 'plugins' },
+        plugins: [{
+          name: 'sentry',
+          description: 'Sentry integration',
+          version: '1.0.0',
+          source: './sentry',
+          author: { name: 'Sentry' },
+          category: 'observability',
+          keywords: ['monitoring', 'errors'],
+          tags: ['popular'],
+          skills: 'skills/',
+          agents: 'agents/',
+          commands: 'commands/',
+          hooks: { hooks: { PostToolUse: [] } },
+          mcpServers: { sentry: { command: 'npx', args: ['-y', 'sentry-mcp'] } },
+          strict: true,
+        }],
+      };
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeJsonResponse(marketplace)));
+      const [entry] = await fetcher.fetch();
+
+      expect(entry.hasSkills).toBe(true);
+      expect(entry.hasCommands).toBe(true);
+      expect(entry.hasAgents).toBe(true);
+      expect(entry.hasHooks).toBe(true);
+      expect(entry.hasMcpServers).toBe(true);
+      expect(entry.tags).toEqual(['popular']);
+      expect(entry.strict).toBe(true);
+      expect(entry.category).toBe('observability');
+      expect(entry.componentPaths).toBeDefined();
+      expect(entry.componentPaths?.skills).toBe('skills/');
+      expect(entry.componentPaths?.commands).toBe('commands/');
+      expect(entry.componentPaths?.agents).toBe('agents/');
+      expect(entry.componentPaths?.hooks).toEqual({ hooks: { PostToolUse: [] } });
+      expect(entry.componentPaths?.mcpServers).toEqual({ sentry: { command: 'npx', args: ['-y', 'sentry-mcp'] } });
+    });
+
+    it('resolves npm source type', async () => {
+      const plugin = {
+        ...BARE_PLUGIN,
+        source: { source: 'npm', package: '@scope/my-plugin', version: '2.0.0' },
+      };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeJsonResponse({ plugins: [plugin] })));
+
+      const [entry] = await fetcher.fetch();
+      const loc = entry.location as PluginLocation;
+      expect(loc.type).toBe('npm');
+      if (loc.type === 'npm') {
+        expect(loc.package).toBe('@scope/my-plugin');
+        expect(loc.version).toBe('2.0.0');
+      }
+    });
+
+    it('defaults strict to true when not specified', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeJsonResponse({ plugins: [BARE_PLUGIN] })));
+      const [entry] = await fetcher.fetch();
+      expect(entry.strict).toBe(true);
+    });
+
+    it('handles skills as string (not array)', async () => {
+      const plugin = { ...BARE_PLUGIN, skills: 'skills/' };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeJsonResponse({ plugins: [plugin] })));
+      const [entry] = await fetcher.fetch();
+      expect(entry.hasSkills).toBe(true);
+    });
+
+    it('handles agents as string (not array)', async () => {
+      const plugin = { ...BARE_PLUGIN, agents: 'agents/' };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeJsonResponse({ plugins: [plugin] })));
+      const [entry] = await fetcher.fetch();
+      expect(entry.hasAgents).toBe(true);
+    });
+
+    it('handles hooks as string path', async () => {
+      const plugin = { ...BARE_PLUGIN, hooks: 'hooks/hooks.json' };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeJsonResponse({ plugins: [plugin] })));
+      const [entry] = await fetcher.fetch();
+      expect(entry.hasHooks).toBe(true);
+    });
   });
 
   // --- Custom URL ---
