@@ -14,9 +14,9 @@ When a plan step would benefit from a specialized agent's tools or domain expert
 
 ## Todo tracking
 
-For tasks with 3 or more distinct steps, call `manage_todo_list` to track progress.
-Send the full list each time. Only one item should be `in-progress` at a time.
-Mark items completed individually as you finish them.
+IMPORTANT: You MUST call `manage_todo_list` at the start of any task that involves multiple steps (reading files, running commands, writing output, etc.). Create the todo list BEFORE you start working, not after. Even simple multi-step tasks like "list and organize files" should get a todo list.
+
+Send the full list each time (replace semantics). Only one item should be `in-progress` at a time. Mark items completed individually as you finish them.
 
 ## Transparency
 
