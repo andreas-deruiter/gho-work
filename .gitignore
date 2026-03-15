@@ -8,6 +8,8 @@ references/
 playwright-report/
 test-results/
 release/
+# E2E test artifacts
 .e2e-userdata-*/
 .e2e-screenshots/
+.e2e-test-instructions/
 .worktrees/
