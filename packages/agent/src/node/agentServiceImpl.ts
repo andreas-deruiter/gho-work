@@ -16,7 +16,7 @@ import type { AgentState, QuotaSnapshot } from '../common/agent.js';
 import type { IAgentService } from '../common/agent.js';
 import type { IConversationService } from '../common/conversation.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
-import type { MessageOptions, SessionEvent } from '../common/types.js';
+import type { MessageOptions, SessionEvent, ToolDefinition } from '../common/types.js';
 import type { SdkMcpServerConfig } from '../common/mcpConfigMapping.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
 import type { ISkillRegistry } from '../common/skillRegistry.js';
@@ -120,6 +120,7 @@ export class AgentServiceImpl implements IAgentService {
           excludedTools: setupOverrides?.excludedTools,
           disabledSkills: disabledSkills.length > 0 ? disabledSkills : undefined,
           customAgents: customAgents.length > 0 ? customAgents : undefined,
+          tools: [this._buildTodoTool(queue)],
         });
         this._sessions.set(context.conversationId, session);
 
@@ -265,24 +266,6 @@ export class AgentServiceImpl implements IAgentService {
         }
         return null;
       }
-      case 'plan.created': {
-        const steps = (data.steps as Array<{ id: string; label: string }>) ?? [];
-        return {
-          type: 'plan_created',
-          plan: { id: (data.planId as string) ?? generateUUID(), steps },
-        };
-      }
-      case 'plan.step_updated':
-        return {
-          type: 'plan_step_updated',
-          planId: data.planId as string,
-          stepId: data.stepId as string,
-          state: data.state as 'pending' | 'running' | 'completed' | 'failed',
-          messageId: (data.messageId as string) ?? undefined,
-          startedAt: data.state === 'running' ? Date.now() : undefined,
-          completedAt: data.state === 'completed' ? Date.now() : undefined,
-          error: (data.error as string) ?? undefined,
-        };
       case 'subagent.started':
         return {
           type: 'subagent_started',
@@ -311,5 +294,61 @@ export class AgentServiceImpl implements IAgentService {
       default:
         return null;
     }
+  }
+
+  private _buildTodoTool(queue: AsyncQueue<AgentEvent>): ToolDefinition {
+    let previousTodos: Array<{ id: number; title: string; status: string }> = [];
+    return {
+      name: 'manage_todo_list',
+      description: 'Create and update a todo list for tracking multi-step tasks. Send the full list each time (replace semantics). Only one item should be in-progress at a time. Mark items completed individually.',
+      parameters: {
+        type: 'object',
+        properties: {
+          todoList: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'number', description: 'Unique identifier' },
+                title: { type: 'string', description: 'Concise action-oriented label (3-7 words)' },
+                status: { type: 'string', enum: ['not-started', 'in-progress', 'completed'] },
+              },
+              required: ['id', 'title', 'status'],
+            },
+          },
+        },
+        required: ['todoList'],
+      },
+      handler: async ({ todoList }: { todoList: Array<{ id: number; title: string; status: 'not-started' | 'in-progress' | 'completed' }> }) => {
+        queue.push({ type: 'todo_list_updated', todos: todoList });
+        const msg = this._buildTodoConfirmation(todoList, previousTodos);
+        previousTodos = todoList;
+        return msg;
+      },
+    };
+  }
+
+  private _buildTodoConfirmation(
+    current: Array<{ id: number; title: string; status: string }>,
+    previous: Array<{ id: number; title: string; status: string }>,
+  ): string {
+    const completed = current.filter(t => t.status === 'completed').length;
+    const total = current.length;
+    if (previous.length === 0) {
+      return `Created ${total} todos`;
+    }
+    const newlyCompleted = current.find(t =>
+      t.status === 'completed' && previous.find(p => p.id === t.id)?.status !== 'completed'
+    );
+    if (newlyCompleted) {
+      return `Completed: *${newlyCompleted.title}* (${completed}/${total})`;
+    }
+    const newlyStarted = current.find(t =>
+      t.status === 'in-progress' && previous.find(p => p.id === t.id)?.status !== 'in-progress'
+    );
+    if (newlyStarted) {
+      return `Starting: *${newlyStarted.title}* (${completed}/${total})`;
+    }
+    return `Updated todos (${completed}/${total})`;
   }
 }
