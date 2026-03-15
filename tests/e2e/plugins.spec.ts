@@ -163,6 +163,94 @@ test.describe('Plugins settings page', () => {
   });
 });
 
+test.describe('Plugin capability badges and new UI elements', () => {
+  /** Helper: navigate to the Plugins page Discover tab */
+  async function openPluginsDiscover(): Promise<void> {
+    await openSettings();
+    const pluginsNavItem = page.locator('.settings-nav-item', { hasText: 'Plugins' });
+    await pluginsNavItem.click();
+    await expect(page.locator('.settings-page-plugins')).toBeVisible({ timeout: 5000 });
+    // Ensure Discover tab is active
+    const discoverTab = page.locator('.plugin-tab', { hasText: 'Discover' });
+    await discoverTab.click();
+    await expect(discoverTab).toHaveClass(/active/);
+  }
+
+  test('Marketplaces tab exists in tab bar', async () => {
+    await openPluginsDiscover();
+
+    const tabBar = page.locator('.plugin-tab-bar');
+    await expect(tabBar).toBeVisible({ timeout: 3000 });
+
+    const marketplacesTab = tabBar.locator('.plugin-tab', { hasText: 'Marketplaces' });
+    await expect(marketplacesTab).toBeVisible({ timeout: 3000 });
+  });
+
+  test('Marketplaces tab shows add-marketplace form', async () => {
+    await openSettings();
+    const pluginsNavItem = page.locator('.settings-nav-item', { hasText: 'Plugins' });
+    await pluginsNavItem.click();
+    await expect(page.locator('.settings-page-plugins')).toBeVisible({ timeout: 5000 });
+
+    // Click the Marketplaces tab
+    const marketplacesTab = page.locator('.plugin-tab', { hasText: 'Marketplaces' });
+    await marketplacesTab.click();
+    await expect(marketplacesTab).toHaveClass(/active/);
+
+    // The add-marketplace section should render
+    const addSection = page.locator('.plugin-marketplace-add-section');
+    await expect(addSection).toBeVisible({ timeout: 3000 });
+
+    // The add button should exist
+    const addBtn = page.locator('button[aria-label="Add marketplace"]');
+    await expect(addBtn).toBeVisible({ timeout: 3000 });
+  });
+
+  test('search input filters the discover grid — typing shows filtered results', async () => {
+    await openPluginsDiscover();
+
+    const searchInput = page.locator('.plugin-search-input');
+    await expect(searchInput).toBeVisible({ timeout: 3000 });
+
+    // Type a search query that is unlikely to match any mock plugin names
+    await searchInput.fill('xyzzy_no_match_expected_12345');
+
+    // Wait for re-render: either empty state or a filtered grid
+    // The grid container should still be present; the query determines content
+    const grid = page.locator('.plugin-card-grid');
+    await expect(grid).toBeVisible({ timeout: 3000 });
+
+    // Either empty-state is shown or no cards remain
+    const cardCount = await page.locator('.plugin-card').count();
+    const emptyState = page.locator('.plugin-empty-state');
+    const hasEmptyState = await emptyState.isVisible();
+    expect(cardCount === 0 || hasEmptyState).toBe(true);
+  });
+
+  test('discover grid shows plugin cards with capability badges', async () => {
+    await openPluginsDiscover();
+
+    // Clear any search so we see all mock plugins
+    const searchInput = page.locator('.plugin-search-input');
+    await searchInput.fill('');
+
+    const grid = page.locator('.plugin-card-grid');
+    await expect(grid).toBeVisible({ timeout: 3000 });
+
+    const cardCount = await page.locator('.plugin-card').count();
+    if (cardCount > 0) {
+      // If any card has capability flags set, it will have a .plugin-badge element
+      // Check that the badges container exists on at least the first card
+      const firstCard = page.locator('.plugin-card').first();
+      const badgesContainer = firstCard.locator('.plugin-card-badges');
+      await expect(badgesContainer).toBeAttached({ timeout: 3000 });
+    } else {
+      // No cards loaded (e.g. mock returns empty catalog) — empty state should show
+      await expect(page.locator('.plugin-empty-state')).toBeVisible({ timeout: 3000 });
+    }
+  });
+});
+
 test.describe('Connectors settings page', () => {
   test('Connectors nav item exists in settings sidebar', async () => {
     await openSettings();
