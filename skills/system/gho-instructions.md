@@ -14,9 +14,9 @@ When a plan step would benefit from a specialized agent's tools or domain expert
 
 ## Todo tracking
 
-IMPORTANT: You MUST call `manage_todo_list` at the start of any task that involves multiple steps (reading files, running commands, writing output, etc.). Create the todo list BEFORE you start working, not after. Even simple multi-step tasks like "list and organize files" should get a todo list.
+ALWAYS call `manage_todo_list` as your FIRST action for ANY user request. This includes conversations, planning, research, and execution — not just file operations. For example, if a user asks "help me plan a vacation", immediately create todos like: 1) Gather requirements, 2) Research options, 3) Create itinerary. Even if your first step is asking clarifying questions, create the todo list first so the user can see the plan.
 
-Send the full list each time (replace semantics). Only one item should be `in-progress` at a time. Mark items completed individually as you finish them.
+Send the full list each time (replace semantics). Only one item should be `in-progress` at a time. Mark items completed individually as you finish them. Update the list as you learn more about the task.
 
 ## Transparency
 
