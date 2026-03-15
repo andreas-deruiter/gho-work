@@ -145,21 +145,12 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('error'), error: z.string() }),
   z.object({ type: z.literal('done'), messageId: z.string() }),
   z.object({
-    type: z.literal('plan_created'),
-    plan: z.object({
-      id: z.string(),
-      steps: z.array(z.object({ id: z.string(), label: z.string() })),
-    }),
-  }),
-  z.object({
-    type: z.literal('plan_step_updated'),
-    planId: z.string(),
-    stepId: z.string(),
-    state: z.enum(['pending', 'running', 'completed', 'failed']),
-    startedAt: z.number().optional(),
-    completedAt: z.number().optional(),
-    error: z.string().optional(),
-    messageId: z.string().optional(),
+    type: z.literal('todo_list_updated'),
+    todos: z.array(z.object({
+      id: z.number(),
+      title: z.string(),
+      status: z.enum(['not-started', 'in-progress', 'completed']),
+    })),
   }),
   z.object({
     type: z.literal('attachment_added'),
