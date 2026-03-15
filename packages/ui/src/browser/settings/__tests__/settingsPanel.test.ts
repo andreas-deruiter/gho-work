@@ -1,18 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SettingsPanel } from '../settingsPanel.js';
-
-function createMockIPC() {
-  return {
-    invoke: vi.fn().mockImplementation((channel: string) => {
-      if (channel === 'skill:sources' || channel === 'skill:list') {
-        return Promise.resolve([]);
-      }
-      return Promise.resolve({});
-    }),
-    on: vi.fn(),
-    removeListener: vi.fn(),
-  };
-}
+import { createMockIPC } from '../../../test/mockIpc.js';
 
 function createMockThemeService() {
   return {
@@ -28,7 +16,10 @@ describe('SettingsPanel', () => {
   let themeService: ReturnType<typeof createMockThemeService>;
 
   beforeEach(() => {
-    ipc = createMockIPC();
+    ipc = createMockIPC({
+      'skill:list': [],
+      'skill:sources': [],
+    });
     themeService = createMockThemeService();
   });
 

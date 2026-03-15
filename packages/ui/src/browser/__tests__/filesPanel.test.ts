@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FilesPanel } from '../filesPanel.js';
+import { createMockIPC } from '../../test/mockIpc.js';
 
-function createMockIPC() {
-  return {
-    invoke: vi.fn().mockImplementation(async (channel: string, args?: Record<string, unknown>) => {
+describe('FilesPanel', () => {
+  let panel: FilesPanel;
+  let ipc: ReturnType<typeof createMockIPC>;
+
+  beforeEach(async () => {
+    ipc = createMockIPC();
+    (ipc.invoke as ReturnType<typeof vi.fn>).mockImplementation(async (channel: string, args?: Record<string, unknown>) => {
       if (channel === 'workspace:get-root') { return { path: '/test/workspace' }; }
       if (channel === 'files:stat') {
         return { name: 'workspace', path: '/test/workspace', type: 'directory', size: 0, mtime: Date.now(), isHidden: false };
@@ -25,18 +30,7 @@ function createMockIPC() {
       }
       if (channel === 'files:watch') { return { watchId: 'w1' }; }
       return {};
-    }),
-    on: vi.fn().mockReturnValue({ dispose: () => {} }),
-    removeListener: vi.fn(),
-  };
-}
-
-describe('FilesPanel', () => {
-  let panel: FilesPanel;
-  let ipc: ReturnType<typeof createMockIPC>;
-
-  beforeEach(async () => {
-    ipc = createMockIPC();
+    });
     panel = new FilesPanel('/test/workspace', ipc);
     document.body.appendChild(panel.getDomNode());
     await panel.load();
@@ -100,7 +94,8 @@ describe('FilesPanel', () => {
     }, { timeout: 2000 });
 
     // Verify IPC was called with search channel
-    const searchCalls = ipc.invoke.mock.calls.filter(
+    const invokeMock = ipc.invoke as ReturnType<typeof vi.fn>;
+    const searchCalls = invokeMock.mock.calls.filter(
       (call: unknown[]) => call[0] === 'files:search',
     );
     expect(searchCalls.length).toBe(1);
@@ -108,10 +103,11 @@ describe('FilesPanel', () => {
   });
 
   it('refreshes tree when refresh button is clicked', () => {
-    const callCountBefore = ipc.invoke.mock.calls.length;
+    const invokeMock = ipc.invoke as ReturnType<typeof vi.fn>;
+    const callCountBefore = invokeMock.mock.calls.length;
     const refreshBtn = panel.getDomNode().querySelector('[aria-label="Refresh"]') as HTMLElement;
     refreshBtn.click();
-    expect(ipc.invoke.mock.calls.length).toBeGreaterThan(callCountBefore);
+    expect(invokeMock.mock.calls.length).toBeGreaterThan(callCountBefore);
   });
 
   it('has title attribute on tree-name spans for tooltip', () => {
