@@ -63,6 +63,7 @@ export const IPC_CHANNELS = {
   PLUGIN_INSTALL_PROGRESS: 'plugin:install-progress',
   PLUGIN_VALIDATE: 'plugin:validate',
   PLUGIN_UPDATES_AVAILABLE: 'plugin:updates-available',
+  PLUGIN_SKILL_DETAILS: 'plugin:skill-details',
   // Additional connector channels
   CONNECTOR_ADD: 'connector:add',
   CONNECTOR_UPDATE: 'connector:update',

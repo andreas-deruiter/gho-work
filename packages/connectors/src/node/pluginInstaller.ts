@@ -14,10 +14,15 @@ const execFileAsync = promisify(execFile);
 // ---------------------------------------------------------------------------
 
 export interface MCPServerInlineConfig {
-  command: string;
+  type?: 'stdio' | 'http';
+  // stdio fields
+  command?: string;
   args?: string[];
   env?: Record<string, string>;
   cwd?: string;
+  // http fields
+  url?: string;
+  headers?: Record<string, string>;
 }
 
 export interface PluginManifest {
@@ -340,7 +345,7 @@ export class PluginInstaller {
    */
   async countAgents(pluginDir: string, agentPaths?: string | string[]): Promise<number> {
     const dirs = this._resolveDirs(pluginDir, agentPaths, 'agents');
-    return dirs.reduce((sum, dir) => sum + this._countMdFilesRecursive(dir), 0);
+    return dirs.reduce((sum, dir) => sum + this._countMdFilesSimple(dir), 0);
   }
 
   /**
@@ -351,7 +356,7 @@ export class PluginInstaller {
    */
   async countCommands(pluginDir: string, commandPaths?: string | string[]): Promise<number> {
     const dirs = this._resolveDirs(pluginDir, commandPaths, 'commands');
-    return dirs.reduce((sum, dir) => sum + this._countMdFilesRecursive(dir), 0);
+    return dirs.reduce((sum, dir) => sum + this._countMdFilesSimple(dir), 0);
   }
 
   // -------------------------------------------------------------------------
@@ -579,10 +584,45 @@ export class PluginInstaller {
       if (entry.isDirectory()) {
         count += this._countMdFilesRecursive(path.join(dir, entry.name));
       } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
-        count++;
+        // Only count files with valid frontmatter (--- block with description:)
+        // to match what the skill registry actually indexes
+        try {
+          const content = fs.readFileSync(path.join(dir, entry.name), 'utf-8');
+          if (content.startsWith('---')) {
+            const endIdx = content.indexOf('---', 3);
+            if (endIdx !== -1) {
+              const yaml = content.substring(3, endIdx);
+              if (/^description:\s*.+$/m.test(yaml)) {
+                count++;
+              }
+            }
+          }
+        } catch {
+          // Skip unreadable files
+        }
       }
     }
 
+    return count;
+  }
+
+  /**
+   * Counts all .md files recursively in a directory (no frontmatter check).
+   * Used for agents and commands which don't require `description:` frontmatter.
+   */
+  private _countMdFilesSimple(dir: string): number {
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+      return 0;
+    }
+    let count = 0;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        count += this._countMdFilesSimple(path.join(dir, entry.name));
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+        count++;
+      }
+    }
     return count;
   }
 }

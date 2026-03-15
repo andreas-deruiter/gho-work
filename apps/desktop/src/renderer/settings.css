@@ -455,6 +455,7 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
 }
 .settings-page-plugins .settings-page-title,
 .settings-page-plugins .settings-page-subtitle {
@@ -628,6 +629,69 @@
 .plugin-badge.hooks {
   background: rgba(239, 68, 68, 0.1);
   color: var(--fg-error, #e06c6c);
+}
+.plugin-badge[data-tooltip-type] {
+  cursor: pointer;
+}
+
+/* Badge tooltip */
+.plugin-badge-tooltip {
+  position: absolute;
+  z-index: 100;
+  background: var(--bg-tertiary, #333);
+  border: 1px solid var(--border-primary, #555);
+  border-radius: 8px;
+  padding: 12px 14px;
+  min-width: 280px;
+  max-width: 420px;
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 11px;
+  color: var(--fg-primary, #ccc);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.plugin-badge-tooltip.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.plugin-badge-tooltip-header {
+  font-weight: 600;
+  color: var(--fg-primary, #e0e0e0);
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.plugin-badge-tooltip-divider {
+  border: none;
+  border-top: 1px solid var(--border-secondary, #444);
+  margin: 0 0 4px;
+}
+.plugin-badge-tooltip-item {
+  padding: 1px 0;
+  color: var(--fg-primary, #ddd);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.plugin-badge-tooltip-item strong {
+  font-weight: 600;
+  font-size: 10.5px;
+}
+.plugin-badge-tooltip-item .desc {
+  color: var(--fg-secondary, #888);
+  font-size: 10px;
+}
+.plugin-badge-tooltip-more {
+  padding: 2px 0;
+  color: var(--fg-muted, #666);
+  font-size: 10px;
+  margin-top: 2px;
+}
+.plugin-badge-tooltip-placeholder {
+  color: var(--fg-muted, #888);
+  font-style: italic;
+  font-size: 11px;
 }
 
 /* Install button */

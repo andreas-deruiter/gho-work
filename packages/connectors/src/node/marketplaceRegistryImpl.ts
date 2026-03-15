@@ -3,9 +3,9 @@ import type { Event, CatalogEntry } from '@gho-work/base';
 import type { MarketplaceEntry, MarketplaceSource } from '../common/marketplaceTypes.js';
 
 const OFFICIAL_MARKETPLACE: MarketplaceEntry = {
-  name: 'official',
-  source: { type: 'github', repo: 'anthropics/claude-plugins-official' },
-  owner: { name: 'Anthropic' },
+  name: 'gho-work',
+  source: { type: 'github', repo: 'andreas-deruiter/gho-work' },
+  owner: { name: 'GHO Work' },
   isDefault: true,
 };
 

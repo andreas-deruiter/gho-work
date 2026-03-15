@@ -6,9 +6,9 @@ import { PluginCatalogFetcher } from '../node/pluginCatalogFetcher.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const MARKETPLACE_REPO_URL = 'https://github.com/anthropics/claude-plugins-official';
+const MARKETPLACE_REPO_URL = 'https://github.com/andreas-deruiter/gho-work';
 const DEFAULT_URL =
-  'https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json';
+  'https://raw.githubusercontent.com/andreas-deruiter/gho-work/main/.claude-plugin/marketplace.json';
 
 function makeJsonResponse(body: unknown, status = 200): Response {
   return {
@@ -118,12 +118,13 @@ describe('PluginCatalogFetcher', () => {
     expect(entry.hasSkills).toBe(true);
   });
 
-  it('sets hasSkills=true when commands field is present', async () => {
+  it('sets hasSkills=false when only commands field is present (no skills)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       makeJsonResponse({ plugins: [COMMANDS_ONLY_PLUGIN] }),
     ));
     const [entry] = await fetcher.fetch();
-    expect(entry.hasSkills).toBe(true);
+    expect(entry.hasSkills).toBe(false);
+    expect(entry.hasCommands).toBe(true);
   });
 
   it('sets hasSkills=true when both skills and commands fields are present', async () => {
@@ -200,7 +201,7 @@ describe('PluginCatalogFetcher', () => {
     expect(loc.type).toBe('git-subdir');
     if (loc.type === 'git-subdir') {
       expect(loc.path).toBe('plugins/sentry');
-      expect(loc.url).toContain('anthropics/claude-plugins-official');
+      expect(loc.url).toContain('andreas-deruiter/gho-work');
     }
   });
 

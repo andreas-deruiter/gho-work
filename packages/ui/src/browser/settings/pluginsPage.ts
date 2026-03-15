@@ -33,6 +33,8 @@ interface InstalledPluginDTO {
   enabled: boolean;
   skillCount: number;
   agentCount: number;
+  commandCount: number;
+  hookCount: number;
   mcpServerNames: string[];
 }
 
@@ -76,6 +78,16 @@ export class PluginsPage extends Widget {
   private readonly _marketplacesTab: HTMLElement;
   private readonly _controlsEl: HTMLElement;
   private readonly _scrollEl: HTMLElement;
+
+  // Tooltip
+  private readonly _tooltip: HTMLElement;
+  private _tooltipTimer: ReturnType<typeof setTimeout> | undefined;
+  private _pluginDetailsCache = new Map<string, {
+    skills: Array<{ name: string; description: string }>;
+    commands: Array<{ name: string; description: string }>;
+    agents: Array<{ name: string; description: string }>;
+    hooks: Array<{ name: string; description: string }>;
+  }>();
 
   // Stable search input (not recreated on each render)
   private _searchInput: HTMLInputElement | undefined;
@@ -124,9 +136,17 @@ export class PluginsPage extends Widget {
     this._controlsEl = layout.controls;
     this._scrollEl = layout.scroll;
 
+    // Shared tooltip element
+    this._tooltip = document.createElement('div');
+    this._tooltip.className = 'plugin-badge-tooltip';
+    layout.root.appendChild(this._tooltip);
+    this.listen(this._tooltip, 'mouseenter', () => this._clearTooltipTimer());
+    this.listen(this._tooltip, 'mouseleave', () => this._hideTooltip());
+
     // IPC: plugin list changed
     const onChanged = (...args: unknown[]) => {
       this._installed = args[0] as InstalledPluginDTO[];
+      this._pluginDetailsCache.clear();
       this._updateInstalledCount();
       if (this._activeTab === 'installed') {
         this._renderInstalled();
@@ -566,6 +586,9 @@ export class PluginsPage extends Widget {
         const mcpBadge = document.createElement('span');
         mcpBadge.className = 'plugin-badge mcp';
         mcpBadge.textContent = 'MCP';
+        mcpBadge.setAttribute('data-tooltip-type', 'mcp');
+        mcpBadge.setAttribute('data-plugin', plugin.name);
+        this._addBadgeTooltipHandlers(mcpBadge);
         header.appendChild(mcpBadge);
       }
 
@@ -573,14 +596,40 @@ export class PluginsPage extends Widget {
         const skillsBadge = document.createElement('span');
         skillsBadge.className = 'plugin-badge skills';
         skillsBadge.textContent = 'Skills';
+        skillsBadge.setAttribute('data-tooltip-type', 'skills');
+        skillsBadge.setAttribute('data-plugin', plugin.name);
+        this._addBadgeTooltipHandlers(skillsBadge);
         header.appendChild(skillsBadge);
+      }
+
+      if (plugin.commandCount > 0) {
+        const commandsBadge = document.createElement('span');
+        commandsBadge.className = 'plugin-badge commands';
+        commandsBadge.textContent = 'Commands';
+        commandsBadge.setAttribute('data-tooltip-type', 'commands');
+        commandsBadge.setAttribute('data-plugin', plugin.name);
+        this._addBadgeTooltipHandlers(commandsBadge);
+        header.appendChild(commandsBadge);
       }
 
       if (plugin.agentCount > 0) {
         const agentsBadge = document.createElement('span');
         agentsBadge.className = 'plugin-badge agents';
         agentsBadge.textContent = 'Agents';
+        agentsBadge.setAttribute('data-tooltip-type', 'agents');
+        agentsBadge.setAttribute('data-plugin', plugin.name);
+        this._addBadgeTooltipHandlers(agentsBadge);
         header.appendChild(agentsBadge);
+      }
+
+      if (plugin.hookCount > 0) {
+        const hooksBadge = document.createElement('span');
+        hooksBadge.className = 'plugin-badge hooks';
+        hooksBadge.textContent = 'Hooks';
+        hooksBadge.setAttribute('data-tooltip-type', 'hooks');
+        hooksBadge.setAttribute('data-plugin', plugin.name);
+        this._addBadgeTooltipHandlers(hooksBadge);
+        header.appendChild(hooksBadge);
       }
 
       info.appendChild(header);
@@ -593,6 +642,12 @@ export class PluginsPage extends Widget {
       }
       if (plugin.agentCount > 0) {
         detailParts.push(`${plugin.agentCount} agent${plugin.agentCount !== 1 ? 's' : ''}`);
+      }
+      if (plugin.commandCount > 0) {
+        detailParts.push(`${plugin.commandCount} command${plugin.commandCount !== 1 ? 's' : ''}`);
+      }
+      if (plugin.hookCount > 0) {
+        detailParts.push(`${plugin.hookCount} hook${plugin.hookCount !== 1 ? 's' : ''}`);
       }
       if (plugin.mcpServerNames.length > 0) {
         detailParts.push(`${plugin.mcpServerNames.length} MCP server${plugin.mcpServerNames.length !== 1 ? 's' : ''}`);
@@ -917,6 +972,127 @@ export class PluginsPage extends Widget {
     // Update log tab badge if not active
     if (this._activeTab !== 'log') {
       this._logTab.textContent = `Log (\u2022)`;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Badge tooltip
+  // ---------------------------------------------------------------------------
+
+  private _addBadgeTooltipHandlers(badge: HTMLElement): void {
+    this.listen(badge, 'mouseenter', () => {
+      this._clearTooltipTimer();
+      this._tooltipTimer = setTimeout(() => void this._showTooltip(badge), 200);
+    });
+    this.listen(badge, 'mouseleave', () => {
+      this._clearTooltipTimer();
+      this._tooltipTimer = setTimeout(() => this._hideTooltip(), 150);
+    });
+  }
+
+  private async _showTooltip(badge: HTMLElement): Promise<void> {
+    const type = badge.getAttribute('data-tooltip-type');
+    if (!type) { return; }
+
+    const pluginName = badge.getAttribute('data-plugin')!;
+    const tooltip = this._tooltip;
+    tooltip.textContent = '';
+
+    // Fetch plugin details (skills, commands, agents) with caching
+    const details = await this._getPluginDetails(pluginName);
+
+    if (type === 'mcp') {
+      const plugin = this._installed.find(p => p.name === pluginName);
+      const names = plugin?.mcpServerNames ?? [];
+      this._renderListTooltip(tooltip, `${names.length} MCP Server${names.length !== 1 ? 's' : ''}`, names.map(n => ({ name: n, description: '' })));
+    } else if (type === 'skills') {
+      this._renderListTooltip(tooltip, `${details.skills.length} Skill${details.skills.length !== 1 ? 's' : ''}`, details.skills);
+    } else if (type === 'commands') {
+      this._renderListTooltip(tooltip, `${details.commands.length} Command${details.commands.length !== 1 ? 's' : ''}`, details.commands);
+    } else if (type === 'agents') {
+      this._renderListTooltip(tooltip, `${details.agents.length} Agent${details.agents.length !== 1 ? 's' : ''}`, details.agents);
+    } else if (type === 'hooks') {
+      this._renderListTooltip(tooltip, `${details.hooks.length} Hook Event${details.hooks.length !== 1 ? 's' : ''}`, details.hooks);
+    }
+
+    // Position below the badge
+    const rect = badge.getBoundingClientRect();
+    const pageRect = this.element.getBoundingClientRect();
+    tooltip.style.top = `${rect.bottom - pageRect.top + 4}px`;
+    let left = rect.left - pageRect.left;
+    // Keep tooltip within the page bounds
+    const maxLeft = pageRect.width - 420;
+    if (left > maxLeft) { left = maxLeft; }
+    if (left < 0) { left = 0; }
+    tooltip.style.left = `${left}px`;
+
+    tooltip.classList.add('visible');
+  }
+
+  private async _getPluginDetails(pluginName: string) {
+    let cached = this._pluginDetailsCache.get(pluginName);
+    if (!cached) {
+      try {
+        cached = await this._ipc.invoke<{
+          skills: Array<{ name: string; description: string }>;
+          commands: Array<{ name: string; description: string }>;
+          agents: Array<{ name: string; description: string }>;
+          hooks: Array<{ name: string; description: string }>;
+        }>(IPC_CHANNELS.PLUGIN_SKILL_DETAILS, { name: pluginName });
+        this._pluginDetailsCache.set(pluginName, cached);
+      } catch (err) {
+        console.error('[PluginsPage] Failed to fetch plugin details:', err);
+        cached = { skills: [], commands: [], agents: [], hooks: [] };
+      }
+    }
+    return cached;
+  }
+
+  private _renderListTooltip(
+    tooltip: HTMLElement,
+    title: string,
+    items: Array<{ name: string; description: string }>,
+  ): void {
+    const header = document.createElement('div');
+    header.className = 'plugin-badge-tooltip-header';
+    header.textContent = title;
+    tooltip.appendChild(header);
+
+    const hr = document.createElement('hr');
+    hr.className = 'plugin-badge-tooltip-divider';
+    tooltip.appendChild(hr);
+
+    const shown = items.slice(0, 20);
+    for (const entry of shown) {
+      const item = document.createElement('div');
+      item.className = 'plugin-badge-tooltip-item';
+      const nameEl = document.createElement('strong');
+      nameEl.textContent = entry.name;
+      item.appendChild(nameEl);
+      if (entry.description) {
+        const desc = document.createElement('span');
+        desc.className = 'desc';
+        desc.textContent = ` \u2014 ${entry.description}`;
+        item.appendChild(desc);
+      }
+      tooltip.appendChild(item);
+    }
+    if (items.length > 20) {
+      const more = document.createElement('div');
+      more.className = 'plugin-badge-tooltip-more';
+      more.textContent = `+ ${items.length - 20} more`;
+      tooltip.appendChild(more);
+    }
+  }
+
+  private _hideTooltip(): void {
+    this._tooltip.classList.remove('visible');
+  }
+
+  private _clearTooltipTimer(): void {
+    if (this._tooltipTimer !== undefined) {
+      clearTimeout(this._tooltipTimer);
+      this._tooltipTimer = undefined;
     }
   }
 

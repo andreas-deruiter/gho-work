@@ -309,9 +309,47 @@ export function createMainProcess(
     const raw = storageService?.getSetting('skills.disabled');
     return raw ? JSON.parse(raw) : [];
   };
+  // Build a readContextFiles function that injects a compact skill summary
+  // into the agent's system prompt so the model knows which skills are available.
+  // Full skill content is NOT injected (too large for 67+ skills); instead we
+  // list name + description so the model can reference them.
+  const readContextFiles = async (): Promise<string> => {
+    const disabledIds = getDisabledSkills();
+    const allSkills = skillRegistry.list();
+    const activeSkills = allSkills.filter(s => !disabledIds.includes(s.id));
+    console.log(`[readContextFiles] Registry has ${allSkills.length} total skills, ${activeSkills.length} active (${disabledIds.length} disabled)`);
+    if (activeSkills.length === 0) {
+      return '';
+    }
+
+    // Group skills by plugin source for a compact listing
+    const byPlugin = new Map<string, Array<{ name: string; description: string }>>();
+    for (const entry of activeSkills) {
+      const pluginKey = entry.sourceId.startsWith('plugin:')
+        ? entry.sourceId.slice('plugin:'.length).split(':')[0]
+        : entry.sourceId;
+      let list = byPlugin.get(pluginKey);
+      if (!list) {
+        list = [];
+        byPlugin.set(pluginKey, list);
+      }
+      list.push({ name: entry.name, description: entry.description });
+    }
+
+    const sections: string[] = [];
+    for (const [plugin, skills] of byPlugin) {
+      const items = skills.map(s => `- **${s.name}**: ${s.description}`).join('\n');
+      sections.push(`### ${plugin}\n${items}`);
+    }
+
+    const result = `# Installed Skills\n\nYou have ${activeSkills.length} skills installed from ${byPlugin.size} plugin(s). When the user's request matches a skill, use your knowledge of that skill's domain to help them.\n\n${sections.join('\n\n')}`;
+    console.log(`[readContextFiles] Injecting ${activeSkills.length} skills from ${byPlugin.size} plugin(s) into system prompt`);
+    return result;
+  };
+
   const pluginAgentRegistry = new PluginAgentRegistryImpl();
   const hookService = new HookServiceImpl();
-  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, undefined, getDisabledSkills, pluginAgentRegistry, hookService);
+  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, readContextFiles, getDisabledSkills, pluginAgentRegistry, hookService);
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
@@ -399,45 +437,12 @@ export function createMainProcess(
     pluginSettings,
   );
 
-  // Re-register all capabilities for enabled installed plugins on startup.
-  // Uses parseManifest() for full capability registration (skills, commands, agents, hooks).
-  // MCP servers are already persisted in config store and auto-loaded.
-  void (async () => {
-    for (const plugin of pluginService.getInstalled()) {
-      if (!plugin.enabled) continue;
-      const pluginRoot = plugin.cachePath;
-
-      try {
-        const manifest = await pluginInstaller.parseManifest(pluginRoot);
-
-        // Skills
-        if (manifest.skills) {
-          const skillPath = path.join(pluginRoot, typeof manifest.skills === 'string' ? manifest.skills : 'skills');
-          skillRegistry.addSource({ id: `plugin:${plugin.name}`, basePath: skillPath, priority: 10 });
-        }
-
-        // Commands
-        if (manifest.commands) {
-          const cmdPath = path.join(pluginRoot, typeof manifest.commands === 'string' ? manifest.commands : 'commands');
-          skillRegistry.addSource({ id: `plugin:${plugin.name}:commands`, basePath: cmdPath, priority: 10 });
-        }
-
-        // Agents
-        const agents = await pluginInstaller.parseAgentFiles(pluginRoot, plugin.name, manifest.agents);
-        for (const agent of agents) {
-          pluginAgentRegistry.register(agent);
-        }
-
-        // Hooks
-        const hooks = await pluginInstaller.parseHooks(pluginRoot, manifest.hooks);
-        if (hooks) {
-          hookService.registerHooks(plugin.name, pluginRoot, hooks);
-        }
-      } catch (err) {
-        console.warn(`[Plugins] Failed to re-register ${plugin.name}:`, err);
-      }
-    }
-  })();
+  // Re-register all capabilities (skills, commands, agents, hooks) for enabled
+  // installed plugins on startup. This resolves git-subdir plugin roots correctly
+  // and triggers a skill registry refresh so skills are available to the agent.
+  void pluginService.reconcileStartup().catch((err) => {
+    console.error('[Plugins] Startup reconciliation failed:', err instanceof Error ? err.message : String(err));
+  });
 
   // Forward plugin events to renderer
   pluginService.onDidChangePlugins((plugins) => {
@@ -528,7 +533,7 @@ export function createMainProcess(
   const marketplaceSettings = {
     get: (key: string): unknown => {
       const raw = storageService?.getSetting(key);
-      if (raw === undefined) return undefined;
+      if (raw === undefined) { return undefined; }
       try { return JSON.parse(raw); } catch { return raw; }
     },
     set: (key: string, value: unknown) => {
@@ -1206,6 +1211,97 @@ export function createMainProcess(
   ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_UPDATE, async (...args: unknown[]) => {
     const { name } = args[0] as { name: string };
     await pluginService.update(name);
+  });
+
+  ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_SKILL_DETAILS, async (...args: unknown[]) => {
+    const { name } = args[0] as { name: string };
+
+    // Skills from registry (category/name structure)
+    const allSkills = skillRegistry.list();
+    const prefix = `plugin:${name}`;
+    const skills = allSkills
+      .filter(s => s.sourceId === prefix || (s.sourceId.startsWith(`${prefix}:`) && !s.sourceId.endsWith(':commands')))
+      .map(s => ({ name: s.name, description: s.description }));
+
+    // Commands: read directly from disk since they use flat file layout
+    // (the skill registry expects category/name.md structure, so commands aren't indexed there)
+    const commands: Array<{ name: string; description: string }> = [];
+    const plugin = pluginService.getPlugin(name);
+    if (plugin) {
+      try {
+        // Resolve the actual plugin root (handles git-subdir nesting)
+        let pluginRoot = plugin.cachePath;
+        const loc = plugin.catalogMeta?.location;
+        if (loc && typeof loc !== 'string' && loc.type === 'git-subdir') {
+          pluginRoot = path.join(plugin.cachePath, loc.path.replace(/^\.\//, ''));
+        }
+        const manifest = await pluginInstaller.parseManifest(pluginRoot);
+        const cmdDirs: string[] = [];
+        if (manifest.commands) {
+          const paths = Array.isArray(manifest.commands) ? manifest.commands : [manifest.commands];
+          for (const p of paths) {
+            cmdDirs.push(path.join(pluginRoot, p));
+          }
+        } else {
+          const defaultDir = path.join(pluginRoot, 'commands');
+          if (fs.existsSync(defaultDir)) { cmdDirs.push(defaultDir); }
+        }
+        for (const dir of cmdDirs) {
+          if (!fs.existsSync(dir)) { continue; }
+          const files = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+          for (const file of files) {
+            const content = fs.readFileSync(path.join(dir, file), 'utf-8');
+            // Parse frontmatter inline to avoid cross-package import
+            let desc = '';
+            let fmName = '';
+            if (content.startsWith('---')) {
+              const endIdx = content.indexOf('---', 3);
+              if (endIdx !== -1) {
+                const yaml = content.substring(3, endIdx);
+                const descMatch = yaml.match(/^description:\s*"?(.+?)"?\s*$/m);
+                if (descMatch) { desc = descMatch[1].trim(); }
+                const nameMatch = yaml.match(/^name:\s*(.+)$/m);
+                if (nameMatch) { fmName = nameMatch[1].trim(); }
+              }
+            }
+            if (desc) {
+              commands.push({ name: fmName || file.slice(0, -3), description: desc });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[plugin-details] Failed to read commands for ${name}:`, err);
+      }
+    }
+
+    // Agents from the agent registry
+    const agents = pluginAgentRegistry.getAgents()
+      .filter(a => a.pluginName === name)
+      .map(a => ({ name: a.name, description: a.description }));
+
+    // Hooks: read event names from manifest
+    const hooks: Array<{ name: string; description: string }> = [];
+    if (plugin) {
+      try {
+        let hooksPluginRoot = plugin.cachePath;
+        const hooksLoc = plugin.catalogMeta?.location;
+        if (hooksLoc && typeof hooksLoc !== 'string' && hooksLoc.type === 'git-subdir') {
+          hooksPluginRoot = path.join(plugin.cachePath, hooksLoc.path.replace(/^\.\//, ''));
+        }
+        const manifest = await pluginInstaller.parseManifest(hooksPluginRoot);
+        const parsed = await pluginInstaller.parseHooks(hooksPluginRoot, manifest.hooks);
+        if (parsed) {
+          for (const eventName of Object.keys(parsed)) {
+            const count = Array.isArray(parsed[eventName]) ? parsed[eventName].length : 0;
+            hooks.push({ name: eventName, description: `${count} hook${count !== 1 ? 's' : ''}` });
+          }
+        }
+      } catch (err) {
+        console.warn(`[plugin-details] Failed to read hooks for ${name}:`, err);
+      }
+    }
+
+    return { skills, commands, agents, hooks };
   });
 
   ipcMainAdapter.handle(IPC_CHANNELS.PLUGIN_VALIDATE, async (...args: unknown[]) => {

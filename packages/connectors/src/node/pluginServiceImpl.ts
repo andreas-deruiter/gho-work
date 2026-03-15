@@ -58,6 +58,7 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
   // -------------------------------------------------------------------------
 
   private _catalog: CatalogEntry[] = [];
+  private _catalogFetched = false;
   private _installed = new Map<string, InstalledPlugin>();
 
   /**
@@ -98,19 +99,105 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
   }
 
   // -------------------------------------------------------------------------
+  // Startup reconciliation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Re-registers skill, command, and agent sources for all enabled installed
+   * plugins. Must be called after construction because it is async (reads
+   * manifests from disk). Without this, plugin skills are lost on app restart.
+   */
+  async reconcileStartup(): Promise<void> {
+    let needsSave = false;
+    for (const plugin of this._installed.values()) {
+      if (!plugin.enabled) {
+        continue;
+      }
+      try {
+        const pluginRoot = this._resolvePluginRoot(plugin.cachePath, plugin.catalogMeta.location);
+        const manifest = await this._installer.parseManifest(pluginRoot);
+
+        // Re-register skills
+        if (plugin.skillCount > 0) {
+          const skillPath = this._resolveSkillPath(pluginRoot, manifest.skills);
+          this._skillRegistration.addSource({ id: `plugin:${plugin.name}`, path: skillPath, priority: 10 });
+        }
+
+        // Re-register commands
+        if (plugin.commandCount > 0) {
+          const commandPath = this._resolveComponentPath(pluginRoot, manifest.commands, 'commands');
+          if (commandPath !== undefined && fs.existsSync(commandPath)) {
+            this._skillRegistration.addSource({ id: `plugin:${plugin.name}:commands`, path: commandPath, priority: 10 });
+          }
+        }
+
+        // Re-register agents
+        const agents = await this._installer.parseAgentFiles(pluginRoot, plugin.name, manifest.agents);
+        for (const agent of agents) {
+          this._agentRegistration.register(agent);
+        }
+
+        // Re-register hooks
+        const hooks = await this._installer.parseHooks(pluginRoot, manifest.hooks);
+        if (hooks) {
+          this._hookRegistration.registerHooks(plugin.name, pluginRoot, hooks);
+        }
+
+        // Re-count components to fix stale persisted counts
+        const freshSkillCount = await this._installer.countSkills(pluginRoot, manifest.skills);
+        const freshCommandCount = await this._installer.countCommands(pluginRoot, manifest.commands);
+        const freshAgentCount = await this._installer.countAgents(pluginRoot, manifest.agents);
+        const freshHookCount = hooks
+          ? Object.values(hooks).flat().reduce((sum, m: any) => sum + (m.hooks?.length ?? 0), 0)
+          : 0;
+
+        let dirty = false;
+        if (plugin.skillCount !== freshSkillCount) { plugin.skillCount = freshSkillCount; dirty = true; }
+        if (plugin.commandCount !== freshCommandCount) { plugin.commandCount = freshCommandCount; dirty = true; }
+        if (plugin.agentCount !== freshAgentCount) { plugin.agentCount = freshAgentCount; dirty = true; }
+        if (plugin.hookCount !== freshHookCount) { plugin.hookCount = freshHookCount; dirty = true; }
+        if (dirty) { needsSave = true; }
+      } catch (err) {
+        console.warn(`[plugins] Failed to reconcile ${plugin.name} on startup:`, err instanceof Error ? err.message : String(err));
+      }
+    }
+
+    // Trigger a skill registry refresh so all re-registered sources are scanned
+    if (this._installed.size > 0) {
+      await this._skillRegistration.refresh();
+    }
+
+    // Persist updated counts and notify renderer
+    if (needsSave) {
+      this._saveToSettings();
+      this._onDidChangePlugins.fire(this.getInstalled());
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Catalog
   // -------------------------------------------------------------------------
 
   async fetchCatalog(forceRefresh = false): Promise<CatalogEntry[]> {
-    if (!forceRefresh && this._catalog.length > 0) {
+    if (!forceRefresh && this._catalogFetched && this._catalog.length > 0) {
       return this._catalog;
     }
 
-    const entries = await this._fetcher.fetch();
-    this._catalog = entries;
-    this._settings.set(KEY_CATALOG, JSON.stringify(entries));
-    this._onDidChangeCatalog.fire(entries);
-    return entries;
+    try {
+      const entries = await this._fetcher.fetch();
+      this._catalog = entries;
+      this._catalogFetched = true;
+      this._settings.set(KEY_CATALOG, JSON.stringify(entries));
+      this._onDidChangeCatalog.fire(entries);
+      return entries;
+    } catch (err) {
+      // If network fetch fails and we have cached data, use it as fallback
+      if (this._catalog.length > 0) {
+        console.warn('PluginService: network fetch failed, using cached catalog:', err instanceof Error ? err.message : String(err));
+        return this._catalog;
+      }
+      throw err;
+    }
   }
 
   getCachedCatalog(): CatalogEntry[] {
@@ -293,20 +380,34 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       // Register MCP servers
       const mcpServerNames: string[] = [];
       for (const [serverKey, serverConfig] of mcpServerMap.entries()) {
-        const mcpConfig: MCPServerConfig = {
-          type: 'stdio',
-          command: expandPluginRoot(serverConfig.command, pluginRoot),
-          ...(serverConfig.args !== undefined && {
-            args: serverConfig.args.map((a) => expandPluginRoot(a, pluginRoot)),
-          }),
-          ...(serverConfig.env !== undefined && {
-            env: expandPluginRootInRecord(serverConfig.env, pluginRoot),
-          }),
-          ...(serverConfig.cwd !== undefined && {
-            cwd: expandPluginRoot(serverConfig.cwd, pluginRoot),
-          }),
-          source: `plugin:${name}`,
-        };
+        const isHttp = serverConfig.type === 'http' || (serverConfig.url !== undefined && serverConfig.command === undefined);
+        const mcpConfig: MCPServerConfig = isHttp
+          ? {
+              type: 'http',
+              url: serverConfig.url,
+              ...(serverConfig.headers !== undefined && { headers: serverConfig.headers }),
+              source: `plugin:${name}`,
+            }
+          : {
+              type: 'stdio',
+              command: expandPluginRoot(serverConfig.command!, pluginRoot),
+              ...(serverConfig.args !== undefined && {
+                args: serverConfig.args.map((a) => expandPluginRoot(a, pluginRoot)),
+              }),
+              ...(serverConfig.env !== undefined && {
+                env: expandPluginRootInRecord(serverConfig.env, pluginRoot),
+              }),
+              ...(serverConfig.cwd !== undefined && {
+                cwd: expandPluginRoot(serverConfig.cwd, pluginRoot),
+              }),
+              source: `plugin:${name}`,
+            };
+        // Skip if this server is already registered (shared MCP servers like Slack
+        // appear in multiple plugins' .mcp.json files)
+        if (this._configStore.getServer(serverKey) !== undefined) {
+          mcpServerNames.push(serverKey);
+          continue;
+        }
         await this._configStore.addServer(serverKey, mcpConfig);
         registeredServerNames.push(serverKey);
         mcpServerNames.push(serverKey);
@@ -433,21 +534,31 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
     for (const serverName of plugin.mcpServerNames) {
       const serverConfig = enableServers.get(serverName);
       if (serverConfig !== undefined) {
-        const mcpConfig: MCPServerConfig = {
-          type: 'stdio',
-          command: expandPluginRoot(serverConfig.command, pluginRoot),
-          ...(serverConfig.args !== undefined && {
-            args: serverConfig.args.map((a) => expandPluginRoot(a, pluginRoot)),
-          }),
-          ...(serverConfig.env !== undefined && {
-            env: expandPluginRootInRecord(serverConfig.env, pluginRoot),
-          }),
-          ...(serverConfig.cwd !== undefined && {
-            cwd: expandPluginRoot(serverConfig.cwd, pluginRoot),
-          }),
-          source: `plugin:${name}`,
-        };
-        await this._configStore.addServer(serverName, mcpConfig);
+        const isHttp = serverConfig.type === 'http' || (serverConfig.url !== undefined && serverConfig.command === undefined);
+        const mcpConfig: MCPServerConfig = isHttp
+          ? {
+              type: 'http',
+              url: serverConfig.url,
+              ...(serverConfig.headers !== undefined && { headers: serverConfig.headers }),
+              source: `plugin:${name}`,
+            }
+          : {
+              type: 'stdio',
+              command: expandPluginRoot(serverConfig.command!, pluginRoot),
+              ...(serverConfig.args !== undefined && {
+                args: serverConfig.args.map((a) => expandPluginRoot(a, pluginRoot)),
+              }),
+              ...(serverConfig.env !== undefined && {
+                env: expandPluginRootInRecord(serverConfig.env, pluginRoot),
+              }),
+              ...(serverConfig.cwd !== undefined && {
+                cwd: expandPluginRoot(serverConfig.cwd, pluginRoot),
+              }),
+              source: `plugin:${name}`,
+            };
+        if (this._configStore.getServer(serverName) === undefined) {
+          await this._configStore.addServer(serverName, mcpConfig);
+        }
       }
     }
 
@@ -523,6 +634,13 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       try {
         const parsed = JSON.parse(installedJson) as InstalledPlugin[];
         for (const plugin of parsed) {
+          // Backfill fields added after initial release to handle stale persisted data
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- backfill for missing fields in older persisted JSON
+          const p = plugin as Record<string, any>;
+          if (p.commandCount === undefined) { p.commandCount = 0; }
+          if (p.agentCount === undefined) { p.agentCount = 0; }
+          if (p.agentIds === undefined) { p.agentIds = []; }
+          if (p.hookCount === undefined) { p.hookCount = 0; }
           this._installed.set(plugin.name, plugin);
         }
       } catch (err) {

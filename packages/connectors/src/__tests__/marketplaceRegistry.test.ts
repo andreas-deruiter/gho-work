@@ -18,7 +18,7 @@ describe('MarketplaceRegistryImpl', () => {
   it('has the official marketplace pre-configured', () => {
     const list = registry.list();
     expect(list).toHaveLength(1);
-    expect(list[0].name).toBe('official');
+    expect(list[0].name).toBe('gho-work');
   });
 
   it('adds a new marketplace by github source', async () => {
@@ -34,7 +34,7 @@ describe('MarketplaceRegistryImpl', () => {
   });
 
   it('cannot remove the official marketplace', async () => {
-    await expect(registry.remove('official')).rejects.toThrow();
+    await expect(registry.remove('gho-work')).rejects.toThrow();
   });
 
   it('prevents duplicate marketplace names', async () => {

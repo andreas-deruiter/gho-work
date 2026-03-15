@@ -17,6 +17,19 @@ export function parseFrontmatterDescription(content: string): string {
   return match ? match[1].trim() : '';
 }
 
+export function parseFrontmatterName(content: string): string {
+  if (!content.startsWith('---')) {
+    return '';
+  }
+  const endIndex = content.indexOf('---', 3);
+  if (endIndex === -1) {
+    return '';
+  }
+  const yaml = content.substring(3, endIndex);
+  const match = yaml.match(/^name:\s*(.+)$/m);
+  return match ? match[1].trim() : '';
+}
+
 export class SkillRegistryImpl extends Disposable implements ISkillRegistry {
   private _skills = new Map<string, SkillEntry>();
   private _scanPromise: Promise<void> | null = null;
@@ -161,9 +174,14 @@ export class SkillRegistryImpl extends Disposable implements ISkillRegistry {
         const id = isPlugin ? `${pluginName}:${category}/${name}` : `${category}/${name}`;
 
         let description = '';
+        let displayName = name;
         try {
           const content = await fs.readFile(filePath, 'utf-8');
           description = parseFrontmatterDescription(content);
+          const fmName = parseFrontmatterName(content);
+          if (fmName) {
+            displayName = fmName;
+          }
         } catch (err) {
           console.warn(`[skills] Could not read ${filePath}:`, err instanceof Error ? err.message : String(err));
         }
@@ -176,7 +194,7 @@ export class SkillRegistryImpl extends Disposable implements ISkillRegistry {
         this._skills.set(id, {
           id,
           category,
-          name,
+          name: displayName,
           description,
           sourceId: source.id,
           filePath,

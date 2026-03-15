@@ -4,10 +4,11 @@ import type { CatalogEntry, PluginLocation } from '@gho-work/base';
 // Constants
 // ---------------------------------------------------------------------------
 
-const MARKETPLACE_REPO_URL = 'https://github.com/anthropics/claude-plugins-official';
+const MARKETPLACE_REPO_URL = 'https://github.com/andreas-deruiter/gho-work';
 
 const DEFAULT_CATALOG_URL =
-  'https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json';
+  process.env.GHO_MARKETPLACE_URL ??
+  'https://raw.githubusercontent.com/andreas-deruiter/gho-work/main/.claude-plugin/marketplace.json';
 
 // ---------------------------------------------------------------------------
 // Raw types from marketplace.json
@@ -97,7 +98,7 @@ export class PluginCatalogFetcher {
 
   /** Maps a raw marketplace plugin entry to a CatalogEntry. */
   _toEntry(plugin: RawPlugin, pluginRoot: string | undefined): CatalogEntry {
-    const hasSkills = _hasValue(plugin.skills) || _hasValue(plugin.commands);
+    const hasSkills = _hasValue(plugin.skills);
     const hasCommands = _hasValue(plugin.commands);
     const hasAgents = _hasValue(plugin.agents);
     const hasHooks = _hasValue(plugin.hooks);
