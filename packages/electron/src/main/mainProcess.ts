@@ -5,7 +5,7 @@
  * Agent execution lives in the Agent Host utility process (agentHostMain.ts).
  * The main process handles conversation persistence, auth, and model selection.
  */
-import { app, BrowserWindow, ipcMain, shell, safeStorage } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as fs from 'node:fs';
@@ -14,15 +14,11 @@ import { ServiceCollection } from '@gho-work/base';
 import type { AgentEvent } from '@gho-work/base';
 import {
   IPC_CHANNELS,
-  IIPCMain,
-  AuthServiceImpl,
-  SecureStorageService,
-  IAuthService,
-  ISecureStorageService,
   SqliteStorageService,
   NodeFileService,
   SkillToggleRequestSchema,
 } from '@gho-work/platform';
+import { createDIContainer } from './diContainer.js';
 import type {
   SendMessageRequest,
   ConversationGetRequest,
@@ -36,8 +32,6 @@ import type {
   OnboardingStatusResponse,
 } from '@gho-work/platform';
 import {
-  ConversationServiceImpl,
-  IConversationService,
   CopilotSDKImpl,
   AgentServiceImpl,
   ICopilotSDK,
@@ -96,106 +90,18 @@ export function createMainProcess(
   workspaceId?: string,
   options?: MainProcessOptions,
 ): ServiceCollection {
-  const services = new ServiceCollection();
-
-  // --- Storage & Conversation Service ---
-  // If no storageService was provided but userDataPath is set, create one.
-  // better-sqlite3 may fail to load if the native module was compiled for a different
-  // Node ABI (e.g., system Node vs Electron). Catch and degrade gracefully.
-  if (!storageService && options?.userDataPath) {
-    try {
-      const globalDbPath = path.join(options.userDataPath, 'global.db');
-      const workspaceDbDir = path.join(options.userDataPath, 'workspaces');
-      storageService = new SqliteStorageService(globalDbPath, workspaceDbDir);
-      workspaceId = 'default';
-    } catch (err) {
-      console.error('[main] CRITICAL: SQLite storage unavailable:', (err as Error).message);
-      console.error('[main] Conversations, settings, and install/auth flows will not work.');
-      console.error('[main] Fix: npx @electron/rebuild -w better-sqlite3 --module-dir apps/desktop');
-      // Show error dialog so the user knows the app is degraded — never silently continue
-      void import('electron').then(({ dialog }) => {
-        dialog.showErrorBox(
-          'GHO Work — Storage Unavailable',
-          'The database module failed to load. Conversations and settings will not work.\n\n'
-          + 'To fix, quit the app and run:\n'
-          + 'npx @electron/rebuild -w better-sqlite3 --module-dir apps/desktop\n\n'
-          + `Error: ${(err as Error).message}`,
-        );
-      });
-    }
-  }
-
-  let conversationService: ConversationServiceImpl | null = null;
-  if (storageService && workspaceId) {
-    const db = storageService.getWorkspaceDatabase(workspaceId);
-    conversationService = new ConversationServiceImpl(db);
-    services.set(IConversationService, conversationService);
-  }
-
-  // In-memory key-value store for secure storage (backed by safeStorage encryption)
-  const _tokenStore = new Map<string, string>();
-  const secureStorage: ISecureStorageService = new SecureStorageService(safeStorage, {
-    read: (key: string) => _tokenStore.get(key) ?? null,
-    write: (key: string, value: string) => { _tokenStore.set(key, value); },
-    delete: (key: string) => { _tokenStore.delete(key); },
-  });
-  services.set(ISecureStorageService, secureStorage);
-
-  // Auth service
-  const authService: IAuthService = new AuthServiceImpl(secureStorage, {
-    openExternal: (url: string) => shell.openExternal(url),
-    createLocalServer: async (port: number) => {
-      const http = await import('node:http');
-      return new Promise((resolve) => {
-        let _resolve: (url: string) => void;
-        const callbackPromise = new Promise<string>((res) => { _resolve = res; });
-        const server = http.createServer((req, res) => {
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end('<html><body>Authentication complete. You may close this tab.</body></html>');
-          _resolve(req.url ?? '/');
-          server.close();
-        });
-        server.listen(port, '127.0.0.1', () => {
-          resolve({
-            waitForCallback: () => callbackPromise,
-            close: () => server.close(),
-          });
-        });
-      });
-    },
-    fetchJson: async (url: string, headers?: Record<string, string>) => {
-      const { default: https } = await import('node:https');
-      return new Promise((resolve, reject) => {
-        const req = https.get(url, { headers }, (res) => {
-          let data = '';
-          res.on('data', (chunk) => { data += chunk; });
-          res.on('end', () => { resolve(JSON.parse(data)); });
-        });
-        req.on('error', reject);
-      });
-    },
-  });
-  services.set(IAuthService, authService);
-
-  // Subscribe to auth state changes and push to renderer
-  authService.onDidChangeAuth((state) => {
-    if (!mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(IPC_CHANNELS.AUTH_STATE_CHANGED, state);
-    }
-  });
-
-  // IPC Main adapter
-  const ipcMainAdapter: import('@gho-work/platform').IIPCMain = {
-    handle(channel: string, handler: (...args: unknown[]) => Promise<unknown>) {
-      ipcMain.handle(channel, (_event, ...args) => handler(...args));
-    },
-    sendToRenderer(channel: string, ...args: unknown[]) {
-      if (!mainWindow.isDestroyed()) {
-        mainWindow.webContents.send(channel, ...args);
-      }
-    },
-  };
-  services.set(IIPCMain, ipcMainAdapter);
+  // --- DI Container: storage, conversation, auth, IPC adapter ---
+  const {
+    services,
+    storageService: resolvedStorageService,
+    workspaceId: resolvedWorkspaceId,
+    conversationService,
+    authService,
+    ipcMainAdapter,
+  } = createDIContainer(mainWindow, storageService, workspaceId, options);
+  // DI container may have created storageService/workspaceId if they weren't provided
+  storageService = resolvedStorageService;
+  workspaceId = resolvedWorkspaceId;
 
   // --- Onboarding state ---
   const execFileAsync = promisify(execFile);
