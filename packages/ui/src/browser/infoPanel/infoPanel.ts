@@ -1,5 +1,5 @@
 /**
- * InfoPanel composite widget — brings together ProgressSection, InputSection,
+ * InfoPanel composite widget — brings together TodoListWidget, InputSection,
  * and OutputSection into a single panel with per-conversation state management.
  *
  * Dispatches AgentEvent to the appropriate child section and manages
@@ -9,13 +9,12 @@ import { Emitter, DisposableStore } from '@gho-work/base';
 import type { Event, AgentEvent } from '@gho-work/base';
 import { Widget } from '../widget.js';
 import { h } from '../dom.js';
-import { ProgressSection } from './progressSection.js';
+import { TodoListWidget } from './todoListWidget.js';
 import { InputSection } from './inputSection.js';
 import { OutputSection } from './outputSection.js';
 import { ContextSection } from './contextSection.js';
 import { InfoPanelState, isInputTool, extractInputName } from './infoPanelState.js';
 import type { InputEntry, OutputEntry } from './infoPanelState.js';
-import { processSubagentEvent } from './subagentProgressBridge.js';
 
 /** Remove all child nodes from an element. */
 function clearChildren(el: HTMLElement): void {
@@ -33,13 +32,13 @@ export class InfoPanel extends Widget {
   readonly onDidRequestRevealFile: Event<string> = this._onDidRequestRevealFile.event;
 
   // --- Child sections ---
-  private _progressSection: ProgressSection;
+  private _todoSection: TodoListWidget;
   private _inputSection: InputSection;
   private _outputSection: OutputSection;
   private _contextSection: ContextSection;
 
   // --- Section wrappers (for CSS targeting / test queries) ---
-  private readonly _progressWrap: HTMLElement;
+  private readonly _todoWrap: HTMLElement;
   private readonly _inputWrap: HTMLElement;
   private readonly _outputWrap: HTMLElement;
   private readonly _contextWrap: HTMLElement;
@@ -56,7 +55,7 @@ export class InfoPanel extends Widget {
   constructor() {
     const layout = h('div.info-panel@root', [
       h('div.info-panel-context@context'),
-      h('div.info-panel-progress@progress'),
+      h('div.info-panel-todo@todo'),
       h('div.info-panel-input@input'),
       h('div.info-panel-output@output'),
       h('div.info-panel-empty@empty'),
@@ -65,7 +64,7 @@ export class InfoPanel extends Widget {
     super(layout.root);
 
     this._contextWrap = layout['context'];
-    this._progressWrap = layout['progress'];
+    this._todoWrap = layout['todo'];
     this._inputWrap = layout['input'];
     this._outputWrap = layout['output'];
     this._emptyEl = layout['empty'];
@@ -79,7 +78,7 @@ export class InfoPanel extends Widget {
 
     // Create child sections
     this._contextSection = this._createContextSection();
-    this._progressSection = this._createProgressSection();
+    this._todoSection = this._createTodoSection();
     this._inputSection = this._createInputSection();
     this._outputSection = this._createOutputSection();
   }
@@ -93,6 +92,7 @@ export class InfoPanel extends Widget {
     switch (event.type) {
       case 'todo_list_updated': {
         this._currentState.setTodos(event.todos);
+        this._todoSection.setTodos(event.todos);
         this._updateEmptyState();
         break;
       }
@@ -164,16 +164,7 @@ export class InfoPanel extends Widget {
         break;
       }
 
-      case 'subagent_started':
-      case 'subagent_completed':
-      case 'subagent_failed': {
-        // Subagent events are processed but standalone indicators are not yet
-        // rendered in the progress section. Reserved for future TodoListWidget use.
-        processSubagentEvent(event, this._currentState);
-        break;
-      }
-
-      // Other event types (text, thinking, error, done) are not handled by InfoPanel
+      // Other event types (text, thinking, error, done, subagent_*) are not handled by InfoPanel
       default:
         break;
     }
@@ -215,15 +206,9 @@ export class InfoPanel extends Widget {
     return section;
   }
 
-  private _createProgressSection(): ProgressSection {
-    const section = this._sectionStore.add(new ProgressSection());
-    this._progressWrap.appendChild(section.getDomNode());
-
-    // Wire click events
-    this._sectionStore.add(section.onDidClickStep((messageId) => {
-      this._onDidRequestScrollToMessage.fire(messageId);
-    }));
-
+  private _createTodoSection(): TodoListWidget {
+    const section = this._sectionStore.add(new TodoListWidget());
+    this._todoWrap.appendChild(section.getDomNode());
     return section;
   }
 
@@ -262,13 +247,13 @@ export class InfoPanel extends Widget {
 
     // Clear DOM wrappers
     clearChildren(this._contextWrap);
-    clearChildren(this._progressWrap);
+    clearChildren(this._todoWrap);
     clearChildren(this._inputWrap);
     clearChildren(this._outputWrap);
 
     // Recreate section widgets
     this._contextSection = this._createContextSection();
-    this._progressSection = this._createProgressSection();
+    this._todoSection = this._createTodoSection();
     this._inputSection = this._createInputSection();
     this._outputSection = this._createOutputSection();
 
@@ -281,6 +266,11 @@ export class InfoPanel extends Widget {
     }
     if (state.registeredAgents.length > 0) {
       this._contextSection.setAgents([...state.registeredAgents]);
+    }
+
+    // Replay todos
+    if (state.todos.length > 0) {
+      this._todoSection.setTodos([...state.todos]);
     }
 
     for (const input of state.inputs) {

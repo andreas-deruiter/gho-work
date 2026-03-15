@@ -8,10 +8,10 @@ describe('InfoPanel', () => {
     panel = new InfoPanel();
   });
 
-  it('renders three section containers', () => {
+  it('renders section containers', () => {
     const root = panel.getDomNode();
     expect(root.classList.contains('info-panel')).toBe(true);
-    expect(root.querySelector('.info-panel-progress')).not.toBeNull();
+    expect(root.querySelector('.info-panel-todo')).not.toBeNull();
     expect(root.querySelector('.info-panel-input')).not.toBeNull();
     expect(root.querySelector('.info-panel-output')).not.toBeNull();
   });
