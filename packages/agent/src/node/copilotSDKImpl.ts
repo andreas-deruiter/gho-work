@@ -126,6 +126,7 @@ function mapSessionConfig(
 		mcpServers: config.mcpServers as import('@github/copilot-sdk').SessionConfig['mcpServers'],
 		onPermissionRequest: approveAll,
 		...(config.customAgents ? { customAgents: config.customAgents as import('@github/copilot-sdk').SessionConfig['customAgents'] } : {}),
+		...(config.tools ? { tools: config.tools as import('@github/copilot-sdk').SessionConfig['tools'] } : {}),
 	};
 }
 
@@ -227,6 +228,7 @@ export class CopilotSDKImpl implements ICopilotSDK {
 			...(config?.excludedTools ? { excludedTools: config.excludedTools } : {}),
 			...(config?.disabledSkills ? { disabledSkills: config.disabledSkills } : {}),
 			...(config?.mcpServers ? { mcpServers: config.mcpServers as import('@github/copilot-sdk').SessionConfig['mcpServers'] } : {}),
+			...(config?.tools ? { tools: config.tools as import('@github/copilot-sdk').SessionConfig['tools'] } : {}),
 			onPermissionRequest: this._sdk.approveAll,
 		};
 		const session = await this._client.resumeSession(sessionId, resumeConfig);
