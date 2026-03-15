@@ -32,15 +32,16 @@ describe('SettingsPanel', () => {
     themeService = createMockThemeService();
   });
 
-  it('renders nav with General, Skills, Plugins, and Connectors items', () => {
+  it('renders nav with General, Instructions, Skills, Plugins, and Connectors items', () => {
     const panel = new SettingsPanel(ipc, themeService);
     const dom = panel.getDomNode();
     const navItems = dom.querySelectorAll('.settings-nav-item');
-    expect(navItems.length).toBe(4);
+    expect(navItems.length).toBe(5);
     expect(navItems[0].textContent).toBe('General');
-    expect(navItems[1].textContent).toBe('Skills');
-    expect(navItems[2].textContent).toBe('Plugins');
-    expect(navItems[3].textContent).toBe('Connectors');
+    expect(navItems[1].textContent).toBe('Instructions');
+    expect(navItems[2].textContent).toBe('Skills');
+    expect(navItems[3].textContent).toBe('Plugins');
+    expect(navItems[4].textContent).toBe('Connectors');
     panel.dispose();
   });
 
@@ -58,7 +59,7 @@ describe('SettingsPanel', () => {
     const panel = new SettingsPanel(ipc, themeService);
     const dom = panel.getDomNode();
     const navItems = dom.querySelectorAll('.settings-nav-item');
-    (navItems[1] as HTMLElement).click();
+    (navItems[2] as HTMLElement).click();
     const activeNav = dom.querySelector('.settings-nav-item.active');
     expect(activeNav?.textContent).toBe('Skills');
     const content = dom.querySelector('.settings-content');

@@ -1,0 +1,187 @@
+<h2>Status Bar Layout</h2>
+<p class="subtitle">Based on the tutorial spec — 24px tall, full-width bottom strip. Does this match your vision?</p>
+
+<div class="mockup">
+  <div class="mockup-header">Status Bar — Default State (Agent Idle)</div>
+  <div class="mockup-body" style="padding: 0; background: #1a1a2e;">
+    <div style="display: flex; justify-content: space-between; align-items: center; height: 24px; padding: 0 8px; background: #16162a; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #8888aa;">
+      <!-- Left -->
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8888aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          ~/Projects/sales-reports
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #4ade80;"></span>
+          3 connectors
+        </span>
+      </div>
+      <!-- Right -->
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="color: #aaaacc;">Claude Sonnet 4.5</span>
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #4ade80;"></span>
+          Agent idle
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 36px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+            <span style="display: block; width: 53%; height: 100%; background: #7c6fe0; border-radius: 2px;"></span>
+          </span>
+          <span>142 left</span>
+        </span>
+        <span style="width: 18px; height: 18px; border-radius: 50%; background: #7c6fe0; color: white; font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center;">AD</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="height: 24px;"></div>
+
+<div class="mockup">
+  <div class="mockup-header">Status Bar — Agent Working</div>
+  <div class="mockup-body" style="padding: 0; background: #1a1a2e;">
+    <div style="display: flex; justify-content: space-between; align-items: center; height: 24px; padding: 0 8px; background: #16162a; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #8888aa;">
+      <!-- Left -->
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8888aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          ~/Projects/sales-reports
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #4ade80;"></span>
+          3 connectors
+        </span>
+      </div>
+      <!-- Right -->
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="color: #aaaacc;">Claude Sonnet 4.5</span>
+        <span style="display: flex; align-items: center; gap: 5px; color: #facc15;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #facc15; animation: pulse 1.5s ease-in-out infinite;"></span>
+          Agent working
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 36px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+            <span style="display: block; width: 53%; height: 100%; background: #7c6fe0; border-radius: 2px;"></span>
+          </span>
+          <span>142 left</span>
+        </span>
+        <span style="width: 18px; height: 18px; border-radius: 50%; background: #7c6fe0; color: white; font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center;">AD</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+</style>
+
+<div style="height: 24px;"></div>
+
+<div class="mockup">
+  <div class="mockup-header">Status Bar — Usage Warning (80%+)</div>
+  <div class="mockup-body" style="padding: 0; background: #1a1a2e;">
+    <div style="display: flex; justify-content: space-between; align-items: center; height: 24px; padding: 0 8px; background: #16162a; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #8888aa;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8888aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          ~/Projects/sales-reports
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #4ade80;"></span>
+          3 connectors
+        </span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="color: #aaaacc;">Claude Sonnet 4.5</span>
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #4ade80;"></span>
+          Agent idle
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #facc15; background: rgba(250,204,21,0.1); padding: 1px 8px; border-radius: 3px;">
+          <span style="display: inline-block; width: 36px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+            <span style="display: block; width: 85%; height: 100%; background: #facc15; border-radius: 2px;"></span>
+          </span>
+          <span>45 left</span>
+        </span>
+        <span style="width: 18px; height: 18px; border-radius: 50%; background: #7c6fe0; color: white; font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center;">AD</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="height: 24px;"></div>
+
+<div class="mockup">
+  <div class="mockup-header">Status Bar — Usage Critical (100%)</div>
+  <div class="mockup-body" style="padding: 0; background: #1a1a2e;">
+    <div style="display: flex; justify-content: space-between; align-items: center; height: 24px; padding: 0 8px; background: #16162a; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #8888aa;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8888aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          ~/Projects/sales-reports
+        </span>
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #4ade80;"></span>
+          3 connectors
+        </span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="color: #aaaacc;">Claude Sonnet 4.5</span>
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #4ade80;"></span>
+          Agent idle
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #f87171; background: rgba(248,113,113,0.1); padding: 1px 8px; border-radius: 3px;">
+          <span style="display: inline-block; width: 36px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+            <span style="display: block; width: 100%; height: 100%; background: #f87171; border-radius: 2px;"></span>
+          </span>
+          <span>0 left</span>
+        </span>
+        <span style="width: 18px; height: 18px; border-radius: 50%; background: #7c6fe0; color: white; font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center;">AD</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="height: 32px;"></div>
+
+<h3>Interactions</h3>
+<p class="subtitle">Which items are clickable and what they do</p>
+
+<table style="width: 100%; font-size: 13px; border-collapse: collapse; color: #ccc;">
+  <thead>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">
+      <th style="padding: 8px 12px; color: #888;">Item</th>
+      <th style="padding: 8px 12px; color: #888;">Click Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+      <td style="padding: 8px 12px;">Workspace path</td>
+      <td style="padding: 8px 12px;">Opens workspace picker (future)</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+      <td style="padding: 8px 12px;">Connector status</td>
+      <td style="padding: 8px 12px;">Navigate to Settings &gt; Connectors</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+      <td style="padding: 8px 12px;">Model name</td>
+      <td style="padding: 8px 12px;">Opens model selector dropdown (future)</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+      <td style="padding: 8px 12px;">Agent state</td>
+      <td style="padding: 8px 12px;">Not clickable (informational)</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+      <td style="padding: 8px 12px;">Usage meter</td>
+      <td style="padding: 8px 12px;">Opens usage popover with details</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+      <td style="padding: 8px 12px;">User avatar</td>
+      <td style="padding: 8px 12px;">Opens user menu (future)</td>
+    </tr>
+  </tbody>
+</table>

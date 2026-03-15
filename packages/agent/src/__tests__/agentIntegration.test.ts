@@ -7,6 +7,9 @@ import { AgentServiceImpl } from '../node/agentServiceImpl.js';
 import { ConversationServiceImpl } from '../node/conversationServiceImpl.js';
 import { SkillRegistryImpl } from '../node/skillRegistryImpl.js';
 
+const noopInstructionResolver = { resolve: async () => ({ content: '', sources: [] }) };
+const noopPluginAgentLoader = { loadAll: async () => [] };
+
 describe('Agent Integration', () => {
   let db: Database.Database;
   let sdk: MockCopilotSDK;
@@ -23,7 +26,7 @@ describe('Agent Integration', () => {
     await sdk.start();
     const registry = new SkillRegistryImpl([]);
     await registry.scan();
-    agentService = new AgentServiceImpl(sdk, null, registry);
+    agentService = new AgentServiceImpl(sdk, null, registry, noopInstructionResolver, noopPluginAgentLoader);
   });
 
   afterEach(async () => {

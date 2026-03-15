@@ -1,5 +1,5 @@
 /**
- * InfoPanel composite widget — brings together ProgressSection, InputSection,
+ * InfoPanel composite widget — brings together TodoListWidget, InputSection,
  * and OutputSection into a single panel with per-conversation state management.
  *
  * Dispatches AgentEvent to the appropriate child section and manages
@@ -9,9 +9,10 @@ import { Emitter, DisposableStore } from '@gho-work/base';
 import type { Event, AgentEvent } from '@gho-work/base';
 import { Widget } from '../widget.js';
 import { h } from '../dom.js';
-import { ProgressSection } from './progressSection.js';
+import { TodoListWidget } from './todoListWidget.js';
 import { InputSection } from './inputSection.js';
 import { OutputSection } from './outputSection.js';
+import { ContextSection } from './contextSection.js';
 import { InfoPanelState, isInputTool, extractInputName } from './infoPanelState.js';
 import type { InputEntry, OutputEntry } from './infoPanelState.js';
 
@@ -30,18 +31,20 @@ export class InfoPanel extends Widget {
   private readonly _onDidRequestRevealFile = this._register(new Emitter<string>());
   readonly onDidRequestRevealFile: Event<string> = this._onDidRequestRevealFile.event;
 
-  private readonly _onDidPlanCreated = this._register(new Emitter<void>());
-  readonly onDidPlanCreated: Event<void> = this._onDidPlanCreated.event;
+  private readonly _onDidTodosReceived = this._register(new Emitter<void>());
+  readonly onDidTodosReceived: Event<void> = this._onDidTodosReceived.event;
 
   // --- Child sections ---
-  private _progressSection: ProgressSection;
+  private _todoSection: TodoListWidget;
   private _inputSection: InputSection;
   private _outputSection: OutputSection;
+  private _contextSection: ContextSection;
 
   // --- Section wrappers (for CSS targeting / test queries) ---
-  private readonly _progressWrap: HTMLElement;
+  private readonly _todoWrap: HTMLElement;
   private readonly _inputWrap: HTMLElement;
   private readonly _outputWrap: HTMLElement;
+  private readonly _contextWrap: HTMLElement;
   private readonly _emptyEl: HTMLElement;
 
   // --- Per-conversation state ---
@@ -54,15 +57,17 @@ export class InfoPanel extends Widget {
 
   constructor() {
     const layout = h('div.info-panel@root', [
-      h('div.info-panel-progress@progress'),
+      h('div.info-panel-todo@todo'),
       h('div.info-panel-input@input'),
       h('div.info-panel-output@output'),
+      h('div.info-panel-context@context'),
       h('div.info-panel-empty@empty'),
     ]);
 
     super(layout.root);
 
-    this._progressWrap = layout['progress'];
+    this._contextWrap = layout['context'];
+    this._todoWrap = layout['todo'];
     this._inputWrap = layout['input'];
     this._outputWrap = layout['output'];
     this._emptyEl = layout['empty'];
@@ -75,7 +80,8 @@ export class InfoPanel extends Widget {
     this._emptyEl.textContent = 'Panel will populate as the agent works';
 
     // Create child sections
-    this._progressSection = this._createProgressSection();
+    this._contextSection = this._createContextSection();
+    this._todoSection = this._createTodoSection();
     this._inputSection = this._createInputSection();
     this._outputSection = this._createOutputSection();
   }
@@ -87,29 +93,14 @@ export class InfoPanel extends Widget {
   /** Dispatch an agent event to the appropriate section(s). */
   handleEvent(event: AgentEvent): void {
     switch (event.type) {
-      case 'plan_created': {
-        this._currentState.setPlan(event.plan);
-        this._progressSection.setPlan(this._currentState.plan!);
+      case 'todo_list_updated': {
+        const hadTodos = this._currentState.todos.length > 0;
+        this._currentState.setTodos(event.todos);
+        this._todoSection.setTodos(event.todos);
         this._updateEmptyState();
-        this._onDidPlanCreated.fire();
-        break;
-      }
-
-      case 'plan_step_updated': {
-        // Map 'running' from AgentEvent to 'active' for StepState
-        const stepState = event.state === 'running' ? 'active' : event.state;
-        this._currentState.updateStep(event.stepId, stepState, {
-          startedAt: event.startedAt,
-          completedAt: event.completedAt,
-          error: event.error,
-          messageId: event.messageId,
-        });
-        this._progressSection.updateStep(event.stepId, stepState, {
-          startedAt: event.startedAt,
-          completedAt: event.completedAt,
-          error: event.error,
-          messageId: event.messageId,
-        });
+        if (!hadTodos && event.todos.length > 0) {
+          this._onDidTodosReceived.fire();
+        }
         break;
       }
 
@@ -171,7 +162,16 @@ export class InfoPanel extends Widget {
         break;
       }
 
-      // Other event types (text, thinking, error, done) are not handled by InfoPanel
+      case 'context_loaded': {
+        this._currentState.setContextSources(event.sources);
+        this._currentState.setRegisteredAgents(event.agents);
+        this._contextSection.setSources(event.sources);
+        this._contextSection.setAgents(event.agents);
+        this._updateEmptyState();
+        break;
+      }
+
+      // Other event types (text, thinking, error, done, subagent_*) are not handled by InfoPanel
       default:
         break;
     }
@@ -207,15 +207,15 @@ export class InfoPanel extends Widget {
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  private _createProgressSection(): ProgressSection {
-    const section = this._sectionStore.add(new ProgressSection());
-    this._progressWrap.appendChild(section.getDomNode());
+  private _createContextSection(): ContextSection {
+    const section = this._sectionStore.add(new ContextSection());
+    this._contextWrap.appendChild(section.getDomNode());
+    return section;
+  }
 
-    // Wire click events
-    this._sectionStore.add(section.onDidClickStep((messageId) => {
-      this._onDidRequestScrollToMessage.fire(messageId);
-    }));
-
+  private _createTodoSection(): TodoListWidget {
+    const section = this._sectionStore.add(new TodoListWidget());
+    this._todoWrap.appendChild(section.getDomNode());
     return section;
   }
 
@@ -253,20 +253,31 @@ export class InfoPanel extends Widget {
     this._sectionStore.clear();
 
     // Clear DOM wrappers
-    clearChildren(this._progressWrap);
+    clearChildren(this._contextWrap);
+    clearChildren(this._todoWrap);
     clearChildren(this._inputWrap);
     clearChildren(this._outputWrap);
 
     // Recreate section widgets
-    this._progressSection = this._createProgressSection();
+    this._contextSection = this._createContextSection();
+    this._todoSection = this._createTodoSection();
     this._inputSection = this._createInputSection();
     this._outputSection = this._createOutputSection();
 
     // Replay state into sections
     const state = this._currentState;
 
-    if (state.plan) {
-      this._progressSection.setPlan(state.plan);
+    // Context data survives clear() — replay it
+    if (state.contextSources.length > 0) {
+      this._contextSection.setSources([...state.contextSources]);
+    }
+    if (state.registeredAgents.length > 0) {
+      this._contextSection.setAgents([...state.registeredAgents]);
+    }
+
+    // Replay todos
+    if (state.todos.length > 0) {
+      this._todoSection.setTodos([...state.todos]);
     }
 
     for (const input of state.inputs) {
@@ -281,7 +292,7 @@ export class InfoPanel extends Widget {
   /** Show or hide the empty state message based on section data. */
   private _updateEmptyState(): void {
     const state = this._currentState;
-    const hasData = state.plan !== null || state.inputs.length > 0 || state.outputs.length > 0;
+    const hasData = state.todos.length > 0 || state.inputs.length > 0 || state.outputs.length > 0 || state.contextSources.length > 0 || state.registeredAgents.length > 0;
     this._emptyEl.style.display = hasData ? 'none' : '';
   }
 }

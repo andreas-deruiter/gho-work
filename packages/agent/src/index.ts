@@ -15,3 +15,5 @@ export { PluginAgentRegistryImpl } from './node/pluginAgentRegistryImpl.js';
 export type { IPluginAgentRegistry } from './common/pluginAgentRegistry.js';
 export { HookServiceImpl } from './node/hookServiceImpl.js';
 export type { IHookService } from './common/hookService.js';
+export { InstructionResolver } from './node/instructionResolver.js';
+export type { InstructionSource, InstructionResult } from './node/instructionResolver.js';

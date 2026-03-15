@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { CatalogEntry, PluginAgentDefinition } from '@gho-work/base';
+import type { CatalogEntry, LegacyPluginAgentDefinition } from '@gho-work/base';
 
 // Module-level async wrapper (promisified execFile).
 // All class calls go through this._run() so tests can spy on the instance method.
@@ -376,9 +376,9 @@ export class PluginInstaller {
     pluginDir: string,
     pluginName: string,
     agentPaths?: string | string[],
-  ): Promise<PluginAgentDefinition[]> {
+  ): Promise<LegacyPluginAgentDefinition[]> {
     const dirs = this._resolveDirs(pluginDir, agentPaths, 'agents');
-    const agents: PluginAgentDefinition[] = [];
+    const agents: LegacyPluginAgentDefinition[] = [];
 
     for (const dir of dirs) {
       if (!fs.existsSync(dir)) { continue; }

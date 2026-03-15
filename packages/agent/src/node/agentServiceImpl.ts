@@ -1,15 +1,22 @@
 /**
  * AgentService — orchestrates task execution.
  * Creates SDK sessions, injects context, maps SDK events to AgentEvents via AsyncQueue.
+ *
+ * Composes system message from:
+ *   1. Bundled persona (gho-instructions skill)
+ *   2. User/project instructions (InstructionResolver)
+ *   3. Per-conversation ephemeral context (context.systemPrompt)
+ *
+ * Registers plugin agents as customAgents on the SDK session.
  */
 import * as os from 'node:os';
 import { generateUUID, Emitter } from '@gho-work/base';
-import type { AgentContext, AgentEvent, Event } from '@gho-work/base';
+import type { AgentContext, AgentEvent, Event, InstalledPlugin, PluginAgentDefinition } from '@gho-work/base';
 import type { AgentState, QuotaSnapshot } from '../common/agent.js';
 import type { IAgentService } from '../common/agent.js';
 import type { IConversationService } from '../common/conversation.js';
 import type { ICopilotSDK, ISDKSession } from '../common/copilotSDK.js';
-import type { MessageOptions, SessionEvent } from '../common/types.js';
+import type { MessageOptions, SessionEvent, ToolDefinition } from '../common/types.js';
 import type { SdkMcpServerConfig } from '../common/mcpConfigMapping.js';
 import { AsyncQueue } from '../common/asyncQueue.js';
 import type { ISkillRegistry } from '../common/skillRegistry.js';
@@ -20,6 +27,22 @@ interface SetupSessionOverrides {
   systemContent: string;
   workingDirectory?: string;
   excludedTools?: string[];
+}
+
+/** Interface for the instruction resolver dependency. */
+export interface IInstructionResolverLike {
+  resolve(): Promise<{
+    content: string;
+    sources: Array<{ path: string; origin: string; format: string }>;
+  }>;
+}
+
+/** Interface for the plugin agent loader dependency. */
+export interface IPluginAgentLoaderLike {
+  loadAll(plugins: InstalledPlugin[]): Promise<Array<{
+    pluginName: string;
+    definition: PluginAgentDefinition;
+  }>>;
 }
 
 export class AgentServiceImpl implements IAgentService {
@@ -39,8 +62,10 @@ export class AgentServiceImpl implements IAgentService {
     private readonly _sdk: ICopilotSDK,
     private readonly _conversationService: IConversationService | null,
     private readonly _skillRegistry: ISkillRegistry,
-    private readonly _readContextFiles?: () => Promise<string>,
+    private readonly _instructionResolver: IInstructionResolverLike,
+    private readonly _pluginAgentLoader: IPluginAgentLoaderLike,
     private readonly _getDisabledSkills?: () => string[],
+    private readonly _getEnabledPlugins?: () => InstalledPlugin[],
     private readonly _pluginAgentRegistry?: IPluginAgentRegistry,
     private readonly _hookService?: IHookService,
   ) {}
@@ -56,14 +81,30 @@ export class AgentServiceImpl implements IAgentService {
       // Reuse existing session for this conversation, or create a new one
       let session = this._sessions.get(context.conversationId);
       if (!session) {
-        // Build system message from context files
-        let systemContent = '';
-        if (this._readContextFiles) {
-          systemContent = await this._readContextFiles();
-        }
-        if (context.systemPrompt) {
-          systemContent += (systemContent ? '\n\n' : '') + context.systemPrompt;
-        }
+        // 1. Load bundled persona (always present)
+        const persona = await this._skillRegistry.getSkill('system', 'gho-instructions') ?? '';
+
+        // 2. Resolve user/project instructions
+        const instructions = await this._instructionResolver.resolve();
+
+        // 3. Load plugin agents
+        const enabledPlugins = this._getEnabledPlugins?.() ?? [];
+        const pluginAgents = await this._pluginAgentLoader.loadAll(enabledPlugins);
+
+        // 4. Map PluginAgentDefinition → SDK customAgents format
+        const customAgents = pluginAgents.map(a => ({
+          name: a.definition.name,
+          displayName: a.definition.displayName,
+          description: a.definition.description,
+          prompt: a.definition.prompt,
+          tools: a.definition.tools,
+          infer: a.definition.infer ?? true,
+          ...(a.definition.mcpServers ? { mcpServers: a.definition.mcpServers } : {}),
+        }));
+
+        // 5. Compose system message — no hardcoded model
+        const systemParts = [persona, instructions.content, context.systemPrompt].filter(Boolean);
+        let systemContent = systemParts.join('\n\n');
 
         // Apply setup overrides if this is a setup conversation
         const setupOverrides = this._installContexts.get(context.conversationId);
@@ -74,7 +115,7 @@ export class AgentServiceImpl implements IAgentService {
         const disabledSkills = this._getDisabledSkills?.() ?? [];
 
         session = await this._sdk.createSession({
-          model: context.model ?? 'gpt-4o',
+          model: context.model || undefined,
           sessionId: context.conversationId,
           systemMessage: systemContent ? { mode: 'append', content: systemContent } : undefined,
           streaming: true,
@@ -82,6 +123,8 @@ export class AgentServiceImpl implements IAgentService {
           workingDirectory: setupOverrides?.workingDirectory,
           excludedTools: setupOverrides?.excludedTools,
           disabledSkills: disabledSkills.length > 0 ? disabledSkills : undefined,
+          customAgents: customAgents.length > 0 ? customAgents : undefined,
+          tools: [this._buildTodoTool(queue)],
         });
         this._sessions.set(context.conversationId, session);
         if (this._hookService) {
@@ -89,6 +132,20 @@ export class AgentServiceImpl implements IAgentService {
             console.warn('[AgentService] SessionStart hook error:', err)
           );
         }
+
+        // 6. Emit context_loaded for transparency (once per session)
+        queue.push({
+          type: 'context_loaded',
+          sources: instructions.sources.map(s => ({
+            path: s.path,
+            origin: s.origin as 'user' | 'project',
+            format: s.format,
+          })),
+          agents: pluginAgents.map(a => ({
+            name: a.definition.displayName ?? a.definition.name,
+            plugin: a.pluginName,
+          })),
+        });
       }
       this._activeSession = session;
 
@@ -228,23 +285,26 @@ export class AgentServiceImpl implements IAgentService {
         }
         return null;
       }
-      case 'plan.created': {
-        const steps = (data.steps as Array<{ id: string; label: string }>) ?? [];
+      case 'subagent.started':
         return {
-          type: 'plan_created',
-          plan: { id: (data.planId as string) ?? generateUUID(), steps },
+          type: 'subagent_started',
+          parentToolCallId: (data.parentToolCallId as string) ?? '',
+          name: (data.name as string) ?? '',
+          displayName: (data.displayName as string) ?? (data.name as string) ?? '',
         };
-      }
-      case 'plan.step_updated':
+      case 'subagent.completed':
         return {
-          type: 'plan_step_updated',
-          planId: data.planId as string,
-          stepId: data.stepId as string,
-          state: data.state as 'pending' | 'running' | 'completed' | 'failed',
-          messageId: (data.messageId as string) ?? undefined,
-          startedAt: data.state === 'running' ? Date.now() : undefined,
-          completedAt: data.state === 'completed' ? Date.now() : undefined,
-          error: (data.error as string) ?? undefined,
+          type: 'subagent_completed',
+          parentToolCallId: (data.parentToolCallId as string) ?? '',
+          name: (data.name as string) ?? '',
+          displayName: (data.displayName as string) ?? (data.name as string) ?? '',
+        };
+      case 'subagent.failed':
+        return {
+          type: 'subagent_failed',
+          parentToolCallId: (data.parentToolCallId as string) ?? '',
+          name: (data.name as string) ?? '',
+          error: (data.error as string) ?? 'Unknown error',
         };
       case 'skill.invoked':
         return {
@@ -272,5 +332,61 @@ export class AgentServiceImpl implements IAgentService {
       default:
         return null;
     }
+  }
+
+  private _buildTodoTool(queue: AsyncQueue<AgentEvent>): ToolDefinition {
+    let previousTodos: Array<{ id: number; title: string; status: string }> = [];
+    return {
+      name: 'manage_todo_list',
+      description: 'Create and update a todo list for tracking multi-step tasks. Send the full list each time (replace semantics). Only one item should be in-progress at a time. Mark items completed individually.',
+      parameters: {
+        type: 'object',
+        properties: {
+          todoList: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'number', description: 'Unique identifier' },
+                title: { type: 'string', description: 'Concise action-oriented label (3-7 words)' },
+                status: { type: 'string', enum: ['not-started', 'in-progress', 'completed'] },
+              },
+              required: ['id', 'title', 'status'],
+            },
+          },
+        },
+        required: ['todoList'],
+      },
+      handler: async ({ todoList }: { todoList: Array<{ id: number; title: string; status: 'not-started' | 'in-progress' | 'completed' }> }) => {
+        queue.push({ type: 'todo_list_updated', todos: todoList });
+        const msg = this._buildTodoConfirmation(todoList, previousTodos);
+        previousTodos = todoList;
+        return msg;
+      },
+    };
+  }
+
+  private _buildTodoConfirmation(
+    current: Array<{ id: number; title: string; status: string }>,
+    previous: Array<{ id: number; title: string; status: string }>,
+  ): string {
+    const completed = current.filter(t => t.status === 'completed').length;
+    const total = current.length;
+    if (previous.length === 0) {
+      return `Created ${total} todos`;
+    }
+    const newlyCompleted = current.find(t =>
+      t.status === 'completed' && previous.find(p => p.id === t.id)?.status !== 'completed'
+    );
+    if (newlyCompleted) {
+      return `Completed: *${newlyCompleted.title}* (${completed}/${total})`;
+    }
+    const newlyStarted = current.find(t =>
+      t.status === 'in-progress' && previous.find(p => p.id === t.id)?.status !== 'in-progress'
+    );
+    if (newlyStarted) {
+      return `Starting: *${newlyStarted.title}* (${completed}/${total})`;
+    }
+    return `Updated todos (${completed}/${total})`;
   }
 }

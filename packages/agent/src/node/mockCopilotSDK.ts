@@ -5,7 +5,7 @@
  */
 import { generateUUID } from '@gho-work/base';
 import type { ICopilotSDK, ISDKSession, SDKQuotaResult } from '../common/copilotSDK.js';
-import type { SessionConfig, MessageOptions, SessionEvent, SessionMetadata, ModelInfo, PingResponse } from '../common/types.js';
+import type { SessionConfig, MessageOptions, SessionEvent, SessionMetadata, ModelInfo, PingResponse, ToolDefinition } from '../common/types.js';
 
 type EventHandler = (event: SessionEvent) => void;
 
@@ -17,15 +17,17 @@ interface StoredHandler {
 class MockSDKSession implements ISDKSession {
   readonly sessionId: string;
   private _model: string;
+  private _tools: ToolDefinition[];
   readonly createdAt: number;
 
   private messages: Array<{ id: string; role: string; content: string }> = [];
   private handlers: StoredHandler[] = [];
   private abortController: AbortController = new AbortController();
 
-  constructor(sessionId: string, model: string) {
+  constructor(sessionId: string, config: SessionConfig) {
     this.sessionId = sessionId;
-    this._model = model;
+    this._model = config.model ?? 'gpt-4o';
+    this._tools = config.tools ?? [];
     this.createdAt = Date.now();
   }
 
@@ -137,29 +139,33 @@ class MockSDKSession implements ISDKSession {
       || lower.includes('build') || lower.includes('analyze') || lower.includes('write');
 
     if (isComplex) {
-      const planId = generateUUID();
-      const steps = [
-        { id: `${planId}-1`, label: 'Understand the request' },
-        { id: `${planId}-2`, label: 'Research relevant files' },
-        { id: `${planId}-3`, label: 'Implement changes' },
-      ];
+      // Call manage_todo_list tool (initial list)
+      const todoToolCallId = generateUUID();
+      const todoArgs = {
+        todoList: [
+          { id: 1, title: 'Understand the request', status: 'in-progress' as const },
+          { id: 2, title: 'Research relevant files', status: 'not-started' as const },
+          { id: 3, title: 'Implement changes', status: 'not-started' as const },
+        ],
+      };
 
       this.emit({
-        type: 'plan.created',
-        data: { planId, steps },
+        type: 'tool.execution_start',
+        data: { toolCallId: todoToolCallId, toolName: 'manage_todo_list', arguments: todoArgs },
+      });
+
+      // Route to registered handler
+      const todoTool = this._tools.find(t => t.name === 'manage_todo_list');
+      let todoResult: unknown = { success: true };
+      if (todoTool) {
+        todoResult = await todoTool.handler(todoArgs);
+      }
+
+      this.emit({
+        type: 'tool.execution_complete',
+        data: { toolCallId: todoToolCallId, success: true, result: todoResult },
       });
       await this.delay(60, signal);
-      if (signal.aborted) { return; }
-
-      // Step 1: running → completed
-      this.emit({ type: 'plan.step_updated', data: { planId, stepId: steps[0].id, state: 'running', messageId } });
-      await this.delay(100, signal);
-      if (signal.aborted) { return; }
-      this.emit({ type: 'plan.step_updated', data: { planId, stepId: steps[0].id, state: 'completed', messageId } });
-
-      // Step 2: running (with a read tool call) → completed
-      this.emit({ type: 'plan.step_updated', data: { planId, stepId: steps[1].id, state: 'running', messageId } });
-      await this.delay(50, signal);
       if (signal.aborted) { return; }
     }
 
@@ -204,11 +210,6 @@ class MockSDKSession implements ISDKSession {
     if (signal.aborted) { return; }
 
     if (isComplex) {
-      const planId = 'plan'; // Not reused, but step updates reference the original plan
-
-      // Step 2 completed after read
-      // (Note: step IDs need to match the plan — this is mock-only, the real SDK handles this)
-
       // Write tool call (triggers Output section)
       const writeToolCallId = generateUUID();
       this.emit({
@@ -230,6 +231,34 @@ class MockSDKSession implements ISDKSession {
           result: { content: 'File written successfully' },
           fileMeta: { path: './src/output.ts', size: 1248, action: 'created' },
         },
+      });
+      await this.delay(30, signal);
+      if (signal.aborted) { return; }
+
+      // Update todo list — steps 1 & 2 done, step 3 in progress
+      const todoUpdateId = generateUUID();
+      const updatedArgs = {
+        todoList: [
+          { id: 1, title: 'Understand the request', status: 'completed' as const },
+          { id: 2, title: 'Research relevant files', status: 'completed' as const },
+          { id: 3, title: 'Implement changes', status: 'in-progress' as const },
+        ],
+      };
+
+      this.emit({
+        type: 'tool.execution_start',
+        data: { toolCallId: todoUpdateId, toolName: 'manage_todo_list', arguments: updatedArgs },
+      });
+
+      const todoTool = this._tools.find(t => t.name === 'manage_todo_list');
+      let result: unknown = { success: true };
+      if (todoTool) {
+        result = await todoTool.handler(updatedArgs);
+      }
+
+      this.emit({
+        type: 'tool.execution_complete',
+        data: { toolCallId: todoUpdateId, success: true, result },
       });
       await this.delay(30, signal);
       if (signal.aborted) { return; }
@@ -318,7 +347,7 @@ export class MockCopilotSDK implements ICopilotSDK {
   async createSession(config: SessionConfig): Promise<ISDKSession> {
     this.ensureStarted();
     const sessionId = config.sessionId ?? generateUUID();
-    const session = new MockSDKSession(sessionId, config.model ?? 'gpt-4o');
+    const session = new MockSDKSession(sessionId, config);
     this.sessions.set(sessionId, session);
     return session;
   }

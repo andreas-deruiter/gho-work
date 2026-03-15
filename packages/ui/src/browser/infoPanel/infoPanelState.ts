@@ -9,6 +9,12 @@ const INPUT_TOOL_NAMES = new Set([
   'getFileContents', 'get_file_contents',
 ]);
 
+/** Internal tools that should never appear in the Input/Output sections. */
+const HIDDEN_TOOL_NAMES = new Set([
+  'manage_todo_list',
+  'report_intent',
+]);
+
 const OUTPUT_TOOL_NAMES = new Set([
   'writeFile', 'write_file', 'createFile', 'create_file',
   'editFile', 'edit_file', 'updateFile', 'update_file',
@@ -16,6 +22,7 @@ const OUTPUT_TOOL_NAMES = new Set([
 ]);
 
 export function isInputTool(toolName: string, serverName: string): boolean {
+  if (HIDDEN_TOOL_NAMES.has(toolName)) { return false; }
   if (serverName) { return true; }
   return INPUT_TOOL_NAMES.has(toolName);
 }
@@ -42,14 +49,11 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export type StepState = 'completed' | 'active' | 'pending' | 'failed';
-
-export interface PlanStep {
-  id: string; label: string; state: StepState;
-  startedAt?: number; completedAt?: number; error?: string; messageId?: string;
+export interface TodoItem {
+  id: number;
+  title: string;
+  status: 'not-started' | 'in-progress' | 'completed';
 }
-
-export interface PlanState { id: string; steps: PlanStep[]; }
 
 export interface InputEntry {
   name: string; path: string; messageId: string; kind: 'file' | 'tool'; count: number;
@@ -59,30 +63,41 @@ export interface OutputEntry {
   name: string; path: string; size: number; action: 'created' | 'modified'; messageId: string;
 }
 
+export interface ContextSourceEntry {
+  path: string;
+  origin: 'user' | 'project' | string;
+  format: string;
+}
+
+export interface RegisteredAgentEntry {
+  name: string;
+  plugin: string;
+}
+
 export class InfoPanelState {
-  private _plan: PlanState | null = null;
+  private _todos: TodoItem[] = [];
   private _inputs: InputEntry[] = [];
   private _outputs: OutputEntry[] = [];
   private _toolCalls = new Map<string, { toolName: string; serverName: string }>();
+  /** Per-session context — survives clear() calls. */
+  private _contextSources: ContextSourceEntry[] = [];
+  private _registeredAgents: RegisteredAgentEntry[] = [];
 
-  get plan(): PlanState | null { return this._plan; }
+  get todos(): readonly TodoItem[] { return this._todos; }
   get inputs(): readonly InputEntry[] { return this._inputs; }
   get outputs(): readonly OutputEntry[] { return this._outputs; }
+  get contextSources(): readonly ContextSourceEntry[] { return this._contextSources; }
+  get registeredAgents(): readonly RegisteredAgentEntry[] { return this._registeredAgents; }
 
-  setPlan(plan: { id: string; steps: Array<{ id: string; label: string }> }): void {
-    this._plan = { id: plan.id, steps: plan.steps.map(s => ({ ...s, state: 'pending' as StepState })) };
+  setContextSources(sources: ContextSourceEntry[]): void {
+    this._contextSources = [...sources];
   }
 
-  updateStep(stepId: string, state: StepState, meta?: { startedAt?: number; completedAt?: number; error?: string; messageId?: string }): void {
-    if (!this._plan) { return; }
-    const step = this._plan.steps.find(s => s.id === stepId);
-    if (!step) { return; }
-    step.state = state;
-    if (meta?.startedAt !== undefined) { step.startedAt = meta.startedAt; }
-    if (meta?.completedAt !== undefined) { step.completedAt = meta.completedAt; }
-    if (meta?.error !== undefined) { step.error = meta.error; }
-    if (meta?.messageId !== undefined) { step.messageId = meta.messageId; }
+  setRegisteredAgents(agents: RegisteredAgentEntry[]): void {
+    this._registeredAgents = [...agents];
   }
+
+  setTodos(todos: TodoItem[]): void { this._todos = [...todos]; }
 
   addInput(entry: Omit<InputEntry, 'count'>): void {
     const existing = this._inputs.find(e => e.path === entry.path);
@@ -105,6 +120,6 @@ export class InfoPanelState {
   }
 
   clear(): void {
-    this._plan = null; this._inputs = []; this._outputs = []; this._toolCalls.clear();
+    this._todos = []; this._inputs = []; this._outputs = []; this._toolCalls.clear();
   }
 }

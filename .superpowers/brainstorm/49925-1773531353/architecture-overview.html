@@ -1,0 +1,115 @@
+<h2>Agent Orchestration — Architecture Overview</h2>
+<p class="subtitle">How the five components compose at session creation and runtime</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">Session Creation Flow</div>
+    <div class="mockup-body" style="padding: 24px; font-family: monospace; font-size: 13px; line-height: 1.8;">
+      <div style="display: flex; gap: 32px;">
+        <!-- Left: inputs -->
+        <div style="flex: 1;">
+          <div style="color: #7aa2f7; font-weight: bold; margin-bottom: 12px;">INPUTS (gathered at session start)</div>
+
+          <div style="background: #1a1b26; border: 1px solid #3d59a1; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+            <div style="color: #bb9af7;">InstructionResolver</div>
+            <div style="color: #565f89; font-size: 11px; margin-top: 4px;">
+              ~/.gho/instructions.md → user-level<br>
+              ./GHO.md → project override<br>
+              ./CLAUDE.md → project fallback<br>
+              ./.github/copilot-instructions.md<br>
+              ./.cursorrules
+            </div>
+            <div style="color: #9ece6a; margin-top: 8px; font-size: 11px;">→ merged string</div>
+          </div>
+
+          <div style="background: #1a1b26; border: 1px solid #3d59a1; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+            <div style="color: #bb9af7;">gho-instructions.md</div>
+            <div style="color: #565f89; font-size: 11px; margin-top: 4px;">
+              Bundled agent persona<br>
+              Planning behavior<br>
+              Delegation rules
+            </div>
+            <div style="color: #9ece6a; margin-top: 8px; font-size: 11px;">→ bundled string (always present)</div>
+          </div>
+
+          <div style="background: #1a1b26; border: 1px solid #3d59a1; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+            <div style="color: #bb9af7;">PluginAgentLoader</div>
+            <div style="color: #565f89; font-size: 11px; margin-top: 4px;">
+              Scans enabled plugins' agents/ dirs<br>
+              Parses .md → CustomAgentConfig<br>
+              Sets infer: true
+            </div>
+            <div style="color: #9ece6a; margin-top: 8px; font-size: 11px;">→ CustomAgentConfig[]</div>
+          </div>
+
+          <div style="background: #1a1b26; border: 1px solid #3d59a1; border-radius: 8px; padding: 12px;">
+            <div style="color: #bb9af7;">Existing inputs</div>
+            <div style="color: #565f89; font-size: 11px; margin-top: 4px;">
+              Skills (SkillRegistry)<br>
+              MCP servers (ConnectorConfigStore)<br>
+              Disabled skills (settings)
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: composition -->
+        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; color: #565f89;">
+          <div style="font-size: 24px;">→</div>
+        </div>
+
+        <!-- Right: session -->
+        <div style="flex: 1;">
+          <div style="color: #7aa2f7; font-weight: bold; margin-bottom: 12px;">SDK SESSION</div>
+
+          <div style="background: #1a1b26; border: 2px solid #9ece6a; border-radius: 8px; padding: 16px;">
+            <div style="color: #9ece6a; font-weight: bold;">createSession({</div>
+            <div style="padding-left: 16px; color: #c0caf5; margin: 8px 0;">
+              <div>systemMessage: {</div>
+              <div style="padding-left: 16px; color: #565f89;">
+                mode: 'append',<br>
+                content: gho-instructions<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ user instructions<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ context.systemPrompt
+              </div>
+              <div>},</div>
+              <div style="margin-top: 4px;">customAgents: <span style="color: #bb9af7;">[...pluginAgents]</span>,</div>
+              <div>mcpServers: <span style="color: #bb9af7;">{...configured}</span>,</div>
+              <div>skillDirectories: <span style="color: #bb9af7;">[...paths]</span>,</div>
+              <div>disabledSkills: <span style="color: #bb9af7;">[...]</span>,</div>
+            </div>
+            <div style="color: #9ece6a;">})</div>
+          </div>
+
+          <div style="margin-top: 24px; color: #7aa2f7; font-weight: bold; margin-bottom: 12px;">RUNTIME EVENTS</div>
+
+          <div style="background: #1a1b26; border: 1px solid #f7768e; border-radius: 8px; padding: 12px;">
+            <div style="color: #f7768e;">SubagentProgressBridge</div>
+            <div style="color: #565f89; font-size: 11px; margin-top: 4px;">
+              plan_changed → parse checklist<br>
+              &nbsp;&nbsp;→ InfoPanelState.setPlan()<br>
+              subagent.started → mark step active<br>
+              subagent.completed → mark step done<br>
+              subagent.failed → mark step failed<br>
+              &nbsp;&nbsp;→ ProgressSection re-renders
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Message priority (top = highest)</h3>
+  <div style="font-family: monospace; font-size: 13px; line-height: 2; background: #1a1b26; border-radius: 8px; padding: 16px;">
+    <div style="color: #565f89;">1. SDK defaults (security, tool instructions) — we don't control this</div>
+    <div style="color: #9ece6a;">2. gho-instructions.md (persona, planning, delegation) — bundled</div>
+    <div style="color: #7aa2f7;">3. User instructions (~/.gho/instructions.md) — user-level</div>
+    <div style="color: #bb9af7;">4. Project instructions (GHO.md / CLAUDE.md / etc.) — project-level</div>
+    <div style="color: #f7768e;">5. context.systemPrompt (per-conversation, e.g. setup skills) — ephemeral</div>
+  </div>
+  <p style="color: #565f89; font-size: 12px; margin-top: 8px;">
+    Note: systemMessage mode is 'append' — all content stacks after SDK defaults.
+    Within our content, later entries can override earlier ones (project overrides user).
+  </p>
+</div>

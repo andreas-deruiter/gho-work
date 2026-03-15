@@ -3,13 +3,13 @@
  * Used across packages: base, platform, agent, connectors, ui, electron.
  */
 
-// --- Plugin Agent Definition ---
+// --- Legacy Plugin Agent Definition (IPluginAgentRegistry) ---
 
 /**
- * Describes an agent contributed by a plugin.
- * Used by IPluginAgentRegistry in packages/agent.
+ * Describes an agent contributed by a plugin — legacy shape used by
+ * IPluginAgentRegistry for registration and install-time bookkeeping.
  */
-export interface PluginAgentDefinition {
+export interface LegacyPluginAgentDefinition {
   /** Fully qualified: plugin-name:agent-name */
   id: string;
   /** Display name */
@@ -158,4 +158,21 @@ export interface InstalledPlugin {
   marketplaceName?: string;
   /** Where the plugin came from. */
   source?: 'marketplace' | 'local';
+}
+
+// --- Plugin Agent Definition ---
+
+/**
+ * Describes a custom agent contributed by a plugin.
+ * Produced by PluginAgentLoader (connectors), consumed by AgentServiceImpl (agent)
+ * which maps it to the SDK's CustomAgentConfig at session creation.
+ */
+export interface PluginAgentDefinition {
+  name: string;
+  displayName?: string;
+  description: string;
+  prompt: string;
+  tools?: string[] | null;
+  infer?: boolean;
+  mcpServers?: Record<string, unknown>;
 }

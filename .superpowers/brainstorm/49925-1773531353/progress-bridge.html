@@ -1,0 +1,110 @@
+<h2>SubagentProgressBridge — Event Flow</h2>
+<p class="subtitle">How SDK events drive the info panel progress section</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">Event Mapping</div>
+    <div class="mockup-body" style="padding: 24px; font-family: monospace; font-size: 12px; line-height: 1.6;">
+
+      <div style="display: flex; gap: 24px;">
+        <!-- SDK Events -->
+        <div style="flex: 1;">
+          <div style="color: #7aa2f7; font-weight: bold; margin-bottom: 12px;">SDK SESSION EVENTS</div>
+
+          <div style="background: #1a1b26; border: 1px solid #3d59a1; border-radius: 6px; padding: 10px; margin-bottom: 6px;">
+            <span style="color: #9ece6a;">session.plan_changed</span>
+            <div style="color: #565f89; font-size: 11px;">type: "created" | "updated" | "deleted"</div>
+            <div style="color: #565f89; font-size: 11px;">content: "- [ ] Pull metrics\n- [ ] Draft slides..."</div>
+          </div>
+
+          <div style="background: #1a1b26; border: 1px solid #3d59a1; border-radius: 6px; padding: 10px; margin-bottom: 6px;">
+            <span style="color: #9ece6a;">subagent.started</span>
+            <div style="color: #565f89; font-size: 11px;">parentToolCallId, name, displayName, description</div>
+          </div>
+
+          <div style="background: #1a1b26; border: 1px solid #3d59a1; border-radius: 6px; padding: 10px; margin-bottom: 6px;">
+            <span style="color: #9ece6a;">subagent.completed</span>
+            <div style="color: #565f89; font-size: 11px;">parentToolCallId, name, displayName</div>
+          </div>
+
+          <div style="background: #1a1b26; border: 1px solid #3d59a1; border-radius: 6px; padding: 10px;">
+            <span style="color: #f7768e;">subagent.failed</span>
+            <div style="color: #565f89; font-size: 11px;">parentToolCallId, name, error</div>
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div style="display: flex; flex-direction: column; justify-content: center; color: #565f89;">
+          <div style="font-size: 20px;">→</div>
+        </div>
+
+        <!-- Bridge -->
+        <div style="flex: 1;">
+          <div style="color: #bb9af7; font-weight: bold; margin-bottom: 12px;">BRIDGE LOGIC</div>
+
+          <div style="background: #1a1b26; border: 1px solid #bb9af7; border-radius: 6px; padding: 10px; margin-bottom: 6px;">
+            <span style="color: #bb9af7;">parsePlanMarkdown()</span>
+            <div style="color: #565f89; font-size: 11px;">
+              "- [ ] Pull metrics" → { id: "step-0", label: "Pull metrics", state: "pending" }<br>
+              "- [x] Draft slides" → { id: "step-1", label: "Draft slides", state: "completed" }
+            </div>
+          </div>
+
+          <div style="background: #1a1b26; border: 1px solid #bb9af7; border-radius: 6px; padding: 10px; margin-bottom: 6px;">
+            <span style="color: #bb9af7;">correlateSubagentToStep()</span>
+            <div style="color: #565f89; font-size: 11px;">
+              Sequential: next pending step = active step<br>
+              Attaches subagent displayName as badge
+            </div>
+          </div>
+
+          <div style="background: #1a1b26; border: 1px solid #bb9af7; border-radius: 6px; padding: 10px;">
+            <span style="color: #bb9af7;">updateStepFromSubagent()</span>
+            <div style="color: #565f89; font-size: 11px;">
+              started → state: "active", badge: displayName<br>
+              completed → state: "completed"<br>
+              failed → state: "failed", error: message
+            </div>
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div style="display: flex; flex-direction: column; justify-content: center; color: #565f89;">
+          <div style="font-size: 20px;">→</div>
+        </div>
+
+        <!-- Info Panel -->
+        <div style="flex: 1;">
+          <div style="color: #f7768e; font-weight: bold; margin-bottom: 12px;">INFO PANEL</div>
+
+          <div style="background: #1a1b26; border: 1px solid #f7768e; border-radius: 6px; padding: 10px;">
+            <div style="color: #f7768e; margin-bottom: 8px;">ProgressSection</div>
+            <div style="color: #565f89; font-size: 11px; line-height: 2;">
+              <div style="color: #9ece6a;">✓ Pull quarterly metrics</div>
+              <div style="color: #7aa2f7;">
+                ● Draft slide deck
+                <span style="background: #3d59a1; color: #c0caf5; padding: 1px 6px; border-radius: 3px; font-size: 10px; margin-left: 6px;">Doc Drafter</span>
+              </div>
+              <div style="color: #565f89;">&nbsp;&nbsp;Email team with summary</div>
+              <div style="margin-top: 8px; background: #24283b; border-radius: 4px; height: 6px; overflow: hidden;">
+                <div style="background: #9ece6a; height: 100%; width: 33%;"></div>
+              </div>
+              <div style="color: #565f89; font-size: 10px; margin-top: 4px;">1 of 3 steps completed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Edge Cases</h3>
+  <div style="font-family: monospace; font-size: 12px; background: #1a1b26; border-radius: 8px; padding: 16px; line-height: 2;">
+    <div><span style="color: #7aa2f7;">No plan created:</span> <span style="color: #565f89;">Simple task — progress section stays hidden. No change from today.</span></div>
+    <div><span style="color: #7aa2f7;">Plan but no subagents:</span> <span style="color: #565f89;">Main agent works through steps itself. Plan events still update the stepper. Steps transition via plan_changed (re-parse markdown for checkbox changes).</span></div>
+    <div><span style="color: #7aa2f7;">Subagent without plan:</span> <span style="color: #565f89;">Model delegated without planning first. Show subagent activity as a single-step progress indicator ("Running: Doc Drafter"), not a stepper.</span></div>
+    <div><span style="color: #7aa2f7;">Plan changes mid-execution:</span> <span style="color: #565f89;">Agent adds/removes steps. Re-parse markdown, preserve state of existing steps, add new ones as pending.</span></div>
+    <div><span style="color: #7aa2f7;">Subagent fails:</span> <span style="color: #565f89;">Mark step as failed with error. Main agent decides whether to retry, skip, or abort — we don't intervene.</span></div>
+  </div>
+</div>

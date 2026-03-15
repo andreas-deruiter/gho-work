@@ -35,7 +35,7 @@ describe('extractInputName', () => {
 describe('InfoPanelState', () => {
   it('starts empty', () => {
     const state = new InfoPanelState();
-    expect(state.plan).toBeNull();
+    expect(state.todos).toEqual([]);
     expect(state.inputs).toEqual([]);
     expect(state.outputs).toEqual([]);
   });
@@ -64,15 +64,40 @@ describe('InfoPanelState', () => {
     expect(state.getToolInfo('tc-unknown')).toBeUndefined();
   });
 
-  it('sets plan and updates step states', () => {
+});
+
+describe('InfoPanelState todos', () => {
+  it('stores and retrieves todos', () => {
     const state = new InfoPanelState();
-    state.setPlan({ id: 'p1', steps: [{ id: 's1', label: 'Fetch' }, { id: 's2', label: 'Analyze' }] });
-    expect(state.plan!.steps).toHaveLength(2);
-    expect(state.plan!.steps[0].state).toBe('pending');
-    state.updateStep('s1', 'active', { startedAt: 1000 });
-    expect(state.plan!.steps[0].state).toBe('active');
-    state.updateStep('s1', 'completed', { completedAt: 2000, messageId: 'msg-5' });
-    expect(state.plan!.steps[0].state).toBe('completed');
-    expect(state.plan!.steps[0].messageId).toBe('msg-5');
+    const todos = [
+      { id: 1, title: 'Step one', status: 'not-started' as const },
+      { id: 2, title: 'Step two', status: 'not-started' as const },
+    ];
+    state.setTodos(todos);
+    expect(state.todos).toHaveLength(2);
+    expect(state.todos[0].title).toBe('Step one');
+  });
+
+  it('replaces todos on subsequent calls', () => {
+    const state = new InfoPanelState();
+    state.setTodos([{ id: 1, title: 'Old', status: 'not-started' }]);
+    state.setTodos([{ id: 1, title: 'New', status: 'completed' }]);
+    expect(state.todos).toHaveLength(1);
+    expect(state.todos[0].title).toBe('New');
+    expect(state.todos[0].status).toBe('completed');
+  });
+
+  it('clears todos on clear()', () => {
+    const state = new InfoPanelState();
+    state.setTodos([{ id: 1, title: 'A', status: 'not-started' }]);
+    state.clear();
+    expect(state.todos).toHaveLength(0);
+  });
+
+  it('preserves context sources across clear()', () => {
+    const state = new InfoPanelState();
+    state.setContextSources([{ path: '/a', origin: 'user', format: 'gho' }]);
+    state.clear();
+    expect(state.contextSources).toHaveLength(1);
   });
 });

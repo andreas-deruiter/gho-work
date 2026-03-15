@@ -1,0 +1,5 @@
+{"type":"server-started","port":50325,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:50325","screen_dir":"/Users/andreasderuiter/Project/gho-work/.superpowers/brainstorm/49925-1773531353"}
+{"type":"screen-added","file":"/Users/andreasderuiter/Project/gho-work/.superpowers/brainstorm/49925-1773531353/architecture-overview.html"}
+{"type":"screen-added","file":"/Users/andreasderuiter/Project/gho-work/.superpowers/brainstorm/49925-1773531353/progress-bridge.html"}
+{"type":"screen-added","file":"/Users/andreasderuiter/Project/gho-work/.superpowers/brainstorm/49925-1773531353/waiting.html"}
+{"type":"server-stopped","reason":"idle timeout"}

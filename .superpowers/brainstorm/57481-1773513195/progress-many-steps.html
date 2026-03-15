@@ -1,0 +1,223 @@
+<h2>Progress with Many Steps (10+)</h2>
+<p class="subtitle">How should the Progress section handle long task plans?</p>
+
+<div class="cards">
+  <!-- Option 1: Scrollable stepper -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1a2e;border-radius:8px;padding:16px;font-family:system-ui;color:#e0e0e0;font-size:11px;min-height:360px;overflow:hidden;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:#ccc;">Progress</div>
+        <div style="max-height:320px;overflow-y:auto;padding-right:4px;">
+          <!-- Steps 1-10 vertical -->
+          <div style="display:flex;gap:10px;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;background:#2d5a3d;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">&#10003;</div>
+              <div style="width:2px;flex:1;background:#2d5a3d;min-height:16px;"></div>
+            </div>
+            <div style="padding-bottom:8px;color:#777;">Fetch spreadsheet data</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;background:#2d5a3d;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">&#10003;</div>
+              <div style="width:2px;flex:1;background:#2d5a3d;min-height:16px;"></div>
+            </div>
+            <div style="padding-bottom:8px;color:#777;">Parse CSV headers</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;background:#2d5a3d;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">&#10003;</div>
+              <div style="width:2px;flex:1;background:#2d5a3d;min-height:16px;"></div>
+            </div>
+            <div style="padding-bottom:8px;color:#777;">Validate data types</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;background:#2d5a3d;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">&#10003;</div>
+              <div style="width:2px;flex:1;background:#2d5a3d;min-height:16px;"></div>
+            </div>
+            <div style="padding-bottom:8px;color:#777;">Clean missing values</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;background:#2d5a3d;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">&#10003;</div>
+              <div style="width:2px;flex:1;background:#2d5a3d;min-height:16px;"></div>
+            </div>
+            <div style="padding-bottom:8px;color:#777;">Compute aggregates</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;background:#4a6cf7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <div style="width:6px;height:6px;border-radius:50%;background:white;"></div>
+              </div>
+              <div style="width:2px;flex:1;background:#444;min-height:16px;"></div>
+            </div>
+            <div style="padding-bottom:8px;color:#e0e0e0;font-weight:600;">Generate charts</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;border:2px solid #444;flex-shrink:0;"></div>
+              <div style="width:2px;flex:1;background:#444;min-height:16px;"></div>
+            </div>
+            <div style="padding-bottom:8px;color:#555;">Build summary table</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;border:2px solid #444;flex-shrink:0;"></div>
+              <div style="width:2px;flex:1;background:#444;min-height:16px;"></div>
+            </div>
+            <div style="padding-bottom:8px;color:#555;">Draft executive summary</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;border:2px solid #444;flex-shrink:0;"></div>
+              <div style="width:2px;flex:1;background:#444;min-height:16px;"></div>
+            </div>
+            <div style="padding-bottom:8px;color:#555;">Format final report</div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div style="width:18px;height:18px;border-radius:50%;border:2px solid #444;flex-shrink:0;"></div>
+            </div>
+            <div style="color:#555;">Export to PDF</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Scrollable Stepper</h3>
+      <p>Full vertical list, section scrolls independently. All steps always visible. Simple but can get long.</p>
+    </div>
+  </div>
+
+  <!-- Option 2: Collapsed stepper -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1a2e;border-radius:8px;padding:16px;font-family:system-ui;color:#e0e0e0;font-size:11px;min-height:360px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:#ccc;">Progress</div>
+
+        <!-- Collapsed completed -->
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#252540;border-radius:6px;margin-bottom:8px;cursor:pointer;">
+          <div style="width:18px;height:18px;border-radius:50%;background:#2d5a3d;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">&#10003;</div>
+          <span style="flex:1;color:#888;">5 steps completed</span>
+          <span style="color:#555;font-size:10px;">&#9660; expand</span>
+        </div>
+
+        <!-- Active step (always visible) -->
+        <div style="display:flex;gap:10px;margin-bottom:2px;">
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="width:18px;height:18px;border-radius:50%;background:#4a6cf7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <div style="width:6px;height:6px;border-radius:50%;background:white;"></div>
+            </div>
+            <div style="width:2px;flex:1;background:#444;min-height:16px;"></div>
+          </div>
+          <div style="padding-bottom:8px;color:#e0e0e0;font-weight:600;">Generate charts</div>
+        </div>
+
+        <!-- Next 2 upcoming -->
+        <div style="display:flex;gap:10px;margin-bottom:2px;">
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="width:18px;height:18px;border-radius:50%;border:2px solid #444;flex-shrink:0;"></div>
+            <div style="width:2px;flex:1;background:#444;min-height:16px;"></div>
+          </div>
+          <div style="padding-bottom:8px;color:#555;">Build summary table</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:2px;">
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="width:18px;height:18px;border-radius:50%;border:2px solid #444;flex-shrink:0;"></div>
+            <div style="width:2px;flex:1;background:#444;min-height:16px;"></div>
+          </div>
+          <div style="padding-bottom:8px;color:#555;">Draft executive summary</div>
+        </div>
+
+        <!-- Collapsed remaining -->
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#252540;border-radius:6px;cursor:pointer;">
+          <div style="width:18px;height:18px;border-radius:50%;border:2px solid #444;flex-shrink:0;"></div>
+          <span style="flex:1;color:#555;">2 more steps</span>
+          <span style="color:#555;font-size:10px;">&#9660; expand</span>
+        </div>
+
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #333;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="color:#888;font-size:10px;">6 of 10</span>
+            <div style="flex:1;margin:0 10px;height:4px;background:#333;border-radius:2px;overflow:hidden;">
+              <div style="width:60%;height:100%;background:linear-gradient(90deg,#2d5a3d 83%,#4a6cf7 83%);border-radius:2px;"></div>
+            </div>
+            <span style="color:#888;font-size:10px;">60%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Smart Collapse</h3>
+      <p>Completed steps collapsed into summary. Active step + next 2 always visible. Remaining collapsed. Progress bar at bottom. Expand to see all.</p>
+    </div>
+  </div>
+
+  <!-- Option 3: Progress bar + list -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1a2e;border-radius:8px;padding:16px;font-family:system-ui;color:#e0e0e0;font-size:11px;min-height:360px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:#ccc;">Progress</div>
+
+        <!-- Progress bar -->
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="color:#888;font-size:10px;">Step 6 of 10</span>
+            <span style="color:#4a6cf7;font-size:10px;font-weight:600;">60%</span>
+          </div>
+          <div style="height:6px;background:#333;border-radius:3px;overflow:hidden;">
+            <div style="width:60%;height:100%;background:linear-gradient(90deg,#2d5a3d 83%,#4a6cf7 83%);border-radius:3px;"></div>
+          </div>
+        </div>
+
+        <!-- Flat list -->
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;">
+            <span style="color:#2d5a3d;font-size:10px;">&#10003;</span>
+            <span style="color:#666;text-decoration:line-through;">Fetch spreadsheet data</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;">
+            <span style="color:#2d5a3d;font-size:10px;">&#10003;</span>
+            <span style="color:#666;text-decoration:line-through;">Parse CSV headers</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;">
+            <span style="color:#2d5a3d;font-size:10px;">&#10003;</span>
+            <span style="color:#666;text-decoration:line-through;">Validate data types</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;">
+            <span style="color:#2d5a3d;font-size:10px;">&#10003;</span>
+            <span style="color:#666;text-decoration:line-through;">Clean missing values</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;">
+            <span style="color:#2d5a3d;font-size:10px;">&#10003;</span>
+            <span style="color:#666;text-decoration:line-through;">Compute aggregates</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:#252540;border-radius:4px;border-left:2px solid #4a6cf7;">
+            <span style="color:#4a6cf7;">&#9679;</span>
+            <span style="color:#e0e0e0;font-weight:600;">Generate charts</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;">
+            <span style="color:#555;">&#9675;</span>
+            <span style="color:#555;">Build summary table</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;">
+            <span style="color:#555;">&#9675;</span>
+            <span style="color:#555;">Draft executive summary</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;">
+            <span style="color:#555;">&#9675;</span>
+            <span style="color:#555;">Format final report</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;">
+            <span style="color:#555;">&#9675;</span>
+            <span style="color:#555;">Export to PDF</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Progress Bar + Flat List</h3>
+      <p>Progress bar at top for quick glance. Compact checklist-style list below. Active step highlighted. Dense but scannable. No circles/lines overhead.</p>
+    </div>
+  </div>
+</div>

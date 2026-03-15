@@ -1,7 +1,7 @@
 import type { IDisposable } from '@gho-work/base';
 import type { Event } from '@gho-work/base';
 import { createServiceIdentifier } from '@gho-work/base';
-import type { CatalogEntry, InstalledPlugin, InstallProgressStatus, PluginAgentDefinition } from '@gho-work/base';
+import type { CatalogEntry, InstalledPlugin, InstallProgressStatus, LegacyPluginAgentDefinition } from '@gho-work/base';
 
 // ---------------------------------------------------------------------------
 // Progress
@@ -32,7 +32,7 @@ export interface PluginSkillRegistration {
 // ---------------------------------------------------------------------------
 
 export interface PluginAgentRegistration {
-  register(agent: PluginAgentDefinition): void;
+  register(agent: LegacyPluginAgentDefinition): void;
   unregister(agentId: string): void;
   unregisterPlugin(pluginName: string): void;
 }

@@ -21,3 +21,5 @@ export { PluginServiceImpl } from './node/pluginServiceImpl.js';
 export { PluginCatalogFetcher } from './node/pluginCatalogFetcher.js';
 export { PluginInstaller } from './node/pluginInstaller.js';
 export { MarketplaceRegistryImpl } from './node/marketplaceRegistryImpl.js';
+export { PluginAgentLoader } from './node/pluginAgentLoader.js';
+export type { LoadedAgent } from './node/pluginAgentLoader.js';

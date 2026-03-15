@@ -1,0 +1,76 @@
+<h2>How should the install flow work?</h2>
+<p class="subtitle">What happens after the user clicks "Install" on a plugin</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Instant install — configure later</h3>
+      <p>Click Install → plugin downloads in background → skills are immediately available. MCP servers that need configuration (API keys, etc.) show a "Configure" badge — user sets them up when ready. Fast, non-blocking.</p>
+      <div class="mockup" style="margin-top: 12px">
+        <div class="mockup-header">Install Flow</div>
+        <div class="mockup-body">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px; background: #1e1e1e; border-radius: 8px; border: 1px solid #333">
+              <div style="width: 36px; height: 36px; background: #2d3a4a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px">🔍</div>
+              <div style="flex: 1">
+                <div style="font-weight: 600; font-size: 13px">sentry</div>
+                <div style="color: #888; font-size: 11px">Error monitoring &amp; debugging</div>
+              </div>
+              <button class="mock-button" style="background: #7c6fe0; color: white; font-size: 11px; padding: 6px 16px">Install</button>
+            </div>
+            <div style="text-align: center; color: #666; font-size: 20px">↓</div>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px; background: #1e1e1e; border-radius: 8px; border: 1px solid #2d4a2d">
+              <div style="width: 36px; height: 36px; background: #2d4a2d; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px">✓</div>
+              <div style="flex: 1">
+                <div style="font-weight: 600; font-size: 13px">sentry <span style="color: #6abf6a; font-size: 11px">installed</span></div>
+                <div style="color: #888; font-size: 11px">3 skills ready · 1 MCP server <span style="background: #4a3a2d; color: #bf8f6a; padding: 1px 6px; border-radius: 3px; font-size: 10px">needs config</span></div>
+              </div>
+              <button class="mock-button" style="font-size: 11px; padding: 6px 12px">Configure</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Guided setup wizard</h3>
+      <p>Click Install → download → if plugin has MCP servers, open a setup panel where user enters config (API keys, etc.) before activation. More hand-holding but blocks on configuration.</p>
+      <div class="mockup" style="margin-top: 12px">
+        <div class="mockup-header">Install Flow</div>
+        <div class="mockup-body">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px">
+              <div style="width: 24px; height: 24px; background: #2d4a2d; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #6abf6a">✓</div>
+              <span style="font-size: 12px; color: #6abf6a">Downloaded</span>
+              <div style="flex: 1; height: 1px; background: #333"></div>
+              <div style="width: 24px; height: 24px; background: #7c6fe0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: white">2</div>
+              <span style="font-size: 12px; color: #7c6fe0">Configure</span>
+              <div style="flex: 1; height: 1px; background: #333"></div>
+              <div style="width: 24px; height: 24px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #666">3</div>
+              <span style="font-size: 12px; color: #666">Activate</span>
+            </div>
+            <div style="background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 16px">
+              <div style="font-weight: 600; font-size: 13px; margin-bottom: 12px">Configure Sentry MCP Server</div>
+              <div style="margin-bottom: 10px">
+                <label style="font-size: 11px; color: #888; display: block; margin-bottom: 4px">SENTRY_AUTH_TOKEN</label>
+                <input class="mock-input" placeholder="sntrys_xxx..." style="width: 100%; box-sizing: border-box">
+              </div>
+              <div style="margin-bottom: 12px">
+                <label style="font-size: 11px; color: #888; display: block; margin-bottom: 4px">SENTRY_ORG_SLUG</label>
+                <input class="mock-input" placeholder="my-org" style="width: 100%; box-sizing: border-box">
+              </div>
+              <div style="display: flex; gap: 8px; justify-content: flex-end">
+                <button class="mock-button" style="font-size: 11px; padding: 6px 12px">Skip for now</button>
+                <button class="mock-button" style="background: #7c6fe0; color: white; font-size: 11px; padding: 6px 16px">Activate</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

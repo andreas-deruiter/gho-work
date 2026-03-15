@@ -8,10 +8,10 @@ describe('InfoPanel', () => {
     panel = new InfoPanel();
   });
 
-  it('renders three section containers', () => {
+  it('renders section containers', () => {
     const root = panel.getDomNode();
     expect(root.classList.contains('info-panel')).toBe(true);
-    expect(root.querySelector('.info-panel-progress')).not.toBeNull();
+    expect(root.querySelector('.info-panel-todo')).not.toBeNull();
     expect(root.querySelector('.info-panel-input')).not.toBeNull();
     expect(root.querySelector('.info-panel-output')).not.toBeNull();
   });
@@ -22,12 +22,15 @@ describe('InfoPanel', () => {
     expect(emptyMsg!.textContent).toContain('Panel will populate');
   });
 
-  it('hides empty state after receiving plan event', () => {
+  it('hides empty state after receiving todo_list_updated event', () => {
     panel.handleEvent({
-      type: 'plan_created',
-      plan: { id: 'p1', steps: [{ id: 's1', label: 'Do thing' }, { id: 's2', label: 'Other' }] },
+      type: 'todo_list_updated',
+      todos: [
+        { id: 1, title: 'Do thing', status: 'not-started' },
+        { id: 2, title: 'Other', status: 'not-started' },
+      ],
     });
-    const emptyMsg = panel.getDomNode().querySelector('.info-panel-empty');
+    const emptyMsg = panel.getDomNode().querySelector<HTMLElement>('.info-panel-empty');
     expect(emptyMsg!.style.display).toBe('none');
   });
 

@@ -17,20 +17,15 @@ describe('InfoPanel integration', () => {
 
   it('processes a full agent task lifecycle', () => {
     const events: AgentEvent[] = [
-      // Agent creates a plan
+      // Agent creates a todo list
       {
-        type: 'plan_created',
-        plan: {
-          id: 'plan-1',
-          steps: [
-            { id: 's1', label: 'Read input file' },
-            { id: 's2', label: 'Analyze data' },
-            { id: 's3', label: 'Generate report' },
-          ],
-        },
+        type: 'todo_list_updated',
+        todos: [
+          { id: 1, title: 'Read input file', status: 'in-progress' },
+          { id: 2, title: 'Analyze data', status: 'not-started' },
+          { id: 3, title: 'Generate report', status: 'not-started' },
+        ],
       },
-      // Step 1 starts
-      { type: 'plan_step_updated', planId: 'plan-1', stepId: 's1', state: 'running', startedAt: 1000 },
       // Agent reads a file (input)
       {
         type: 'tool_call_start',
@@ -46,22 +41,22 @@ describe('InfoPanel integration', () => {
         attachment: { name: 'budget.xlsx', path: '/home/user/budget.xlsx', source: 'drag-drop' },
         messageId: 'msg-2',
       },
-      // Step 1 completes
-      { type: 'plan_step_updated', planId: 'plan-1', stepId: 's1', state: 'completed', completedAt: 2000, messageId: 'msg-1' },
-      // Step 2 active
-      { type: 'plan_step_updated', planId: 'plan-1', stepId: 's2', state: 'running', startedAt: 2000 },
-      // Step 2 completes
-      { type: 'plan_step_updated', planId: 'plan-1', stepId: 's2', state: 'completed', completedAt: 3000, messageId: 'msg-3' },
-      // Step 3 active — agent writes a file
-      { type: 'plan_step_updated', planId: 'plan-1', stepId: 's3', state: 'running', startedAt: 3000 },
+      // All steps completed
+      {
+        type: 'todo_list_updated',
+        todos: [
+          { id: 1, title: 'Read input file', status: 'completed' },
+          { id: 2, title: 'Analyze data', status: 'completed' },
+          { id: 3, title: 'Generate report', status: 'completed' },
+        ],
+      },
+      // Agent writes a file (output)
       {
         type: 'tool_call_result',
         toolCallId: 'tc-2',
         result: { success: true, content: 'File written' },
         fileMeta: { path: '/data/report.pdf', size: 156000, action: 'created' },
       },
-      // Step 3 completes
-      { type: 'plan_step_updated', planId: 'plan-1', stepId: 's3', state: 'completed', completedAt: 4000, messageId: 'msg-4' },
     ];
 
     for (const event of events) {
@@ -70,9 +65,9 @@ describe('InfoPanel integration', () => {
 
     const root = panel.getDomNode();
 
-    // Progress: all 3 steps completed
-    const completedSteps = root.querySelectorAll('.info-step--completed');
-    expect(completedSteps.length).toBe(3);
+    // Todos: all 3 items completed
+    const completedItems = root.querySelectorAll('.info-todo-item--completed');
+    expect(completedItems.length).toBe(3);
 
     // Input: 2 entries (readFile + attachment)
     const inputEntries = root.querySelectorAll('.info-panel-input .info-entry');

@@ -1,12 +1,12 @@
-import { Disposable, Emitter, type Event, type PluginAgentDefinition } from '@gho-work/base';
+import { Disposable, Emitter, type Event, type LegacyPluginAgentDefinition } from '@gho-work/base';
 import type { IPluginAgentRegistry } from '../common/pluginAgentRegistry.js';
 
 export class PluginAgentRegistryImpl extends Disposable implements IPluginAgentRegistry {
-  private readonly _agents = new Map<string, PluginAgentDefinition>();
-  private readonly _onDidChangeAgents = this._register(new Emitter<PluginAgentDefinition[]>());
-  readonly onDidChangeAgents: Event<PluginAgentDefinition[]> = this._onDidChangeAgents.event;
+  private readonly _agents = new Map<string, LegacyPluginAgentDefinition>();
+  private readonly _onDidChangeAgents = this._register(new Emitter<LegacyPluginAgentDefinition[]>());
+  readonly onDidChangeAgents: Event<LegacyPluginAgentDefinition[]> = this._onDidChangeAgents.event;
 
-  register(agent: PluginAgentDefinition): void {
+  register(agent: LegacyPluginAgentDefinition): void {
     this._agents.set(agent.id, agent);
     this._onDidChangeAgents.fire(this.getAgents());
   }
@@ -25,11 +25,11 @@ export class PluginAgentRegistryImpl extends Disposable implements IPluginAgentR
     this._onDidChangeAgents.fire(this.getAgents());
   }
 
-  getAgents(): PluginAgentDefinition[] {
+  getAgents(): LegacyPluginAgentDefinition[] {
     return [...this._agents.values()];
   }
 
-  getAgent(id: string): PluginAgentDefinition | undefined {
+  getAgent(id: string): LegacyPluginAgentDefinition | undefined {
     return this._agents.get(id);
   }
 }

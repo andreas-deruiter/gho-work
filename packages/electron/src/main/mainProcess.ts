@@ -47,6 +47,7 @@ import {
   toSdkMcpConfig,
   PluginAgentRegistryImpl,
   HookServiceImpl,
+  InstructionResolver,
 } from '@gho-work/agent';
 import { expandPluginRoot, expandPluginRootInRecord } from '@gho-work/base';
 import * as os from 'node:os';
@@ -63,6 +64,7 @@ import {
   PluginCatalogFetcher,
   PluginInstaller,
   MarketplaceRegistryImpl,
+  PluginAgentLoader,
 } from '@gho-work/connectors';
 import type { PluginSettingsStore, PluginAgentRegistration, PluginHookRegistration, MarketplaceSource } from '@gho-work/connectors';
 import type {
@@ -263,12 +265,13 @@ export function createMainProcess(
   })();
 
   // Skill registry: multi-source skill discovery with priority-based deduplication.
-  // In development, app.getAppPath() returns apps/desktop (the package directory).
-  // Bundled skills live at <repo-root>/skills/, which is 2 levels up.
+  // In development, electron-vite outputs to apps/desktop/out/main/index.js,
+  // so app.getAppPath() returns apps/desktop/out/main — 4 levels below repo root.
+  // Bundled skills live at <repo-root>/skills/.
   // In packaged builds, they're copied to resources/skills/.
   const bundledSkillsPath = app.isPackaged
     ? path.join(process.resourcesPath, 'skills')
-    : path.join(app.getAppPath(), '..', '..', 'skills');
+    : path.join(app.getAppPath(), '..', '..', '..', '..', 'skills');
   const skillSources = buildSkillSources({
     bundledPath: bundledSkillsPath,
     userPath: path.join(os.homedir(), '.gho-work', 'skills'),
@@ -311,7 +314,6 @@ export function createMainProcess(
   };
 
   const DEFAULT_INSTRUCTIONS_PATH = path.join(os.homedir(), '.gho-work', 'gho-instructions.md');
-  const MAX_INSTRUCTIONS_SIZE = 50 * 1024; // 50KB
 
   const getInstructionsPath = (): string => {
     const custom = storageService?.getSetting('instructions.filePath');
@@ -329,64 +331,41 @@ export function createMainProcess(
     }
   };
 
-  const readInstructionsFile = async (): Promise<string> => {
-    const filePath = getInstructionsPath();
+  // InstructionResolver: discovers and merges user/project instruction files
+  const userInstructionsDir = path.join(os.homedir(), '.gho-work');
+  const projectDirsRaw = storageService?.getSetting('instructions.projectDirs');
+  let projectDirs: string[] = [];
+  if (projectDirsRaw) {
     try {
-      const content = await fs.promises.readFile(filePath, { encoding: 'utf-8' });
-      if (content.length > MAX_INSTRUCTIONS_SIZE) {
-        console.warn(`Instructions file exceeds 50KB (${content.length} bytes), truncating`);
-        return content.slice(0, MAX_INSTRUCTIONS_SIZE) + '\n\n[Instructions truncated — file exceeds 50KB]';
-      }
-      return content;
-    } catch {
-      return '';
+      projectDirs = JSON.parse(projectDirsRaw);
+    } catch (err) {
+      console.warn('[main] Failed to parse instructions.projectDirs:', err);
     }
-  };
+  }
+  const instructionResolver = new InstructionResolver(userInstructionsDir, projectDirs);
 
-  // Build a readContextFiles function that injects a compact skill summary
-  // into the agent's system prompt so the model knows which skills are available.
-  // Full skill content is NOT injected (too large for 67+ skills); instead we
-  // list name + description so the model can reference them.
-  const readContextFiles = async (): Promise<string> => {
-    // Include user instructions
-    const instructions = await readInstructionsFile();
+  // PluginAgentLoader: reads agent .md files from installed plugins
+  const pluginAgentLoader = new PluginAgentLoader();
 
-    const disabledIds = getDisabledSkills();
-    const allSkills = skillRegistry.list();
-    const activeSkills = allSkills.filter(s => !disabledIds.includes(s.id));
-    console.log(`[readContextFiles] Registry has ${allSkills.length} total skills, ${activeSkills.length} active (${disabledIds.length} disabled)`);
-    if (activeSkills.length === 0) {
-      return instructions;
-    }
-
-    // Group skills by plugin source for a compact listing
-    const byPlugin = new Map<string, Array<{ name: string; description: string }>>();
-    for (const entry of activeSkills) {
-      const pluginKey = entry.sourceId.startsWith('plugin:')
-        ? entry.sourceId.slice('plugin:'.length).split(':')[0]
-        : entry.sourceId;
-      let list = byPlugin.get(pluginKey);
-      if (!list) {
-        list = [];
-        byPlugin.set(pluginKey, list);
-      }
-      list.push({ name: entry.name, description: entry.description });
-    }
-
-    const sections: string[] = [];
-    for (const [plugin, skills] of byPlugin) {
-      const items = skills.map(s => `- **${s.name}**: ${s.description}`).join('\n');
-      sections.push(`### ${plugin}\n${items}`);
-    }
-
-    const skillSummary = `# Installed Skills\n\nYou have ${activeSkills.length} skills installed from ${byPlugin.size} plugin(s). When the user's request matches a skill, use your knowledge of that skill's domain to help them.\n\n${sections.join('\n\n')}`;
-    console.log(`[readContextFiles] Injecting ${activeSkills.length} skills from ${byPlugin.size} plugin(s) into system prompt`);
-    return instructions ? instructions + '\n\n' + skillSummary : skillSummary;
-  };
+  // getEnabledPlugins callback — pluginService is initialized later in setup,
+  // but this callback is only called at runtime during executeTask().
+  let _pluginServiceRef: { getInstalled(): import('@gho-work/base').InstalledPlugin[] } | null = null;
+  const getEnabledPlugins = () => _pluginServiceRef?.getInstalled().filter(p => p.enabled) ?? [];
 
   const pluginAgentRegistry = new PluginAgentRegistryImpl();
   const hookService = new HookServiceImpl();
-  const agentService = new AgentServiceImpl(sdk, conversationService, skillRegistry, readContextFiles, getDisabledSkills, pluginAgentRegistry, hookService);
+
+  const agentService = new AgentServiceImpl(
+    sdk,
+    conversationService,
+    skillRegistry,
+    instructionResolver,
+    pluginAgentLoader,
+    getDisabledSkills,
+    getEnabledPlugins,
+    pluginAgentRegistry,
+    hookService,
+  );
   services.set(ICopilotSDK, sdk);
   services.set(IAgentService, agentService);
 
@@ -499,6 +478,7 @@ export function createMainProcess(
     configStore,
     pluginSettings,
   );
+  _pluginServiceRef = pluginService;
 
   // Re-register all capabilities (skills, commands, agents, hooks) for enabled
   // installed plugins on startup. This resolves git-subdir plugin roots correctly

@@ -1,0 +1,87 @@
+<h2>Settings > Instructions</h2>
+<p class="subtitle">New tab in the Settings panel — manages the agent instructions file</p>
+
+<div class="cards">
+  <div class="card" data-choice="layout" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <!-- Mockup of the Instructions settings page -->
+      <div style="background: #1e1e2e; border-radius: 8px; padding: 24px; font-family: system-ui, sans-serif; color: #cdd6f4;">
+
+        <!-- Tab bar -->
+        <div style="display: flex; gap: 0; border-bottom: 1px solid #45475a; margin-bottom: 24px;">
+          <div style="padding: 8px 16px; color: #6c7086; font-size: 13px;">Appearance</div>
+          <div style="padding: 8px 16px; color: #cdd6f4; border-bottom: 2px solid #89b4fa; font-size: 13px; font-weight: 600;">Instructions</div>
+          <div style="padding: 8px 16px; color: #6c7086; font-size: 13px;">Skills</div>
+          <div style="padding: 8px 16px; color: #6c7086; font-size: 13px;">Plugins</div>
+          <div style="padding: 8px 16px; color: #6c7086; font-size: 13px;">Connectors</div>
+        </div>
+
+        <!-- Page title -->
+        <div style="margin-bottom: 4px; font-size: 18px; font-weight: 600;">Instructions</div>
+        <div style="margin-bottom: 24px; font-size: 13px; color: #a6adc8;">
+          Configure the instructions file that the agent reads at the start of every conversation
+        </div>
+
+        <!-- Instructions File section -->
+        <div style="margin-bottom: 24px;">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Instructions File</div>
+          <div style="font-size: 12px; color: #a6adc8; margin-bottom: 12px;">
+            A markdown file with instructions, conventions, and context for the agent
+          </div>
+
+          <!-- Path input row -->
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" value="~/.gho-work/gho-instructions.md" readonly
+              style="flex: 1; background: #313244; border: 1px solid #45475a; border-radius: 6px; padding: 8px 12px; color: #cdd6f4; font-size: 13px; font-family: 'SF Mono', monospace;">
+            <button style="background: #45475a; border: none; border-radius: 6px; padding: 8px 16px; color: #cdd6f4; font-size: 13px; cursor: pointer; white-space: nowrap;">
+              Browse
+            </button>
+            <button style="background: transparent; border: 1px solid #45475a; border-radius: 6px; padding: 8px 16px; color: #a6adc8; font-size: 13px; cursor: pointer; white-space: nowrap;">
+              Reset
+            </button>
+          </div>
+
+          <!-- Status indicator -->
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #a6e3a1;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #a6e3a1; display: inline-block;"></span>
+            File found — 24 lines
+          </div>
+        </div>
+
+        <!-- Help text -->
+        <div style="background: #313244; border-radius: 8px; padding: 16px; font-size: 12px; color: #a6adc8; line-height: 1.6;">
+          <div style="font-weight: 600; color: #cdd6f4; margin-bottom: 8px;">Tips</div>
+          <ul style="margin: 0; padding-left: 16px;">
+            <li>Edit this file with any text editor — changes take effect on the next conversation</li>
+            <li>Use markdown formatting for structure and clarity</li>
+            <li>Reference other files with relative paths from your home directory</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Instructions Settings Page</h3>
+      <p>File path with Browse + Reset buttons, status indicator, and help tips</p>
+    </div>
+  </div>
+</div>
+
+<!-- Show the "file missing" state too -->
+<h3 style="margin-top: 32px;">Error State</h3>
+<p class="subtitle">When the configured file doesn't exist</p>
+
+<div class="mockup">
+  <div class="mockup-header">Status indicator — file missing</div>
+  <div class="mockup-body" style="background: #1e1e2e; padding: 16px; font-family: system-ui, sans-serif;">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <input type="text" value="/Users/me/custom-instructions.md" readonly
+        style="flex: 1; background: #313244; border: 1px solid #f38ba8; border-radius: 6px; padding: 8px 12px; color: #cdd6f4; font-size: 13px; font-family: 'SF Mono', monospace;">
+      <button style="background: #45475a; border: none; border-radius: 6px; padding: 8px 16px; color: #cdd6f4; font-size: 13px;">Browse</button>
+      <button style="background: transparent; border: 1px solid #45475a; border-radius: 6px; padding: 8px 16px; color: #a6adc8; font-size: 13px;">Reset</button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #f38ba8;">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: #f38ba8; display: inline-block;"></span>
+      File not found — agent will run without instructions
+    </div>
+  </div>
+</div>

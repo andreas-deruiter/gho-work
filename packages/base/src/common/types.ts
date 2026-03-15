@@ -143,16 +143,9 @@ export type AgentEvent =
   | { type: 'tool_call_result'; toolCallId: string; result: ToolResult; fileMeta?: FileMeta }
   | { type: 'error'; error: string }
   | { type: 'done'; messageId: string }
-  | { type: 'plan_created'; plan: { id: string; steps: Array<{ id: string; label: string }> } }
   | {
-      type: 'plan_step_updated';
-      planId: string;
-      stepId: string;
-      state: 'pending' | 'running' | 'completed' | 'failed';
-      startedAt?: number;
-      completedAt?: number;
-      error?: string;
-      messageId?: string;
+      type: 'todo_list_updated';
+      todos: Array<{ id: number; title: string; status: 'not-started' | 'in-progress' | 'completed' }>;
     }
   | {
       type: 'attachment_added';
@@ -161,7 +154,15 @@ export type AgentEvent =
     }
   | { type: 'skill_invoked'; skillName: string; state: 'running' | 'completed' | 'failed' }
   | { type: 'subagent_started'; subagentId: string; subagentName: string }
-  | { type: 'subagent_completed'; subagentId: string; state: 'completed' | 'failed' };
+  | { type: 'subagent_started'; parentToolCallId: string; name: string; displayName: string }
+  | { type: 'subagent_completed'; subagentId: string; state: 'completed' | 'failed' }
+  | { type: 'subagent_completed'; parentToolCallId: string; name: string; displayName: string }
+  | { type: 'subagent_failed'; parentToolCallId: string; name: string; error: string }
+  | {
+      type: 'context_loaded';
+      sources: Array<{ path: string; origin: 'user' | 'project'; format: string }>;
+      agents: Array<{ name: string; plugin: string }>;
+    };
 
 // --- Agent Context ---
 

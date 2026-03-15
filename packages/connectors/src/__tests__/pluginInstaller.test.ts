@@ -224,8 +224,8 @@ describe('PluginInstaller', () => {
   describe('countSkills', () => {
     it('counts .md files in a skills/ directory', async () => {
       const pluginDir = path.join(tempDir, 'skill-plugin');
-      writeFile(path.join(pluginDir, 'skills', 'skill-a.md'), '# Skill A\n');
-      writeFile(path.join(pluginDir, 'skills', 'skill-b.md'), '# Skill B\n');
+      writeFile(path.join(pluginDir, 'skills', 'skill-a.md'), '---\ndescription: Skill A\n---\n# Skill A\n');
+      writeFile(path.join(pluginDir, 'skills', 'skill-b.md'), '---\ndescription: Skill B\n---\n# Skill B\n');
 
       const count = await installer.countSkills(pluginDir);
       expect(count).toBe(2);
@@ -233,9 +233,9 @@ describe('PluginInstaller', () => {
 
     it('counts .md files when skillPaths is specified as a string', async () => {
       const pluginDir = path.join(tempDir, 'skill-plugin-path');
-      writeFile(path.join(pluginDir, 'custom-skills', 'skill-1.md'), '# Skill 1\n');
-      writeFile(path.join(pluginDir, 'custom-skills', 'skill-2.md'), '# Skill 2\n');
-      writeFile(path.join(pluginDir, 'custom-skills', 'skill-3.md'), '# Skill 3\n');
+      writeFile(path.join(pluginDir, 'custom-skills', 'skill-1.md'), '---\ndescription: Skill 1\n---\n# Skill 1\n');
+      writeFile(path.join(pluginDir, 'custom-skills', 'skill-2.md'), '---\ndescription: Skill 2\n---\n# Skill 2\n');
+      writeFile(path.join(pluginDir, 'custom-skills', 'skill-3.md'), '---\ndescription: Skill 3\n---\n# Skill 3\n');
 
       const count = await installer.countSkills(pluginDir, 'custom-skills/');
       expect(count).toBe(3);
@@ -243,9 +243,9 @@ describe('PluginInstaller', () => {
 
     it('counts .md files when skillPaths is an array', async () => {
       const pluginDir = path.join(tempDir, 'skill-plugin-array');
-      writeFile(path.join(pluginDir, 'skills-a', 'skill-a.md'), '# Skill A\n');
-      writeFile(path.join(pluginDir, 'skills-b', 'skill-b.md'), '# Skill B\n');
-      writeFile(path.join(pluginDir, 'skills-b', 'skill-c.md'), '# Skill C\n');
+      writeFile(path.join(pluginDir, 'skills-a', 'skill-a.md'), '---\ndescription: Skill A\n---\n# Skill A\n');
+      writeFile(path.join(pluginDir, 'skills-b', 'skill-b.md'), '---\ndescription: Skill B\n---\n# Skill B\n');
+      writeFile(path.join(pluginDir, 'skills-b', 'skill-c.md'), '---\ndescription: Skill C\n---\n# Skill C\n');
 
       const count = await installer.countSkills(pluginDir, ['skills-a/', 'skills-b/']);
       expect(count).toBe(3);
@@ -269,8 +269,8 @@ describe('PluginInstaller', () => {
 
     it('counts SKILL.md files in subdirectories', async () => {
       const pluginDir = path.join(tempDir, 'subdir-skills');
-      writeFile(path.join(pluginDir, 'skills', 'tool-a', 'SKILL.md'), '# Tool A\n');
-      writeFile(path.join(pluginDir, 'skills', 'tool-b', 'SKILL.md'), '# Tool B\n');
+      writeFile(path.join(pluginDir, 'skills', 'tool-a', 'SKILL.md'), '---\ndescription: Tool A\n---\n# Tool A\n');
+      writeFile(path.join(pluginDir, 'skills', 'tool-b', 'SKILL.md'), '---\ndescription: Tool B\n---\n# Tool B\n');
       writeFile(path.join(pluginDir, 'skills', 'readme.md'), '# Skills\n');
 
       const count = await installer.countSkills(pluginDir);
@@ -279,7 +279,7 @@ describe('PluginInstaller', () => {
 
     it('does not count non-.md files', async () => {
       const pluginDir = path.join(tempDir, 'mixed-skills');
-      writeFile(path.join(pluginDir, 'skills', 'skill.md'), '# Skill\n');
+      writeFile(path.join(pluginDir, 'skills', 'skill.md'), '---\ndescription: A skill\n---\n# Skill\n');
       writeFile(path.join(pluginDir, 'skills', 'not-a-skill.ts'), 'export {};');
       writeFile(path.join(pluginDir, 'skills', 'not-a-skill.json'), '{}');
 

@@ -1,0 +1,156 @@
+<h2>Plugins Settings Page</h2>
+<p class="subtitle">Two sub-views: Discover and Installed</p>
+
+<div class="section">
+  <h3>Discover View</h3>
+  <div class="mockup">
+    <div class="mockup-header">Settings &gt; Plugins</div>
+    <div class="mockup-body" style="padding: 0">
+      <!-- Sub-nav -->
+      <div style="display: flex; gap: 0; border-bottom: 1px solid #333; padding: 0 16px">
+        <div style="padding: 10px 16px; border-bottom: 2px solid #7c6fe0; color: #7c6fe0; margin-bottom: -1px; font-weight: 600; font-size: 13px">Discover</div>
+        <div style="padding: 10px 16px; color: #666; font-size: 13px">Installed (2)</div>
+      </div>
+      <div style="padding: 16px">
+        <!-- Search -->
+        <div style="position: relative; margin-bottom: 16px">
+          <input class="mock-input" placeholder="Search plugins..." style="width: 100%; box-sizing: border-box; padding-left: 32px">
+          <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #666; font-size: 14px">🔍</span>
+        </div>
+        <!-- Category filters -->
+        <div style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap">
+          <div style="padding: 4px 12px; background: #7c6fe0; border-radius: 12px; font-size: 11px; color: white">All</div>
+          <div style="padding: 4px 12px; background: #2a2a2a; border-radius: 12px; font-size: 11px; color: #888">Integrations</div>
+          <div style="padding: 4px 12px; background: #2a2a2a; border-radius: 12px; font-size: 11px; color: #888">Code Intelligence</div>
+          <div style="padding: 4px 12px; background: #2a2a2a; border-radius: 12px; font-size: 11px; color: #888">Workflows</div>
+        </div>
+        <!-- Plugin cards grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+          <!-- Card 1 -->
+          <div style="background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start">
+              <div>
+                <div style="font-weight: 600; font-size: 14px">sentry</div>
+                <div style="color: #666; font-size: 11px">by Sentry · v1.2.0</div>
+              </div>
+              <button class="mock-button" style="background: #7c6fe0; color: white; font-size: 11px; padding: 5px 14px; border-radius: 6px; white-space: nowrap">Install</button>
+            </div>
+            <div style="color: #999; font-size: 12px; line-height: 1.4">Fix production issues and review code with Sentry context</div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap">
+              <span style="background: #2d4a2d; color: #6abf6a; padding: 2px 8px; border-radius: 4px; font-size: 10px">MCP</span>
+              <span style="background: #2d3a4a; color: #6a9fbf; padding: 2px 8px; border-radius: 4px; font-size: 10px">Skills</span>
+            </div>
+          </div>
+          <!-- Card 2 -->
+          <div style="background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start">
+              <div>
+                <div style="font-weight: 600; font-size: 14px">github</div>
+                <div style="color: #666; font-size: 11px">by Anthropic · v2.0.1</div>
+              </div>
+              <button class="mock-button" style="background: #7c6fe0; color: white; font-size: 11px; padding: 5px 14px; border-radius: 6px; white-space: nowrap">Install</button>
+            </div>
+            <div style="color: #999; font-size: 12px; line-height: 1.4">GitHub integration — PRs, issues, repos</div>
+            <div style="display: flex; gap: 4px">
+              <span style="background: #2d4a2d; color: #6abf6a; padding: 2px 8px; border-radius: 4px; font-size: 10px">MCP</span>
+            </div>
+          </div>
+          <!-- Card 3 -->
+          <div style="background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start">
+              <div>
+                <div style="font-weight: 600; font-size: 14px">commit-commands</div>
+                <div style="color: #666; font-size: 11px">by Anthropic · v1.0.0</div>
+              </div>
+              <button class="mock-button" style="background: #7c6fe0; color: white; font-size: 11px; padding: 5px 14px; border-radius: 6px; white-space: nowrap">Install</button>
+            </div>
+            <div style="color: #999; font-size: 12px; line-height: 1.4">Git commit workflows — commit, push, PR creation</div>
+            <div style="display: flex; gap: 4px">
+              <span style="background: #2d3a4a; color: #6a9fbf; padding: 2px 8px; border-radius: 4px; font-size: 10px">Skills</span>
+            </div>
+          </div>
+          <!-- Card 4 - already installed -->
+          <div style="background: #1e1e1e; border: 1px solid #2d4a2d; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start">
+              <div>
+                <div style="font-weight: 600; font-size: 14px">figma</div>
+                <div style="color: #666; font-size: 11px">by Anthropic · v1.1.0</div>
+              </div>
+              <span style="color: #6abf6a; font-size: 12px; padding: 5px 0">✓ Installed</span>
+            </div>
+            <div style="color: #999; font-size: 12px; line-height: 1.4">Design integration — inspect, export, code generation</div>
+            <div style="display: flex; gap: 4px">
+              <span style="background: #2d4a2d; color: #6abf6a; padding: 2px 8px; border-radius: 4px; font-size: 10px">MCP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Installed View</h3>
+  <div class="mockup">
+    <div class="mockup-header">Settings &gt; Plugins &gt; Installed</div>
+    <div class="mockup-body" style="padding: 0">
+      <!-- Sub-nav -->
+      <div style="display: flex; gap: 0; border-bottom: 1px solid #333; padding: 0 16px">
+        <div style="padding: 10px 16px; color: #666; font-size: 13px">Discover</div>
+        <div style="padding: 10px 16px; border-bottom: 2px solid #7c6fe0; color: #7c6fe0; margin-bottom: -1px; font-weight: 600; font-size: 13px">Installed (2)</div>
+      </div>
+      <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px">
+        <!-- Installed plugin 1 -->
+        <div style="background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 14px">
+          <div style="display: flex; justify-content: space-between; align-items: center">
+            <div style="flex: 1">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="font-weight: 600; font-size: 14px">figma</span>
+                <span style="color: #666; font-size: 11px">v1.1.0</span>
+                <span style="background: #2d4a2d; color: #6abf6a; padding: 1px 6px; border-radius: 3px; font-size: 10px">MCP</span>
+              </div>
+              <div style="color: #999; font-size: 12px; margin-top: 4px">Design integration — inspect, export, code generation</div>
+              <div style="color: #666; font-size: 11px; margin-top: 6px">
+                MCP: figma-server
+                <span style="color: #6abf6a; margin-left: 4px">● connected</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center">
+              <!-- Toggle -->
+              <div style="width: 36px; height: 20px; background: #6abf6a; border-radius: 10px; position: relative; cursor: pointer">
+                <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; right: 2px; top: 2px"></div>
+              </div>
+              <button class="mock-button" style="font-size: 11px; padding: 5px 10px; color: #bf6a6a; border-color: #4a2d2d">Uninstall</button>
+            </div>
+          </div>
+        </div>
+        <!-- Installed plugin 2 -->
+        <div style="background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 14px">
+          <div style="display: flex; justify-content: space-between; align-items: center">
+            <div style="flex: 1">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="font-weight: 600; font-size: 14px">sentry</span>
+                <span style="color: #666; font-size: 11px">v1.2.0</span>
+                <span style="background: #2d4a2d; color: #6abf6a; padding: 1px 6px; border-radius: 3px; font-size: 10px">MCP</span>
+                <span style="background: #2d3a4a; color: #6a9fbf; padding: 1px 6px; border-radius: 3px; font-size: 10px">Skills</span>
+              </div>
+              <div style="color: #999; font-size: 12px; margin-top: 4px">Fix production issues and review code with Sentry context</div>
+              <div style="color: #666; font-size: 11px; margin-top: 6px">
+                Skills: sentry-workflow, sentry-sdk-setup, sentry-seer ·
+                MCP: sentry-server
+                <span style="background: #4a3a2d; color: #bf8f6a; padding: 1px 6px; border-radius: 3px; font-size: 10px; margin-left: 4px">needs config</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center">
+              <button class="mock-button" style="font-size: 11px; padding: 5px 10px">Configure</button>
+              <div style="width: 36px; height: 20px; background: #6abf6a; border-radius: 10px; position: relative; cursor: pointer">
+                <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; right: 2px; top: 2px"></div>
+              </div>
+              <button class="mock-button" style="font-size: 11px; padding: 5px 10px; color: #bf6a6a; border-color: #4a2d2d">Uninstall</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -622,6 +622,9 @@ export class PluginServiceImpl extends Disposable implements IPluginService {
       try {
         const parsed = JSON.parse(catalogJson) as CatalogEntry[];
         this._catalog = parsed;
+        if (parsed.length > 0) {
+          this._catalogFetched = true;
+        }
       } catch (err) {
         console.warn('PluginService: failed to parse cached catalog from settings:', err);
         this._catalog = [];

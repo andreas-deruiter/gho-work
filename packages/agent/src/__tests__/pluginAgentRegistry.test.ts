@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PluginAgentRegistryImpl } from '../node/pluginAgentRegistryImpl.js';
-import type { PluginAgentDefinition } from '@gho-work/base';
+import type { LegacyPluginAgentDefinition } from '@gho-work/base';
 
 describe('PluginAgentRegistryImpl', () => {
   let registry: PluginAgentRegistryImpl;
 
-  const agent: PluginAgentDefinition = {
+  const agent: LegacyPluginAgentDefinition = {
     id: 'sentry:seer',
     name: 'seer',
     description: 'Ask questions about your Sentry environment',
