@@ -3,3 +3,7 @@ export { TodoListWidget } from './todoListWidget.js';
 export { InputSection } from './inputSection.js';
 export { OutputSection } from './outputSection.js';
 export { ContextSection } from './contextSection.js';
+export { CollapsibleSection } from './collapsibleSection.js';
+export { AgentsSection } from './agentsSection.js';
+export { SkillsSection } from './skillsSection.js';
+export { UsageSection } from './usageSection.js';
