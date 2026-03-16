@@ -10,6 +10,7 @@ export interface UsageData {
 
 export class UsageSection extends CollapsibleSection {
   private readonly _barFill: HTMLElement;
+  private readonly _miniBarFill: HTMLElement;
   private readonly _requestsEl: HTMLElement;
   private readonly _resetEl: HTMLElement;
   private _latestData: UsageData | null = null;
@@ -30,6 +31,13 @@ export class UsageSection extends CollapsibleSection {
     this._requestsEl = footerLayout['requests'];
     this._resetEl = footerLayout['reset'];
 
+    // Mini progress bar shown inline in the header (visible when collapsed)
+    const miniBarLayout = h('span.info-usage-mini-bar@miniTrack', [
+      h('span.info-usage-mini-bar-fill@miniFill'),
+    ]);
+    this._miniBarFill = miniBarLayout['miniFill'];
+    this.headerElement.appendChild(miniBarLayout.root);
+
     this.bodyElement.appendChild(barLayout.root);
     this.bodyElement.appendChild(footerLayout.root);
   }
@@ -40,6 +48,7 @@ export class UsageSection extends CollapsibleSection {
     const usedPct = 100 - data.remainingPercentage;
 
     this._barFill.style.width = `${usedPct}%`;
+    this._miniBarFill.style.width = `${usedPct}%`;
     this._requestsEl.textContent = `${data.used.toLocaleString('en-US')} / ${data.total.toLocaleString('en-US')} requests`;
 
     if (data.resetDate) {
@@ -50,7 +59,8 @@ export class UsageSection extends CollapsibleSection {
       this._resetEl.textContent = '';
     }
 
-    this.setBadge(`${usedPct}%`);
+    // Badge shows remaining percentage per spec
+    this.setBadge(`${data.remainingPercentage}%`);
     this.setVisible(true);
   }
 

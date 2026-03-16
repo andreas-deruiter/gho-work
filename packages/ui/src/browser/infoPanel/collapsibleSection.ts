@@ -52,6 +52,10 @@ export class CollapsibleSection extends Widget {
     return this._bodyEl;
   }
 
+  get headerElement(): HTMLElement {
+    return this._headerEl;
+  }
+
   toggle(): void {
     this.setCollapsed(!this._collapsed);
   }

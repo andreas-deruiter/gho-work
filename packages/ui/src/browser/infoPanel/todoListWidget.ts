@@ -54,6 +54,24 @@ export class TodoListWidget extends CollapsibleSection {
     svg.setAttribute('height', '56');
     svg.setAttribute('viewBox', '0 0 56 56');
 
+    // Gradient definition (green to purple)
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    const gradient = document.createElementNS(SVG_NS, 'linearGradient');
+    gradient.setAttribute('id', 'ring-gradient');
+    gradient.setAttribute('x1', '0%');
+    gradient.setAttribute('y1', '0%');
+    gradient.setAttribute('x2', '100%');
+    gradient.setAttribute('y2', '100%');
+    const stop1 = document.createElementNS(SVG_NS, 'stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', '#00b894');
+    const stop2 = document.createElementNS(SVG_NS, 'stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', '#6c5ce7');
+    gradient.appendChild(stop1);
+    gradient.appendChild(stop2);
+    defs.appendChild(gradient);
+
     // Background circle
     const bgCircle = document.createElementNS(SVG_NS, 'circle');
     bgCircle.setAttribute('cx', '28');
@@ -63,19 +81,20 @@ export class TodoListWidget extends CollapsibleSection {
     bgCircle.setAttribute('stroke', 'rgba(255,255,255,0.06)');
     bgCircle.setAttribute('stroke-width', '3.5');
 
-    // Progress circle
+    // Progress circle with gradient stroke
     const progressCircle = document.createElementNS(SVG_NS, 'circle');
     progressCircle.setAttribute('cx', '28');
     progressCircle.setAttribute('cy', '28');
     progressCircle.setAttribute('r', String(RING_RADIUS));
     progressCircle.setAttribute('fill', 'none');
-    progressCircle.setAttribute('stroke', '#00b894');
+    progressCircle.setAttribute('stroke', 'url(#ring-gradient)');
     progressCircle.setAttribute('stroke-width', '3.5');
     progressCircle.setAttribute('stroke-dasharray', String(RING_CIRCUMFERENCE));
     progressCircle.setAttribute('stroke-dashoffset', String(offset));
     progressCircle.setAttribute('stroke-linecap', 'round');
     progressCircle.setAttribute('transform', 'rotate(-90 28 28)');
 
+    svg.appendChild(defs);
     svg.appendChild(bgCircle);
     svg.appendChild(progressCircle);
 

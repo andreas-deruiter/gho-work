@@ -13,11 +13,19 @@ describe('UsageSection', () => {
     expect(section.getDomNode().style.display).not.toBe('none');
   });
 
-  it('shows used percentage badge', () => {
+  it('shows remaining percentage badge', () => {
     const section = new UsageSection();
     section.update({ used: 642, total: 1000, remainingPercentage: 36, resetDate: '2026-03-21' });
-    // Badge shows used percentage: 100 - remainingPercentage
-    expect(section.getDomNode().querySelector('.info-section-badge')?.textContent).toBe('64%');
+    // Badge shows remaining percentage per design spec
+    expect(section.getDomNode().querySelector('.info-section-badge')?.textContent).toBe('36%');
+  });
+
+  it('renders mini progress bar in header', () => {
+    const section = new UsageSection();
+    section.update({ used: 500, total: 1000, remainingPercentage: 50, resetDate: '2026-03-21' });
+    const miniBar = section.getDomNode().querySelector('.info-usage-mini-bar-fill') as HTMLElement;
+    expect(miniBar).toBeTruthy();
+    expect(miniBar.style.width).toBe('50%');
   });
 
   it('renders request counts', () => {

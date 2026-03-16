@@ -2657,6 +2657,24 @@ html, body {
   color: var(--fg-muted);
 }
 
+.info-usage-mini-bar {
+  display: inline-block;
+  width: 48px;
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.info-usage-mini-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #00b894, #f0932b);
+  border-radius: 2px;
+}
+
 /* --- Context Section --- */
 .info-context-section {
   margin-bottom: 4px;
