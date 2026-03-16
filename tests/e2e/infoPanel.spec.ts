@@ -36,13 +36,16 @@ test.describe('Info Panel', () => {
   test('toggles visibility with Cmd+Shift+B', async () => {
     const panelContainer = page.locator('.info-panel-container');
 
-    // Toggle on
+    // Toggle on — container becomes visible
     await page.keyboard.press('Meta+Shift+b');
     await expect(panelContainer).toBeVisible();
-    await expect(page.locator('.info-panel')).toBeVisible();
 
-    // Should have 7 section containers
-    const sections = page.locator('.info-section-container');
+    // Info panel auto-hides when no data — inner element is hidden but exists in DOM
+    const panel = page.locator('.info-panel');
+    await expect(panel).toBeAttached();
+
+    // Should have 7 section containers (rendered but hidden since no data)
+    const sections = panel.locator('.info-section-container');
     expect(await sections.count()).toBe(7);
 
     // Toggle off
