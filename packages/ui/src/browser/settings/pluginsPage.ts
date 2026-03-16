@@ -979,6 +979,8 @@ export class PluginsPage extends Widget {
       if (this._activeTab === 'marketplaces') {
         this._renderMarketplaces();
       }
+      // Also refresh the Discover catalog so it picks up marketplace changes
+      await this._refreshCatalog();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error('[PluginsPage] Refresh marketplace failed:', err);

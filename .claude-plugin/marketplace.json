@@ -7,5 +7,556 @@
     "description": "Official plugin catalog for GHO Work",
     "version": "0.1.0"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "productivity",
+      "description": "Manage tasks, plan your day, and build up memory of important context about your work. Syncs with your calendar, email, and chat to keep everything organized and on track.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "productivity"
+      },
+      "keywords": [
+        "tasks",
+        "calendar",
+        "daily-planning",
+        "workflows"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "featured",
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "enterprise-search",
+      "description": "Search across all of your company's tools in one place. Find anything across email, chat, documents, and wikis without switching between apps.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "enterprise-search"
+      },
+      "keywords": [
+        "search",
+        "email",
+        "documents",
+        "knowledge-base"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "featured",
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "product-management",
+      "description": "Write feature specs, plan roadmaps, and synthesize user research faster. Keep stakeholders updated and stay ahead of the competitive landscape.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "product-management"
+      },
+      "keywords": [
+        "specs",
+        "roadmap",
+        "user-research",
+        "stakeholders"
+      ],
+      "category": "Management",
+      "tags": [
+        "featured",
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "marketing",
+      "description": "Draft content, plan campaigns, enforce brand voice, brief on competitors, and report on performance across channels.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "marketing"
+      },
+      "keywords": [
+        "content",
+        "campaigns",
+        "brand-voice",
+        "analytics"
+      ],
+      "category": "Marketing",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "sales",
+      "description": "Prospect, craft outreach, and build deal strategy faster. Prep for calls, manage your pipeline, and write personalized messaging that moves deals forward.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "sales"
+      },
+      "keywords": [
+        "prospecting",
+        "pipeline",
+        "outreach",
+        "calls"
+      ],
+      "category": "Sales",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "customer-support",
+      "description": "Triage tickets, draft responses, escalate issues, and build your knowledge base. Research customer context and turn resolved issues into self-service content.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "customer-support"
+      },
+      "keywords": [
+        "tickets",
+        "responses",
+        "escalation",
+        "knowledge-base"
+      ],
+      "category": "Support",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "data",
+      "description": "Write SQL, explore datasets, and generate insights faster. Build visualizations and dashboards, and turn raw data into clear stories for stakeholders.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "data"
+      },
+      "keywords": [
+        "sql",
+        "dashboards",
+        "analytics",
+        "visualization"
+      ],
+      "category": "Data",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "finance",
+      "description": "Streamline finance and accounting workflows, from journal entries and reconciliation to financial statements and variance analysis. Speed up audit prep and month-end close.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "finance"
+      },
+      "keywords": [
+        "accounting",
+        "reconciliation",
+        "audit",
+        "statements"
+      ],
+      "category": "Finance",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "legal",
+      "description": "Speed up contract review, NDA triage, and compliance workflows for in-house legal teams. Draft legal briefs, organize precedent research, and manage institutional knowledge.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "legal"
+      },
+      "keywords": [
+        "contracts",
+        "nda",
+        "compliance",
+        "risk"
+      ],
+      "category": "Legal",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "human-resources",
+      "description": "Streamline people operations \u2014 recruiting, onboarding, performance reviews, compensation analysis, and policy guidance. Maintain compliance and keep your team running smoothly.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "human-resources"
+      },
+      "keywords": [
+        "recruiting",
+        "onboarding",
+        "performance",
+        "compensation"
+      ],
+      "category": "HR",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "design",
+      "description": "Accelerate design workflows \u2014 critique, design system management, UX writing, accessibility audits, research synthesis, and dev handoff. From exploration to pixel-perfect specs.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "design"
+      },
+      "keywords": [
+        "ux",
+        "accessibility",
+        "design-system",
+        "handoff"
+      ],
+      "category": "Design",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "operations",
+      "description": "Optimize business operations \u2014 vendor management, process documentation, change management, capacity planning, and compliance tracking. Keep your organization running efficiently.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "operations"
+      },
+      "keywords": [
+        "vendors",
+        "processes",
+        "compliance",
+        "planning"
+      ],
+      "category": "Operations",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "engineering",
+      "description": "Streamline engineering workflows \u2014 standups, code review, architecture decisions, incident response, and technical documentation. Works with your existing tools or standalone.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "engineering"
+      },
+      "keywords": [
+        "standups",
+        "code-review",
+        "incidents",
+        "architecture"
+      ],
+      "category": "Engineering",
+      "tags": [
+        "productivity"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "cowork-plugin-management",
+      "description": "Create, customize, and manage plugins tailored to your organization's tools and workflows. Configure MCP servers, adjust plugin behavior, and adapt templates to match how your team works.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "cowork-plugin-management"
+      },
+      "keywords": [
+        "plugins",
+        "customization",
+        "mcp",
+        "workflows"
+      ],
+      "category": "Automation",
+      "tags": [
+        "featured",
+        "automation"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ]
+    },
+    {
+      "name": "skill-creator",
+      "description": "Create new skills, improve existing skills, and measure skill performance. Build custom automation workflows, run evaluations, and benchmark skill quality.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic",
+        "email": "support@anthropic.com"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/claude-plugins-official",
+        "path": "plugins/skill-creator"
+      },
+      "keywords": [
+        "skills",
+        "automation",
+        "evaluation",
+        "benchmarking"
+      ],
+      "category": "Automation",
+      "tags": [
+        "featured",
+        "automation"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "agents": [
+        "agents/"
+      ]
+    },
+    {
+      "name": "superpowers",
+      "description": "Core skills library: structured brainstorming, implementation planning, test-driven development, systematic debugging, and collaboration workflows.",
+      "version": "5.0.2",
+      "author": {
+        "name": "Jesse Vincent",
+        "email": "jesse@fsck.com"
+      },
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers"
+      },
+      "keywords": [
+        "planning",
+        "brainstorming",
+        "tdd",
+        "debugging",
+        "workflows"
+      ],
+      "category": "Workflows",
+      "tags": [
+        "featured",
+        "methodology"
+      ],
+      "homepage": "https://github.com/obra/superpowers",
+      "license": "MIT",
+      "strict": true,
+      "skills": [
+        "skills/"
+      ],
+      "commands": [
+        "commands/"
+      ],
+      "agents": [
+        "agents/"
+      ],
+      "hooks": "hooks/"
+    },
+    {
+      "name": "slack-by-salesforce",
+      "description": "Slack integration for searching messages, sending communications, managing canvases, and more.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Salesforce"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "partner-built/slack"
+      },
+      "keywords": [
+        "slack",
+        "messaging",
+        "collaboration",
+        "channels"
+      ],
+      "category": "Communication",
+      "tags": [
+        "partner",
+        "communication"
+      ],
+      "strict": true,
+      "mcpServers": {
+        "slack": {}
+      }
+    },
+    {
+      "name": "brand-voice",
+      "description": "Discover your brand voice from existing documents and conversations, generate enforceable guidelines, and validate AI-generated content against your established tone and positioning.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Tribe AI"
+      },
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/anthropics/knowledge-work-plugins",
+        "path": "partner-built/brand-voice"
+      },
+      "keywords": [
+        "brand",
+        "voice",
+        "guidelines",
+        "content"
+      ],
+      "category": "Marketing",
+      "tags": [
+        "partner",
+        "marketing"
+      ],
+      "strict": true,
+      "skills": [
+        "skills/"
+      ]
+    }
+  ]
 }
