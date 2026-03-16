@@ -4,6 +4,10 @@
   "private": true,
   "description": "GHO Work - AI-powered office productivity desktop app",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andreas-deruiter/gho-work.git"
+  },
   "packageManager": "npm@11.8.0",
   "workspaces": [
     "packages/*",
