@@ -198,6 +198,10 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
       name: z.string(),
       plugin: z.string(),
     })),
+    skills: z.array(z.object({
+      name: z.string(),
+      source: z.string(),
+    })),
   }),
 ]);
 export type AgentEvent = z.infer<typeof AgentEventSchema>;

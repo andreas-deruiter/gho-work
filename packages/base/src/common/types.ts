@@ -160,6 +160,7 @@ export type AgentEvent =
       type: 'context_loaded';
       sources: Array<{ path: string; origin: 'user' | 'project'; format: string }>;
       agents: Array<{ name: string; plugin: string }>;
+      skills: Array<{ name: string; source: string }>;
     };
 
 // --- Agent Context ---

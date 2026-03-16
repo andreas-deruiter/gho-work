@@ -145,6 +145,10 @@ export class AgentServiceImpl implements IAgentService {
             name: a.definition.displayName ?? a.definition.name,
             plugin: a.pluginName,
           })),
+          skills: this._skillRegistry.list().map(s => ({
+            name: s.name,
+            source: s.sourceId,
+          })),
         });
       }
       this._activeSession = session;
