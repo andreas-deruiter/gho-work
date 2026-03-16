@@ -15,6 +15,7 @@ import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { ModelSelector } from './modelSelector.js';
 import { ChatThinkingSection } from './chatThinkingSection.js';
 import { ChatStreamManager } from './chatStreamManager.js';
+import { createChatInputArea } from './chatInputArea.js';
 import {
   type ChatMessage,
   renderMessage,
@@ -125,124 +126,28 @@ export class ChatPanel extends Disposable {
     this._renderWelcome();
     panel.appendChild(this._messageListEl);
 
-    // Input area
-    const inputArea = document.createElement('div');
-    inputArea.className = 'chat-input-area';
-
-    const inputWrapper = document.createElement('div');
-    inputWrapper.className = 'chat-input-wrapper';
-
-    // File drag-and-drop
+    // Input area (delegated to chatInputArea.ts)
     this._attachments = [];
-    this._attachmentListEl = document.createElement('div');
-    this._attachmentListEl.className = 'chat-attachments';
-    inputArea.appendChild(this._attachmentListEl);
-
-    inputWrapper.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      inputWrapper.classList.add('drag-over');
+    const {
+      inputArea,
+      inputEl,
+      sendBtnEl,
+      cancelBtnEl,
+      attachmentListEl,
+      slashDropdownEl,
+      modelSelectorContainer,
+    } = createChatInputArea({
+      onSendMessage: () => this._sendMessage(),
+      onCancelRequest: () => this._cancelRequest(),
+      onFileDrop: (files) => files.forEach(f => this._addAttachment(f)),
+      onInputChange: () => this._updateSlashDropdown(),
     });
-
-    inputWrapper.addEventListener('dragleave', () => {
-      inputWrapper.classList.remove('drag-over');
-    });
-
-    inputWrapper.addEventListener('drop', (e) => {
-      e.preventDefault();
-      inputWrapper.classList.remove('drag-over');
-      if (e.dataTransfer?.files) {
-        for (const file of Array.from(e.dataTransfer.files)) {
-          this._addAttachment(file);
-        }
-      }
-    });
-
-    this._inputEl = document.createElement('textarea');
-    this._inputEl.className = 'chat-input';
-    this._inputEl.placeholder =
-      'Ask GHO Work anything... (try "draft an email" or "analyze my data")';
-    this._inputEl.rows = 1;
-    this._inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        this._sendMessage();
-      }
-    });
-    this._inputEl.addEventListener('input', () => {
-      // Auto-resize
-      this._inputEl.style.height = 'auto';
-      this._inputEl.style.height = Math.min(this._inputEl.scrollHeight, 150) + 'px';
-    });
-    this._inputEl.addEventListener('input', () => {
-      this._updateSlashDropdown();
-    });
-    inputWrapper.appendChild(this._inputEl);
-
-    this._slashDropdownEl = document.createElement('div');
-    this._slashDropdownEl.className = 'slash-dropdown';
-    this._slashDropdownEl.style.display = 'none';
-    inputWrapper.appendChild(this._slashDropdownEl);
-
-    this._sendBtnEl = document.createElement('button');
-    this._sendBtnEl.className = 'chat-send-btn';
-    const sendSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    sendSvg.setAttribute('width', '14');
-    sendSvg.setAttribute('height', '14');
-    sendSvg.setAttribute('viewBox', '0 0 24 24');
-    sendSvg.setAttribute('fill', 'none');
-    sendSvg.setAttribute('stroke', 'currentColor');
-    sendSvg.setAttribute('stroke-width', '2');
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', '22');
-    line.setAttribute('y1', '2');
-    line.setAttribute('x2', '11');
-    line.setAttribute('y2', '13');
-    sendSvg.appendChild(line);
-    const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    polygon.setAttribute('points', '22 2 15 22 11 13 2 9 22 2');
-    sendSvg.appendChild(polygon);
-    this._sendBtnEl.appendChild(sendSvg);
-    this._sendBtnEl.addEventListener('click', () => this._sendMessage());
-    inputWrapper.appendChild(this._sendBtnEl);
-
-    // Cancel button — same position/size as send button, swap via display
-    this._cancelBtnEl = document.createElement('button');
-    this._cancelBtnEl.className = 'chat-cancel-btn';
-    this._cancelBtnEl.title = 'Stop';
-    const stopSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    stopSvg.setAttribute('width', '14');
-    stopSvg.setAttribute('height', '14');
-    stopSvg.setAttribute('viewBox', '0 0 24 24');
-    stopSvg.setAttribute('fill', 'currentColor');
-    const stopRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    stopRect.setAttribute('x', '6');
-    stopRect.setAttribute('y', '6');
-    stopRect.setAttribute('width', '12');
-    stopRect.setAttribute('height', '12');
-    stopRect.setAttribute('rx', '2');
-    stopSvg.appendChild(stopRect);
-    this._cancelBtnEl.appendChild(stopSvg);
-    this._cancelBtnEl.style.display = 'none';
-    this._cancelBtnEl.addEventListener('click', () => this._cancelRequest());
-    inputWrapper.appendChild(this._cancelBtnEl);
-
-    inputArea.appendChild(inputWrapper);
-
-    // Footer row: model selector (left) + hint (right)
-    const inputFooter = document.createElement('div');
-    inputFooter.className = 'chat-input-footer';
-
-    const modelSelectorContainer = document.createElement('div');
-    modelSelectorContainer.className = 'chat-input-model';
+    this._inputEl = inputEl;
+    this._sendBtnEl = sendBtnEl;
+    this._cancelBtnEl = cancelBtnEl;
+    this._attachmentListEl = attachmentListEl;
+    this._slashDropdownEl = slashDropdownEl;
     this._modelSelector.render(modelSelectorContainer);
-    inputFooter.appendChild(modelSelectorContainer);
-
-    const hint = document.createElement('div');
-    hint.className = 'chat-hint';
-    hint.textContent = 'Press Enter to send, Shift+Enter for new line';
-    inputFooter.appendChild(hint);
-
-    inputArea.appendChild(inputFooter);
 
     panel.appendChild(inputArea);
     container.appendChild(panel);
