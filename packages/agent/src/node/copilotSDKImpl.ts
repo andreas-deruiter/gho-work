@@ -201,6 +201,12 @@ export class CopilotSDKImpl implements ICopilotSDK {
 			if (nativeBinary) {
 				clientOptions.cliPath = nativeBinary;
 				console.warn('[CopilotSDKImpl] Using native binary:', nativeBinary);
+			} else {
+				// Fallback: if native binary not found, tell Electron to act as
+				// plain Node.js when spawned as a subprocess. Without this, the
+				// SDK's default .js entry point would launch new Electron GUI instances.
+				console.warn('[CopilotSDKImpl] Native binary not found, using ELECTRON_RUN_AS_NODE fallback');
+				clientOptions.env = { ...process.env, ELECTRON_RUN_AS_NODE: '1' };
 			}
 
 			this._client = new sdk.CopilotClient(clientOptions);
