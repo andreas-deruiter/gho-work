@@ -14,7 +14,7 @@ import type { IIPCRenderer, FileEntry } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { ModelSelector } from './modelSelector.js';
 import { ChatThinkingSection } from './chatThinkingSection.js';
-import { renderChatMarkdown } from './chatMarkdownRenderer.js';
+import { ChatStreamManager } from './chatStreamManager.js';
 import {
   type ChatMessage,
   renderMessage,
@@ -24,10 +24,6 @@ import {
   setSanitizedMarkdown,
   clearElement,
 } from './chatMessageRenderer.js';
-
-/** A content part in the assistant response stream. */
-type ContentPart =
-  | { type: 'text'; content: string };
 
 export interface SendMessageEvent {
   conversationId: string;
@@ -45,9 +41,7 @@ export class ChatPanel extends Disposable {
   private _isProcessing = false;
   private _currentAssistantMessage: ChatMessage | null = null;
   private readonly _currentThinkingSection = this._register(new MutableDisposable<ChatThinkingSection>());
-
-  /** Ordered content parts for the current streaming assistant message. */
-  private _contentParts: ContentPart[] = [];
+  private readonly _streamManager = new ChatStreamManager();
 
   private _modelSelector!: ModelSelector;
   private _conversationId: string = generateUUID();
@@ -425,7 +419,7 @@ export class ChatPanel extends Disposable {
     this._renderMessage(userMsg);
 
     // Reset parts-based state for the new assistant message
-    this._contentParts = [];
+    this._streamManager.reset();
     // Create a placeholder assistant message for streaming
     this._currentAssistantMessage = {
       id: generateUUID(),
@@ -506,7 +500,8 @@ export class ChatPanel extends Disposable {
       }
       case 'text_delta': {
         this._currentAssistantMessage.content += event.content;
-        this._appendTextDelta(event.content);
+        this._streamManager.appendTextDelta(event.content, this._getPartsContainer());
+        this._scrollToBottom();
         break;
       }
       case 'tool_call_start': {
@@ -551,65 +546,6 @@ export class ChatPanel extends Disposable {
     }
   }
 
-  /**
-   * Appends a text delta to the current assistant message parts.
-   * If the last part is text, appends to it. Otherwise creates a new text part.
-   * Only re-renders the last text segment's DOM for efficiency.
-   */
-  private _appendTextDelta(delta: string): void {
-    const lastPart = this._contentParts[this._contentParts.length - 1];
-    if (lastPart && lastPart.type === 'text') {
-      lastPart.content += delta;
-    } else {
-      this._contentParts.push({ type: 'text', content: delta });
-      // Create a new text segment DOM element
-      this._appendTextPartDom();
-    }
-    this._updateLastTextPart();
-  }
-
-  /** Creates a new empty text segment DOM element in the parts container. */
-  private _appendTextPartDom(): void {
-    const partsContainer = this._getPartsContainer();
-    if (!partsContainer) {
-      return;
-    }
-    const textEl = document.createElement('div');
-    textEl.className = 'chat-message-content';
-    partsContainer.appendChild(textEl);
-  }
-
-  /** Re-renders only the last text segment with updated markdown content. */
-  private _updateLastTextPart(): void {
-    const partsContainer = this._getPartsContainer();
-    if (!partsContainer) {
-      return;
-    }
-
-    // Find the last .chat-message-content element
-    const textEls = partsContainer.querySelectorAll('.chat-message-content');
-    const lastTextEl = textEls[textEls.length - 1];
-    if (!lastTextEl) {
-      return;
-    }
-
-    // Find the corresponding text part
-    const textParts = this._contentParts.filter(p => p.type === 'text');
-    const lastTextPart = textParts[textParts.length - 1];
-    if (!lastTextPart || lastTextPart.type !== 'text') {
-      return;
-    }
-
-    const isStreaming = this._currentAssistantMessage?.isStreaming ?? false;
-    renderChatMarkdown(lastTextEl, lastTextPart.content, { isStreaming });
-    if (isStreaming) {
-      const cursor = document.createElement('span');
-      cursor.className = 'chat-cursor';
-      lastTextEl.appendChild(cursor);
-    }
-    this._scrollToBottom();
-  }
-
   /** Gets the parts container for the current assistant message. */
   private _getPartsContainer(): HTMLElement | null {
     if (!this._currentAssistantMessage) {
@@ -623,7 +559,7 @@ export class ChatPanel extends Disposable {
     if (this._currentAssistantMessage) {
       this._currentAssistantMessage.isStreaming = false;
       // Final render of the last text part (removes cursor)
-      this._updateLastTextPart();
+      this._streamManager.finishRendering(this._getPartsContainer());
     }
     this._currentThinkingSection.value?.setActive(false);
     // Belt-and-suspenders: ensure no thinking section in the DOM stays active
