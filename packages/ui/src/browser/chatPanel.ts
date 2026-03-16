@@ -15,15 +15,15 @@ import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { ModelSelector } from './modelSelector.js';
 import { ChatThinkingSection } from './chatThinkingSection.js';
 import { renderChatMarkdown } from './chatMarkdownRenderer.js';
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  toolCalls?: Array<{ id: string; name: string; status: string }>;
-  isStreaming?: boolean;
-  attachments?: Array<{ name: string; path: string }>;
-}
+import {
+  type ChatMessage,
+  renderMessage,
+  renderWelcomeScreen,
+  createHelpMessage,
+  createErrorBanner,
+  setSanitizedMarkdown,
+  clearElement,
+} from './chatMessageRenderer.js';
 
 /** A content part in the assistant response stream. */
 type ContentPart =
@@ -96,7 +96,7 @@ export class ChatPanel extends Disposable {
   }
 
   render(container: HTMLElement): void {
-    this._clearElement(container);
+    clearElement(container);
 
     // Header with inline-editable title — rendered outside chat-panel so it spans full width
     const header = document.createElement('div');
@@ -340,7 +340,7 @@ export class ChatPanel extends Disposable {
       }
 
       // Clear and re-render messages
-      this._clearElement(this._messageListEl);
+      clearElement(this._messageListEl);
 
       for (const msg of response.messages) {
         const chatMsg: ChatMessage = {
@@ -374,47 +374,11 @@ export class ChatPanel extends Disposable {
   }
 
   private _renderWelcome(): void {
-    this._clearElement(this._messageListEl);
-
-    const welcome = document.createElement('div');
-    welcome.className = 'chat-welcome';
-
-    const ascii = document.createElement('pre');
-    ascii.className = 'chat-welcome-ascii';
-    ascii.textContent =
-      '  __ _| |__   ___   __      _____  _ __| | __\n' +
-      ' / _` | \'_ \\ / _ \\  \\ \\ /\\ / / _ \\| \'__| |/ /\n' +
-      '| (_| | | | | (_) |  \\ V  V / (_) | |  |   < \n' +
-      ' \\__, |_| |_|\\___/    \\_/\\_/ \\___/|_|  |_|\\_\\\n' +
-      ' |___/';
-    welcome.appendChild(ascii);
-
-    const desc = document.createElement('p');
-    desc.textContent = 'Your GitHub Copilot subscription just learned to do office work.';
-    welcome.appendChild(desc);
-
-    const suggestions = document.createElement('div');
-    suggestions.className = 'chat-welcome-suggestions';
-
-    const prompts = [
-      { label: 'Draft an email', prompt: 'Draft an email to the team about the Q1 results' },
-      { label: 'Analyze data', prompt: 'Analyze the sales data and find trends' },
-      { label: 'Check meetings', prompt: 'What meetings do I have today?' },
-      { label: 'Search files', prompt: 'Search for the project roadmap file' },
-    ];
-
-    for (const { label, prompt } of prompts) {
-      const btn = document.createElement('button');
-      btn.className = 'suggestion-btn';
-      btn.textContent = label;
-      btn.addEventListener('click', () => {
-        this._inputEl.value = prompt;
-        this._sendMessage();
-      });
-      suggestions.appendChild(btn);
-    }
-
-    welcome.appendChild(suggestions);
+    clearElement(this._messageListEl);
+    const welcome = renderWelcomeScreen((prompt) => {
+      this._inputEl.value = prompt;
+      void this._sendMessage();
+    });
     this._messageListEl.appendChild(welcome);
   }
 
@@ -679,79 +643,9 @@ export class ChatPanel extends Disposable {
   }
 
   private _renderMessage(msg: ChatMessage): void {
-    const el = document.createElement('div');
-    el.className = `chat-message chat-message-${msg.role}`;
-    el.id = `msg-${msg.id}`;
-    el.setAttribute('data-message-id', msg.id);
-
-    const body = document.createElement('div');
-    body.className = 'chat-message-body';
-
-    if (msg.role === 'user') {
-      // User messages: show attached files above the bubble, right-aligned
-      if (msg.attachments && msg.attachments.length > 0) {
-        const attachedContext = document.createElement('div');
-        attachedContext.className = 'chat-attached-context';
-        for (const att of msg.attachments) {
-          const pill = document.createElement('span');
-          pill.className = 'chat-attached-context-pill';
-          pill.textContent = att.name;
-          pill.title = att.path;
-          attachedContext.appendChild(pill);
-        }
-        body.appendChild(attachedContext);
-      }
-
-      // User content in a bubble
-      const bubbleEl = document.createElement('div');
-      bubbleEl.className = 'chat-user-bubble';
-      bubbleEl.textContent = msg.content;
-      body.appendChild(bubbleEl);
-    } else {
-      // Assistant messages: role label + parts container (thinking + inline tool calls + text)
-      const roleLabel = document.createElement('div');
-      roleLabel.className = 'chat-role-label';
-      roleLabel.textContent = 'GHO Work';
-      body.appendChild(roleLabel);
-
-      // Parts container: thinking section, inline tool calls, and text segments
-      // are all appended here in order as events stream in
-      const partsEl = document.createElement('div');
-      partsEl.className = 'chat-message-parts';
-      body.appendChild(partsEl);
-
-      // For non-streaming messages (loaded from history), render content directly
-      if (!msg.isStreaming && msg.content) {
-        const contentEl = document.createElement('div');
-        contentEl.className = 'chat-message-content';
-        this._setSanitizedMarkdown(contentEl, msg.content);
-        partsEl.appendChild(contentEl);
-      }
-
-      // Typing indicator for empty streaming messages
-      if (msg.isStreaming && !msg.content) {
-        const indicator = document.createElement('span');
-        indicator.className = 'chat-typing-indicator';
-        partsEl.appendChild(indicator);
-      }
-
-      // Status
-      const statusEl = document.createElement('div');
-      statusEl.className = 'chat-message-status';
-      body.appendChild(statusEl);
-    }
-
-    el.appendChild(body);
+    const el = renderMessage(msg, (elem, text) => setSanitizedMarkdown(elem, text));
     this._messageListEl.appendChild(el);
     this._scrollToBottom();
-  }
-
-  /**
-   * Renders markdown content into an element using renderChatMarkdown (marked + highlight.js + DOMPurify).
-   * All output is sanitized to prevent XSS attacks.
-   */
-  private _setSanitizedMarkdown(el: Element, markdownText: string, isStreaming = false): void {
-    renderChatMarkdown(el, markdownText, { isStreaming });
   }
 
   showError(message: string): void {
@@ -760,20 +654,7 @@ export class ChatPanel extends Disposable {
 
   private _showErrorBanner(message: string): void {
     this._dismissErrorBanner();
-
-    const banner = document.createElement('div');
-    banner.className = 'chat-error-banner';
-
-    const text = document.createElement('span');
-    text.textContent = message;
-    banner.appendChild(text);
-
-    const dismissBtn = document.createElement('button');
-    dismissBtn.className = 'chat-error-dismiss';
-    dismissBtn.textContent = 'Dismiss';
-    dismissBtn.addEventListener('click', () => this._dismissErrorBanner());
-    banner.appendChild(dismissBtn);
-
+    const banner = createErrorBanner(message, () => this._dismissErrorBanner());
     const panel = this._messageListEl?.parentElement;
     const inputArea = panel?.querySelector('.chat-input-area');
     if (panel && inputArea) {
@@ -898,19 +779,9 @@ export class ChatPanel extends Disposable {
   }
 
   private _showHelpMessage(): void {
-    const helpMsg: ChatMessage = {
-      id: generateUUID(),
-      role: 'assistant',
-      content: '**Available commands:**\n- `/model` — Switch the AI model\n- `/clear` — Clear the conversation\n- `/help` — Show this help message\n\n**Keyboard shortcuts:**\n- `Enter` — Send message\n- `Shift+Enter` — New line\n- `Cmd+B` — Toggle sidebar\n- `Cmd+N` — New conversation',
-    };
+    const helpMsg = createHelpMessage();
     this._messages.push(helpMsg);
     this._renderMessage(helpMsg);
-  }
-
-  private _clearElement(el: Element): void {
-    while (el.firstChild) {
-      el.removeChild(el.firstChild);
-    }
   }
 
   private _scrollToBottom(): void {
