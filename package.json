@@ -21,6 +21,7 @@
     "desktop:build": "cd apps/desktop && npm run build",
     "desktop:build:mac": "cd apps/desktop && npm run build:mac",
     "desktop:build:win": "cd apps/desktop && npm run build:win",
+    "desktop:publish:mac": "cd apps/desktop && npm run publish:mac",
     "format": "prettier --write 'packages/*/src/**/*.ts' 'apps/*/src/**/*.ts'",
     "format:check": "prettier --check 'packages/*/src/**/*.ts' 'apps/*/src/**/*.ts'",
     "e2e": "playwright test",

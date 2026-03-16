@@ -11,7 +11,10 @@
     "lint": "eslint 'src/**/*.ts'",
     "build:win": "electron-vite build && electron-builder --win --config ../../electron-builder.yml",
     "build:mac": "electron-vite build && electron-builder --mac --config ../../electron-builder.yml",
-    "build:linux": "electron-vite build && electron-builder --linux --config ../../electron-builder.yml"
+    "build:linux": "electron-vite build && electron-builder --linux --config ../../electron-builder.yml",
+    "publish:mac": "electron-vite build && electron-builder --mac --publish always --config ../../electron-builder.yml",
+    "publish:win": "electron-vite build && electron-builder --win --publish always --config ../../electron-builder.yml",
+    "publish:linux": "electron-vite build && electron-builder --linux --publish always --config ../../electron-builder.yml"
   },
   "dependencies": {
     "@gho-work/base": "*",

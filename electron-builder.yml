@@ -32,3 +32,6 @@ linux:
     - AppImage
   category: Office
 npmRebuild: false
+publish:
+  provider: github
+  releaseType: draft
