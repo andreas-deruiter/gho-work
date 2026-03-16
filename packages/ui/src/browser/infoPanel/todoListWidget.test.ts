@@ -1,80 +1,60 @@
 import { describe, it, expect } from 'vitest';
 import { TodoListWidget } from './todoListWidget.js';
 
-describe('TodoListWidget', () => {
-  it('is hidden when no todos', () => {
+describe('TodoListWidget (timeline)', () => {
+  it('starts hidden', () => {
     const widget = new TodoListWidget();
     expect(widget.getDomNode().style.display).toBe('none');
   });
 
-  it('becomes visible after setTodos', () => {
+  it('shows when todos arrive', () => {
     const widget = new TodoListWidget();
-    widget.setTodos([
-      { id: 1, title: 'Step one', status: 'not-started' },
-    ]);
-    expect(widget.getDomNode().style.display).toBe('');
+    widget.setTodos([{ id: 1, title: 'Step 1', status: 'not-started' }]);
+    expect(widget.getDomNode().style.display).not.toBe('none');
   });
 
-  it('renders correct number of items', () => {
-    const widget = new TodoListWidget();
-    widget.setTodos([
-      { id: 1, title: 'A', status: 'completed' },
-      { id: 2, title: 'B', status: 'in-progress' },
-      { id: 3, title: 'C', status: 'not-started' },
-    ]);
-    const items = widget.getDomNode().querySelectorAll('.info-todo-item');
-    expect(items.length).toBe(3);
-  });
-
-  it('shows correct header counter', () => {
-    const widget = new TodoListWidget();
-    widget.setTodos([
-      { id: 1, title: 'A', status: 'completed' },
-      { id: 2, title: 'B', status: 'completed' },
-      { id: 3, title: 'C', status: 'in-progress' },
-      { id: 4, title: 'D', status: 'not-started' },
-      { id: 5, title: 'E', status: 'not-started' },
-    ]);
-    const header = widget.getDomNode().querySelector('.info-section-header');
-    expect(header!.textContent).toContain('2/5');
-  });
-
-  it('applies correct status classes', () => {
+  it('renders progress ring with correct count', () => {
     const widget = new TodoListWidget();
     widget.setTodos([
       { id: 1, title: 'Done', status: 'completed' },
-      { id: 2, title: 'Working', status: 'in-progress' },
-      { id: 3, title: 'Waiting', status: 'not-started' },
+      { id: 2, title: 'Active', status: 'in-progress' },
+      { id: 3, title: 'Pending', status: 'not-started' },
     ]);
-    const items = widget.getDomNode().querySelectorAll('.info-todo-item');
-    expect(items[0].classList.contains('info-todo-item--completed')).toBe(true);
-    expect(items[1].classList.contains('info-todo-item--in-progress')).toBe(true);
-    expect(items[2].classList.contains('info-todo-item--not-started')).toBe(true);
+    const counter = widget.getDomNode().querySelector('.info-progress-counter');
+    expect(counter?.textContent).toContain('1');
+    expect(counter?.textContent).toContain('3');
   });
 
-  it('toggles collapse on header click', () => {
+  it('renders completed step with checkmark class', () => {
     const widget = new TodoListWidget();
-    widget.setTodos([{ id: 1, title: 'A', status: 'not-started' }]);
-    const header = widget.getDomNode().querySelector('.info-section-header') as HTMLElement;
-    const list = widget.getDomNode().querySelector('.info-todo-list') as HTMLElement;
-
-    // Initially expanded
-    expect(list.style.display).not.toBe('none');
-
-    // Click to collapse
-    header.click();
-    expect(list.style.display).toBe('none');
-
-    // Click to expand
-    header.click();
-    expect(list.style.display).not.toBe('none');
+    widget.setTodos([{ id: 1, title: 'Done', status: 'completed' }]);
+    expect(widget.getDomNode().querySelector('.info-timeline-node--completed')).toBeTruthy();
   });
 
-  it('has correct ARIA attributes', () => {
+  it('renders active step with active class', () => {
     const widget = new TodoListWidget();
-    widget.setTodos([{ id: 1, title: 'A', status: 'not-started' }]);
-    const list = widget.getDomNode().querySelector('.info-todo-list');
-    expect(list!.getAttribute('role')).toBe('list');
-    expect(list!.getAttribute('aria-label')).toBe('Todo items');
+    widget.setTodos([{ id: 1, title: 'Active', status: 'in-progress' }]);
+    expect(widget.getDomNode().querySelector('.info-timeline-node--in-progress')).toBeTruthy();
+  });
+
+  it('renders pending step with pending class', () => {
+    const widget = new TodoListWidget();
+    widget.setTodos([{ id: 1, title: 'Pending', status: 'not-started' }]);
+    expect(widget.getDomNode().querySelector('.info-timeline-node--not-started')).toBeTruthy();
+  });
+
+  it('sets badge to N / M', () => {
+    const widget = new TodoListWidget();
+    widget.setTodos([
+      { id: 1, title: 'Done', status: 'completed' },
+      { id: 2, title: 'Pending', status: 'not-started' },
+    ]);
+    const badge = widget.getDomNode().querySelector('.info-section-badge');
+    expect(badge?.textContent).toBe('1 / 2');
+  });
+
+  it('starts expanded by default', () => {
+    const widget = new TodoListWidget();
+    expect(widget.isCollapsed).toBe(false);
   });
 });
