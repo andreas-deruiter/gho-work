@@ -51,6 +51,8 @@ export class AgentServiceImpl implements IAgentService {
   private readonly _installContexts = new Map<string, SetupSessionOverrides>();
   /** Cached sessions keyed by conversationId — enables multi-turn conversations. */
   private readonly _sessions = new Map<string, ISDKSession>();
+  /** Mutable reference so the todo tool handler always pushes to the current turn's queue. */
+  private _currentQueue: AsyncQueue<AgentEvent> | null = null;
 
   private readonly _onDidChangeAgentState = new Emitter<{ state: AgentState }>();
   readonly onDidChangeAgentState: Event<{ state: AgentState }> = this._onDidChangeAgentState.event;
@@ -76,6 +78,7 @@ export class AgentServiceImpl implements IAgentService {
     this._onDidChangeAgentState.fire({ state: 'working' });
 
     const queue = new AsyncQueue<AgentEvent>();
+    this._currentQueue = queue;
 
     try {
       // Reuse existing session for this conversation, or create a new one
@@ -124,7 +127,7 @@ export class AgentServiceImpl implements IAgentService {
           excludedTools: setupOverrides?.excludedTools,
           disabledSkills: disabledSkills.length > 0 ? disabledSkills : undefined,
           customAgents: customAgents.length > 0 ? customAgents : undefined,
-          tools: [this._buildTodoTool(queue)],
+          tools: [this._buildTodoTool()],
         });
         this._sessions.set(context.conversationId, session);
         if (this._hookService) {
@@ -194,6 +197,7 @@ export class AgentServiceImpl implements IAgentService {
     } finally {
       this._activeTaskId = null;
       this._activeSession = null;
+      this._currentQueue = null;
       this._onDidChangeAgentState.fire({ state: 'idle' });
     }
   }
@@ -326,7 +330,7 @@ export class AgentServiceImpl implements IAgentService {
     }
   }
 
-  private _buildTodoTool(queue: AsyncQueue<AgentEvent>): ToolDefinition {
+  private _buildTodoTool(): ToolDefinition {
     let previousTodos: Array<{ id: number; title: string; status: string }> = [];
     return {
       name: 'manage_todo_list',
@@ -350,7 +354,8 @@ export class AgentServiceImpl implements IAgentService {
         required: ['todoList'],
       },
       handler: async ({ todoList }: { todoList: Array<{ id: number; title: string; status: 'not-started' | 'in-progress' | 'completed' }> }) => {
-        queue.push({ type: 'todo_list_updated', todos: todoList });
+        // Use mutable _currentQueue so multi-turn conversations push to the active queue
+        this._currentQueue?.push({ type: 'todo_list_updated', todos: todoList });
         const msg = this._buildTodoConfirmation(todoList, previousTodos);
         previousTodos = todoList;
         return msg;
