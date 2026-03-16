@@ -1,36 +1,30 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SkillsPage } from '../skillsPage.js';
+import { createMockIPC } from '../../../test/mockIpc.js';
 
-function createMockIPC(data?: {
-  skills?: Array<{ id: string; category: string; name: string; description: string; sourceId: string; filePath: string }>;
-  sources?: Array<{ id: string; priority: number; basePath: string }>;
-}) {
-  const skills = data?.skills ?? [
-    { id: 'install/gh', category: 'install', name: 'gh', description: 'Install GitHub CLI', sourceId: 'bundled', filePath: '/skills/install/gh.md' },
-    { id: 'auth/gh', category: 'auth', name: 'gh', description: 'Authenticate with GitHub', sourceId: 'bundled', filePath: '/skills/auth/gh.md' },
-  ];
-  const sources = data?.sources ?? [
-    { id: 'bundled', priority: 0, basePath: 'skills/' },
-    { id: 'user', priority: 10, basePath: '~/.gho-work/skills/' },
-  ];
+const defaultSkills = [
+  { id: 'install/gh', category: 'install', name: 'gh', description: 'Install GitHub CLI', sourceId: 'bundled', filePath: '/skills/install/gh.md' },
+  { id: 'auth/gh', category: 'auth', name: 'gh', description: 'Authenticate with GitHub', sourceId: 'bundled', filePath: '/skills/auth/gh.md' },
+];
 
-  return {
-    invoke: vi.fn(async (channel: string, ..._args: unknown[]) => {
-      if (channel === 'skill:list') { return skills; }
-      if (channel === 'skill:sources') { return sources; }
-      if (channel === 'skill:add-path') { return { ok: true }; }
-      if (channel === 'skill:remove-path') { return {}; }
-      if (channel === 'skill:rescan') { return skills; }
-      return {};
-    }),
-    on: vi.fn(),
-    removeListener: vi.fn(),
-  };
+const defaultSources = [
+  { id: 'bundled', priority: 0, basePath: 'skills/' },
+  { id: 'user', priority: 10, basePath: '~/.gho-work/skills/' },
+];
+
+function makeSkillsIPC(skills = defaultSkills, sources = defaultSources) {
+  return createMockIPC({
+    'skill:list': skills,
+    'skill:sources': sources,
+    'skill:add-path': { ok: true },
+    'skill:remove-path': {},
+    'skill:rescan': skills,
+  });
 }
 
 describe('SkillsPage', () => {
   it('renders page title and subtitle', () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     const dom = page.getDomNode();
     expect(dom.querySelector('.settings-page-title')?.textContent).toBe('Skills');
@@ -39,7 +33,7 @@ describe('SkillsPage', () => {
   });
 
   it('renders skill sources after load', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -49,7 +43,7 @@ describe('SkillsPage', () => {
   });
 
   it('renders skills grouped by category after load', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -61,7 +55,7 @@ describe('SkillsPage', () => {
   });
 
   it('shows remove button only for user paths (priority > 0)', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -71,7 +65,7 @@ describe('SkillsPage', () => {
   });
 
   it('calls skill:add-path IPC when adding a path', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -85,8 +79,8 @@ describe('SkillsPage', () => {
   });
 
   it('shows error when add-path fails', async () => {
-    const ipc = createMockIPC();
-    ipc.invoke.mockImplementation(async (channel: string) => {
+    const ipc = makeSkillsIPC();
+    (ipc.invoke as ReturnType<typeof vi.fn>).mockImplementation(async (channel: string) => {
       if (channel === 'skill:add-path') { return { error: 'Directory not found' }; }
       if (channel === 'skill:list') { return []; }
       if (channel === 'skill:sources') { return []; }
@@ -108,7 +102,7 @@ describe('SkillsPage', () => {
   });
 
   it('calls skill:rescan IPC on rescan click', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -119,7 +113,7 @@ describe('SkillsPage', () => {
   });
 
   it('shows empty state when no skills', async () => {
-    const ipc = createMockIPC({ skills: [], sources: [] });
+    const ipc = makeSkillsIPC([], []);
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -129,7 +123,7 @@ describe('SkillsPage', () => {
   });
 
   it('renders toggle switches for each skill', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -144,8 +138,8 @@ describe('SkillsPage', () => {
   });
 
   it('renders disabled skills with aria-checked=false and dimmed row', async () => {
-    const ipc = createMockIPC();
-    ipc.invoke.mockImplementation(async (channel: string) => {
+    const ipc = makeSkillsIPC();
+    (ipc.invoke as ReturnType<typeof vi.fn>).mockImplementation(async (channel: string) => {
       if (channel === 'skill:list') {
         return [
           { id: 'install/gh', category: 'install', name: 'gh', description: 'Install GitHub CLI', sourceId: 'bundled', filePath: '/skills/install/gh.md', disabled: true },
@@ -166,7 +160,7 @@ describe('SkillsPage', () => {
   });
 
   it('calls skill:toggle IPC when toggle is clicked', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -177,7 +171,7 @@ describe('SkillsPage', () => {
   });
 
   it('shows disclaimer after first toggle', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -194,7 +188,7 @@ describe('SkillsPage', () => {
   });
 
   it('toggle responds to Enter key', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();
@@ -205,7 +199,7 @@ describe('SkillsPage', () => {
   });
 
   it('toggle responds to Space key', async () => {
-    const ipc = createMockIPC();
+    const ipc = makeSkillsIPC();
     const page = new SkillsPage(ipc);
     await page.load();
     const dom = page.getDomNode();

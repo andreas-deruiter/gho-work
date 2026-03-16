@@ -52,10 +52,4 @@ describe('Connector Setup Skills', () => {
     }
   });
 
-  describe('createSetupConversation behavior', () => {
-    // Placeholder: will be implemented after Task 10 creates the method
-    it.skip('placeholder: implement with real AgentServiceImpl mocks', () => {
-      expect(true).toBe(true);
-    });
-  });
 });

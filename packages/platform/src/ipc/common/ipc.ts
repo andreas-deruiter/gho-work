@@ -20,7 +20,6 @@ export const IPC_CHANNELS = {
   AUTH_STATE_CHANGED: 'auth:state-changed',
   STORAGE_GET: 'storage:get',
   STORAGE_SET: 'storage:set',
-  PORT_AGENT_HOST: 'port:agent-host',
   ONBOARDING_CHECK_GH: 'onboarding:check-gh',
   ONBOARDING_GH_LOGIN: 'onboarding:gh-login',
   ONBOARDING_GH_LOGIN_EVENT: 'onboarding:gh-login-event',

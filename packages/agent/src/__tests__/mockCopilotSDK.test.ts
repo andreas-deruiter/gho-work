@@ -105,7 +105,7 @@ describe('MockCopilotSDK', () => {
     await sdk.stop();
   });
 
-  it('should abort a session', async () => {
+  it('should abort a session without throwing', async () => {
     const sdk = new MockCopilotSDK();
     await sdk.start();
 
@@ -115,16 +115,15 @@ describe('MockCopilotSDK', () => {
 
     // Send without waiting, then immediately abort
     void session.send({ prompt: 'hello world' });
-    // Small delay to let the simulation start
     await new Promise((r) => setTimeout(r, 5));
-    await session.abort();
 
-    // Give time for any pending microtasks
+    // abort() should resolve without throwing
+    await expect(session.abort()).resolves.toBeUndefined();
+
     await new Promise((r) => setTimeout(r, 50));
 
-    // Should not have received session.idle (aborted before completion)
-    // or if it did complete very fast, at least abort didn't throw
-    expect(true).toBe(true); // Abort completed without error
+    // Verify the session received events before abort
+    expect(events.length).toBeGreaterThan(0);
 
     await sdk.stop();
   });

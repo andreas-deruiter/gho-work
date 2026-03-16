@@ -14,20 +14,17 @@ import type { IIPCRenderer, FileEntry } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { ModelSelector } from './modelSelector.js';
 import { ChatThinkingSection } from './chatThinkingSection.js';
-import { renderChatMarkdown } from './chatMarkdownRenderer.js';
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  toolCalls?: Array<{ id: string; name: string; status: string }>;
-  isStreaming?: boolean;
-  attachments?: Array<{ name: string; path: string }>;
-}
-
-/** A content part in the assistant response stream. */
-type ContentPart =
-  | { type: 'text'; content: string };
+import { ChatStreamManager } from './chatStreamManager.js';
+import { createChatInputArea } from './chatInputArea.js';
+import {
+  type ChatMessage,
+  renderMessage,
+  renderWelcomeScreen,
+  createHelpMessage,
+  createErrorBanner,
+  setSanitizedMarkdown,
+  clearElement,
+} from './chatMessageRenderer.js';
 
 export interface SendMessageEvent {
   conversationId: string;
@@ -45,9 +42,7 @@ export class ChatPanel extends Disposable {
   private _isProcessing = false;
   private _currentAssistantMessage: ChatMessage | null = null;
   private readonly _currentThinkingSection = this._register(new MutableDisposable<ChatThinkingSection>());
-
-  /** Ordered content parts for the current streaming assistant message. */
-  private _contentParts: ContentPart[] = [];
+  private readonly _streamManager = new ChatStreamManager();
 
   private _modelSelector!: ModelSelector;
   private _conversationId: string = generateUUID();
@@ -96,7 +91,7 @@ export class ChatPanel extends Disposable {
   }
 
   render(container: HTMLElement): void {
-    this._clearElement(container);
+    clearElement(container);
 
     // Header with inline-editable title — rendered outside chat-panel so it spans full width
     const header = document.createElement('div');
@@ -131,124 +126,28 @@ export class ChatPanel extends Disposable {
     this._renderWelcome();
     panel.appendChild(this._messageListEl);
 
-    // Input area
-    const inputArea = document.createElement('div');
-    inputArea.className = 'chat-input-area';
-
-    const inputWrapper = document.createElement('div');
-    inputWrapper.className = 'chat-input-wrapper';
-
-    // File drag-and-drop
+    // Input area (delegated to chatInputArea.ts)
     this._attachments = [];
-    this._attachmentListEl = document.createElement('div');
-    this._attachmentListEl.className = 'chat-attachments';
-    inputArea.appendChild(this._attachmentListEl);
-
-    inputWrapper.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      inputWrapper.classList.add('drag-over');
+    const {
+      inputArea,
+      inputEl,
+      sendBtnEl,
+      cancelBtnEl,
+      attachmentListEl,
+      slashDropdownEl,
+      modelSelectorContainer,
+    } = createChatInputArea({
+      onSendMessage: () => this._sendMessage(),
+      onCancelRequest: () => this._cancelRequest(),
+      onFileDrop: (files) => files.forEach(f => this._addAttachment(f)),
+      onInputChange: () => this._updateSlashDropdown(),
     });
-
-    inputWrapper.addEventListener('dragleave', () => {
-      inputWrapper.classList.remove('drag-over');
-    });
-
-    inputWrapper.addEventListener('drop', (e) => {
-      e.preventDefault();
-      inputWrapper.classList.remove('drag-over');
-      if (e.dataTransfer?.files) {
-        for (const file of Array.from(e.dataTransfer.files)) {
-          this._addAttachment(file);
-        }
-      }
-    });
-
-    this._inputEl = document.createElement('textarea');
-    this._inputEl.className = 'chat-input';
-    this._inputEl.placeholder =
-      'Ask GHO Work anything... (try "draft an email" or "analyze my data")';
-    this._inputEl.rows = 1;
-    this._inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        this._sendMessage();
-      }
-    });
-    this._inputEl.addEventListener('input', () => {
-      // Auto-resize
-      this._inputEl.style.height = 'auto';
-      this._inputEl.style.height = Math.min(this._inputEl.scrollHeight, 150) + 'px';
-    });
-    this._inputEl.addEventListener('input', () => {
-      this._updateSlashDropdown();
-    });
-    inputWrapper.appendChild(this._inputEl);
-
-    this._slashDropdownEl = document.createElement('div');
-    this._slashDropdownEl.className = 'slash-dropdown';
-    this._slashDropdownEl.style.display = 'none';
-    inputWrapper.appendChild(this._slashDropdownEl);
-
-    this._sendBtnEl = document.createElement('button');
-    this._sendBtnEl.className = 'chat-send-btn';
-    const sendSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    sendSvg.setAttribute('width', '14');
-    sendSvg.setAttribute('height', '14');
-    sendSvg.setAttribute('viewBox', '0 0 24 24');
-    sendSvg.setAttribute('fill', 'none');
-    sendSvg.setAttribute('stroke', 'currentColor');
-    sendSvg.setAttribute('stroke-width', '2');
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', '22');
-    line.setAttribute('y1', '2');
-    line.setAttribute('x2', '11');
-    line.setAttribute('y2', '13');
-    sendSvg.appendChild(line);
-    const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    polygon.setAttribute('points', '22 2 15 22 11 13 2 9 22 2');
-    sendSvg.appendChild(polygon);
-    this._sendBtnEl.appendChild(sendSvg);
-    this._sendBtnEl.addEventListener('click', () => this._sendMessage());
-    inputWrapper.appendChild(this._sendBtnEl);
-
-    // Cancel button — same position/size as send button, swap via display
-    this._cancelBtnEl = document.createElement('button');
-    this._cancelBtnEl.className = 'chat-cancel-btn';
-    this._cancelBtnEl.title = 'Stop';
-    const stopSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    stopSvg.setAttribute('width', '14');
-    stopSvg.setAttribute('height', '14');
-    stopSvg.setAttribute('viewBox', '0 0 24 24');
-    stopSvg.setAttribute('fill', 'currentColor');
-    const stopRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    stopRect.setAttribute('x', '6');
-    stopRect.setAttribute('y', '6');
-    stopRect.setAttribute('width', '12');
-    stopRect.setAttribute('height', '12');
-    stopRect.setAttribute('rx', '2');
-    stopSvg.appendChild(stopRect);
-    this._cancelBtnEl.appendChild(stopSvg);
-    this._cancelBtnEl.style.display = 'none';
-    this._cancelBtnEl.addEventListener('click', () => this._cancelRequest());
-    inputWrapper.appendChild(this._cancelBtnEl);
-
-    inputArea.appendChild(inputWrapper);
-
-    // Footer row: model selector (left) + hint (right)
-    const inputFooter = document.createElement('div');
-    inputFooter.className = 'chat-input-footer';
-
-    const modelSelectorContainer = document.createElement('div');
-    modelSelectorContainer.className = 'chat-input-model';
+    this._inputEl = inputEl;
+    this._sendBtnEl = sendBtnEl;
+    this._cancelBtnEl = cancelBtnEl;
+    this._attachmentListEl = attachmentListEl;
+    this._slashDropdownEl = slashDropdownEl;
     this._modelSelector.render(modelSelectorContainer);
-    inputFooter.appendChild(modelSelectorContainer);
-
-    const hint = document.createElement('div');
-    hint.className = 'chat-hint';
-    hint.textContent = 'Press Enter to send, Shift+Enter for new line';
-    inputFooter.appendChild(hint);
-
-    inputArea.appendChild(inputFooter);
 
     panel.appendChild(inputArea);
     container.appendChild(panel);
@@ -340,7 +239,7 @@ export class ChatPanel extends Disposable {
       }
 
       // Clear and re-render messages
-      this._clearElement(this._messageListEl);
+      clearElement(this._messageListEl);
 
       for (const msg of response.messages) {
         const chatMsg: ChatMessage = {
@@ -374,47 +273,11 @@ export class ChatPanel extends Disposable {
   }
 
   private _renderWelcome(): void {
-    this._clearElement(this._messageListEl);
-
-    const welcome = document.createElement('div');
-    welcome.className = 'chat-welcome';
-
-    const ascii = document.createElement('pre');
-    ascii.className = 'chat-welcome-ascii';
-    ascii.textContent =
-      '  __ _| |__   ___   __      _____  _ __| | __\n' +
-      ' / _` | \'_ \\ / _ \\  \\ \\ /\\ / / _ \\| \'__| |/ /\n' +
-      '| (_| | | | | (_) |  \\ V  V / (_) | |  |   < \n' +
-      ' \\__, |_| |_|\\___/    \\_/\\_/ \\___/|_|  |_|\\_\\\n' +
-      ' |___/';
-    welcome.appendChild(ascii);
-
-    const desc = document.createElement('p');
-    desc.textContent = 'Your GitHub Copilot subscription just learned to do office work.';
-    welcome.appendChild(desc);
-
-    const suggestions = document.createElement('div');
-    suggestions.className = 'chat-welcome-suggestions';
-
-    const prompts = [
-      { label: 'Draft an email', prompt: 'Draft an email to the team about the Q1 results' },
-      { label: 'Analyze data', prompt: 'Analyze the sales data and find trends' },
-      { label: 'Check meetings', prompt: 'What meetings do I have today?' },
-      { label: 'Search files', prompt: 'Search for the project roadmap file' },
-    ];
-
-    for (const { label, prompt } of prompts) {
-      const btn = document.createElement('button');
-      btn.className = 'suggestion-btn';
-      btn.textContent = label;
-      btn.addEventListener('click', () => {
-        this._inputEl.value = prompt;
-        this._sendMessage();
-      });
-      suggestions.appendChild(btn);
-    }
-
-    welcome.appendChild(suggestions);
+    clearElement(this._messageListEl);
+    const welcome = renderWelcomeScreen((prompt) => {
+      this._inputEl.value = prompt;
+      void this._sendMessage();
+    });
     this._messageListEl.appendChild(welcome);
   }
 
@@ -461,7 +324,7 @@ export class ChatPanel extends Disposable {
     this._renderMessage(userMsg);
 
     // Reset parts-based state for the new assistant message
-    this._contentParts = [];
+    this._streamManager.reset();
     // Create a placeholder assistant message for streaming
     this._currentAssistantMessage = {
       id: generateUUID(),
@@ -542,7 +405,8 @@ export class ChatPanel extends Disposable {
       }
       case 'text_delta': {
         this._currentAssistantMessage.content += event.content;
-        this._appendTextDelta(event.content);
+        this._streamManager.appendTextDelta(event.content, this._getPartsContainer());
+        this._scrollToBottom();
         break;
       }
       case 'tool_call_start': {
@@ -587,65 +451,6 @@ export class ChatPanel extends Disposable {
     }
   }
 
-  /**
-   * Appends a text delta to the current assistant message parts.
-   * If the last part is text, appends to it. Otherwise creates a new text part.
-   * Only re-renders the last text segment's DOM for efficiency.
-   */
-  private _appendTextDelta(delta: string): void {
-    const lastPart = this._contentParts[this._contentParts.length - 1];
-    if (lastPart && lastPart.type === 'text') {
-      lastPart.content += delta;
-    } else {
-      this._contentParts.push({ type: 'text', content: delta });
-      // Create a new text segment DOM element
-      this._appendTextPartDom();
-    }
-    this._updateLastTextPart();
-  }
-
-  /** Creates a new empty text segment DOM element in the parts container. */
-  private _appendTextPartDom(): void {
-    const partsContainer = this._getPartsContainer();
-    if (!partsContainer) {
-      return;
-    }
-    const textEl = document.createElement('div');
-    textEl.className = 'chat-message-content';
-    partsContainer.appendChild(textEl);
-  }
-
-  /** Re-renders only the last text segment with updated markdown content. */
-  private _updateLastTextPart(): void {
-    const partsContainer = this._getPartsContainer();
-    if (!partsContainer) {
-      return;
-    }
-
-    // Find the last .chat-message-content element
-    const textEls = partsContainer.querySelectorAll('.chat-message-content');
-    const lastTextEl = textEls[textEls.length - 1];
-    if (!lastTextEl) {
-      return;
-    }
-
-    // Find the corresponding text part
-    const textParts = this._contentParts.filter(p => p.type === 'text');
-    const lastTextPart = textParts[textParts.length - 1];
-    if (!lastTextPart || lastTextPart.type !== 'text') {
-      return;
-    }
-
-    const isStreaming = this._currentAssistantMessage?.isStreaming ?? false;
-    renderChatMarkdown(lastTextEl, lastTextPart.content, { isStreaming });
-    if (isStreaming) {
-      const cursor = document.createElement('span');
-      cursor.className = 'chat-cursor';
-      lastTextEl.appendChild(cursor);
-    }
-    this._scrollToBottom();
-  }
-
   /** Gets the parts container for the current assistant message. */
   private _getPartsContainer(): HTMLElement | null {
     if (!this._currentAssistantMessage) {
@@ -659,7 +464,7 @@ export class ChatPanel extends Disposable {
     if (this._currentAssistantMessage) {
       this._currentAssistantMessage.isStreaming = false;
       // Final render of the last text part (removes cursor)
-      this._updateLastTextPart();
+      this._streamManager.finishRendering(this._getPartsContainer());
     }
     this._currentThinkingSection.value?.setActive(false);
     // Belt-and-suspenders: ensure no thinking section in the DOM stays active
@@ -679,79 +484,9 @@ export class ChatPanel extends Disposable {
   }
 
   private _renderMessage(msg: ChatMessage): void {
-    const el = document.createElement('div');
-    el.className = `chat-message chat-message-${msg.role}`;
-    el.id = `msg-${msg.id}`;
-    el.setAttribute('data-message-id', msg.id);
-
-    const body = document.createElement('div');
-    body.className = 'chat-message-body';
-
-    if (msg.role === 'user') {
-      // User messages: show attached files above the bubble, right-aligned
-      if (msg.attachments && msg.attachments.length > 0) {
-        const attachedContext = document.createElement('div');
-        attachedContext.className = 'chat-attached-context';
-        for (const att of msg.attachments) {
-          const pill = document.createElement('span');
-          pill.className = 'chat-attached-context-pill';
-          pill.textContent = att.name;
-          pill.title = att.path;
-          attachedContext.appendChild(pill);
-        }
-        body.appendChild(attachedContext);
-      }
-
-      // User content in a bubble
-      const bubbleEl = document.createElement('div');
-      bubbleEl.className = 'chat-user-bubble';
-      bubbleEl.textContent = msg.content;
-      body.appendChild(bubbleEl);
-    } else {
-      // Assistant messages: role label + parts container (thinking + inline tool calls + text)
-      const roleLabel = document.createElement('div');
-      roleLabel.className = 'chat-role-label';
-      roleLabel.textContent = 'GHO Work';
-      body.appendChild(roleLabel);
-
-      // Parts container: thinking section, inline tool calls, and text segments
-      // are all appended here in order as events stream in
-      const partsEl = document.createElement('div');
-      partsEl.className = 'chat-message-parts';
-      body.appendChild(partsEl);
-
-      // For non-streaming messages (loaded from history), render content directly
-      if (!msg.isStreaming && msg.content) {
-        const contentEl = document.createElement('div');
-        contentEl.className = 'chat-message-content';
-        this._setSanitizedMarkdown(contentEl, msg.content);
-        partsEl.appendChild(contentEl);
-      }
-
-      // Typing indicator for empty streaming messages
-      if (msg.isStreaming && !msg.content) {
-        const indicator = document.createElement('span');
-        indicator.className = 'chat-typing-indicator';
-        partsEl.appendChild(indicator);
-      }
-
-      // Status
-      const statusEl = document.createElement('div');
-      statusEl.className = 'chat-message-status';
-      body.appendChild(statusEl);
-    }
-
-    el.appendChild(body);
+    const el = renderMessage(msg, (elem, text) => setSanitizedMarkdown(elem, text));
     this._messageListEl.appendChild(el);
     this._scrollToBottom();
-  }
-
-  /**
-   * Renders markdown content into an element using renderChatMarkdown (marked + highlight.js + DOMPurify).
-   * All output is sanitized to prevent XSS attacks.
-   */
-  private _setSanitizedMarkdown(el: Element, markdownText: string, isStreaming = false): void {
-    renderChatMarkdown(el, markdownText, { isStreaming });
   }
 
   showError(message: string): void {
@@ -760,20 +495,7 @@ export class ChatPanel extends Disposable {
 
   private _showErrorBanner(message: string): void {
     this._dismissErrorBanner();
-
-    const banner = document.createElement('div');
-    banner.className = 'chat-error-banner';
-
-    const text = document.createElement('span');
-    text.textContent = message;
-    banner.appendChild(text);
-
-    const dismissBtn = document.createElement('button');
-    dismissBtn.className = 'chat-error-dismiss';
-    dismissBtn.textContent = 'Dismiss';
-    dismissBtn.addEventListener('click', () => this._dismissErrorBanner());
-    banner.appendChild(dismissBtn);
-
+    const banner = createErrorBanner(message, () => this._dismissErrorBanner());
     const panel = this._messageListEl?.parentElement;
     const inputArea = panel?.querySelector('.chat-input-area');
     if (panel && inputArea) {
@@ -814,9 +536,7 @@ export class ChatPanel extends Disposable {
   }
 
   private _renderAttachments(): void {
-    while (this._attachmentListEl.firstChild) {
-      this._attachmentListEl.removeChild(this._attachmentListEl.firstChild);
-    }
+    clearElement(this._attachmentListEl);
     for (let i = 0; i < this._attachments.length; i++) {
       const pill = document.createElement('span');
       pill.className = 'attachment-pill';
@@ -850,9 +570,7 @@ export class ChatPanel extends Disposable {
       ].filter((c) => c.name.includes(query) || query === '');
 
       if (commands.length > 0) {
-        while (this._slashDropdownEl.firstChild) {
-          this._slashDropdownEl.removeChild(this._slashDropdownEl.firstChild);
-        }
+        clearElement(this._slashDropdownEl);
         for (const cmd of commands) {
           const item = document.createElement('div');
           item.className = 'slash-dropdown-item';
@@ -898,19 +616,9 @@ export class ChatPanel extends Disposable {
   }
 
   private _showHelpMessage(): void {
-    const helpMsg: ChatMessage = {
-      id: generateUUID(),
-      role: 'assistant',
-      content: '**Available commands:**\n- `/model` — Switch the AI model\n- `/clear` — Clear the conversation\n- `/help` — Show this help message\n\n**Keyboard shortcuts:**\n- `Enter` — Send message\n- `Shift+Enter` — New line\n- `Cmd+B` — Toggle sidebar\n- `Cmd+N` — New conversation',
-    };
+    const helpMsg = createHelpMessage();
     this._messages.push(helpMsg);
     this._renderMessage(helpMsg);
-  }
-
-  private _clearElement(el: Element): void {
-    while (el.firstChild) {
-      el.removeChild(el.firstChild);
-    }
   }
 
   private _scrollToBottom(): void {

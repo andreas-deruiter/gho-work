@@ -61,8 +61,8 @@ export class MCPConnection extends Disposable {
     if (this._client) {
       try {
         await this._client.close();
-      } catch {
-        // ignore close errors
+      } catch (err) {
+        console.warn(`[MCPConnection] Failed to close client for "${this._name}":`, err instanceof Error ? err.message : String(err));
       }
       this._client = null;
     }
@@ -112,7 +112,10 @@ export class MCPConnection extends Disposable {
           this._missedPings = 0;
           this._setStatus('connected');
         }
-      } catch {
+      } catch (err) {
+        if (this._missedPings === 0) {
+          console.warn(`[MCPConnection] Heartbeat failed for "${this._name}":`, err instanceof Error ? err.message : String(err));
+        }
         this._missedPings++;
         if (this._missedPings >= 3) {
           this._setStatus('error');
@@ -137,7 +140,9 @@ export class MCPConnection extends Disposable {
   }
 
   override dispose(): void {
-    this.disconnect().catch(() => {});
+    this.disconnect().catch((err) => {
+      console.warn(`[MCPConnection] Cleanup error for "${this._name}":`, err instanceof Error ? err.message : String(err));
+    });
     super.dispose();
   }
 }

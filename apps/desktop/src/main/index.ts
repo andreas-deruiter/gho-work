@@ -13,7 +13,7 @@ if (process.env.GHO_USER_DATA_DIR) {
 // --mock flag enables mock SDK mode (for testing without GitHub auth)
 const useMockSDK = process.argv.includes('--mock');
 if (useMockSDK) {
-  console.log('[main] Mock mode enabled via --mock flag');
+  console.warn('[main] Mock mode enabled via --mock flag');
 }
 
 // Parse --skills-path for test isolation

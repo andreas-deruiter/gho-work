@@ -1,13 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ChatPanel } from '../chatPanel.js';
-
-function createMockIPC() {
-  return {
-    invoke: vi.fn().mockResolvedValue({}),
-    on: vi.fn().mockReturnValue({ dispose: () => {} }),
-    removeListener: vi.fn(),
-  };
-}
+import { createMockIPC } from '../../test/mockIpc.js';
 
 describe('ChatPanel attachment public API', () => {
   let chatPanel: ChatPanel;

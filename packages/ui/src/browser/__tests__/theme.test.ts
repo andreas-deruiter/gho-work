@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ThemeService } from '../theme.js';
+import { createMockIPC } from '../../test/mockIpc.js';
 
-function createMockIPC() {
-  const stored: Record<string, string> = {};
-  return {
-    invoke: vi.fn(async (channel: string, ...args: unknown[]) => {
+describe('ThemeService', () => {
+  let ipc: ReturnType<typeof createMockIPC>;
+
+  beforeEach(() => {
+    const stored: Record<string, string> = {};
+    ipc = createMockIPC();
+    (ipc.invoke as ReturnType<typeof vi.fn>).mockImplementation(async (channel: string, ...args: unknown[]) => {
       if (channel === 'storage:get') {
         const { key } = args[0] as { key: string };
         return { value: stored[key] ?? null };
@@ -15,17 +19,7 @@ function createMockIPC() {
         return {};
       }
       return {};
-    }),
-    on: vi.fn(),
-    removeListener: vi.fn(),
-  };
-}
-
-describe('ThemeService', () => {
-  let ipc: ReturnType<typeof createMockIPC>;
-
-  beforeEach(() => {
-    ipc = createMockIPC();
+    });
     document.documentElement.setAttribute('data-theme', 'system');
     // jsdom doesn't implement matchMedia — provide a stub
     Object.defineProperty(window, 'matchMedia', {
@@ -54,7 +48,7 @@ describe('ThemeService', () => {
   });
 
   it('loads persisted theme on init', async () => {
-    ipc.invoke.mockResolvedValueOnce({ value: 'dark' });
+    (ipc.invoke as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ value: 'dark' });
     const service = new ThemeService(ipc);
     await service.init();
     expect(service.currentTheme).toBe('dark');
@@ -62,7 +56,7 @@ describe('ThemeService', () => {
   });
 
   it('stays system if no persisted theme', async () => {
-    ipc.invoke.mockResolvedValueOnce({ value: null });
+    (ipc.invoke as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ value: null });
     const service = new ThemeService(ipc);
     await service.init();
     expect(service.currentTheme).toBe('system');

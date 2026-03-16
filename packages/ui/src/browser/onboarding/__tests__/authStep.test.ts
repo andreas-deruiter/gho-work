@@ -5,14 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { IIPCRenderer } from '@gho-work/platform/common';
 import { IPC_CHANNELS } from '@gho-work/platform/common';
 import { AuthStep } from '../authStep.js';
-
-function createMockIPC(responses: Record<string, unknown> = {}): IIPCRenderer {
-  return {
-    invoke: vi.fn(async (channel: string) => responses[channel] ?? {}) as unknown as IIPCRenderer['invoke'],
-    on: vi.fn(),
-    removeListener: vi.fn(),
-  };
-}
+import { createMockIPC } from '../../../test/mockIpc.js';
 
 describe('AuthStep', () => {
   let container: HTMLElement;
