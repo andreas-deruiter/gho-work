@@ -78,7 +78,7 @@ export class TodoListWidget extends CollapsibleSection {
     bgCircle.setAttribute('cy', '28');
     bgCircle.setAttribute('r', String(RING_RADIUS));
     bgCircle.setAttribute('fill', 'none');
-    bgCircle.setAttribute('stroke', 'rgba(255,255,255,0.06)');
+    bgCircle.setAttribute('class', 'info-progress-ring-bg');
     bgCircle.setAttribute('stroke-width', '3.5');
 
     // Progress circle with gradient stroke

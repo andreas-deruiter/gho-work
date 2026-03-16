@@ -44,6 +44,14 @@
 
   --border-primary: #404040;
   --border-secondary: #333333;
+
+  /* Info panel tokens (fallback = dark) */
+  --info-section-border: rgba(255,255,255,0.06);
+  --info-section-bg: rgba(255,255,255,0.02);
+  --info-timeline-not-started-border: rgba(255,255,255,0.12);
+  --info-timeline-connector: rgba(255,255,255,0.06);
+  --info-ring-bg-stroke: rgba(255,255,255,0.06);
+  --info-usage-track-bg: rgba(255,255,255,0.06);
 }
 
 /* Reset */
@@ -2314,9 +2322,9 @@ html, body {
 
 /* --- CollapsibleSection container --- */
 .info-section-container {
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--info-section-border);
   border-radius: 10px;
-  background: rgba(255,255,255,0.02);
+  background: var(--info-section-bg);
   margin-bottom: 8px;
   overflow: hidden;
 }
@@ -2380,6 +2388,10 @@ html, body {
   display: block;
 }
 
+.info-progress-ring-bg {
+  stroke: var(--info-ring-bg-stroke);
+}
+
 .info-progress-counter {
   position: absolute;
   top: 50%;
@@ -2439,7 +2451,7 @@ html, body {
 .info-timeline-node--not-started .info-timeline-circle {
   width: 10px;
   height: 10px;
-  border: 1.5px solid rgba(255,255,255,0.12);
+  border: 1.5px solid var(--info-timeline-not-started-border);
   background: transparent;
   margin: 2px;
 }
@@ -2450,7 +2462,7 @@ html, body {
   top: 16px;
   bottom: 0;
   width: 2px;
-  background: rgba(255,255,255,0.06);
+  background: var(--info-timeline-connector);
 }
 
 .info-timeline-node--completed .info-timeline-connector {
@@ -2628,7 +2640,7 @@ html, body {
 /* --- UsageSection --- */
 .info-usage-bar-track {
   height: 6px;
-  background: rgba(255,255,255,0.06);
+  background: var(--info-usage-track-bg);
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 6px;
@@ -2661,7 +2673,7 @@ html, body {
   display: inline-block;
   width: 48px;
   height: 4px;
-  background: rgba(255,255,255,0.06);
+  background: var(--info-usage-track-bg);
   border-radius: 2px;
   overflow: hidden;
   margin-left: 8px;
