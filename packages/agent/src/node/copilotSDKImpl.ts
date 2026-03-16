@@ -155,6 +155,27 @@ export class CopilotSDKImpl implements ICopilotSDK {
 		return this._sdk;
 	}
 
+	/**
+	 * Resolve the platform-specific native copilot binary path.
+	 * In packaged Electron, process.execPath is the Electron .exe — if the SDK
+	 * falls back to spawning a .js entry point via process.execPath it launches
+	 * a new Electron instance instead of the copilot CLI, causing an infinite
+	 * restart loop. Pointing cliPath at the native binary avoids this entirely.
+	 */
+	private _resolveNativeBinaryPath(): string | undefined {
+		const pkgName = `@github/copilot-${process.platform}-${process.arch}`;
+		try {
+			// The platform package's main export points directly at the binary.
+			// In packaged Electron, require.resolve returns the ASAR-virtual path;
+			// native binaries live in app.asar.unpacked (due to asarUnpack config).
+			let resolved = require.resolve(pkgName);
+			resolved = resolved.replace('app.asar', 'app.asar.unpacked');
+			return resolved;
+		} catch {
+			return undefined;
+		}
+	}
+
 	async start(): Promise<void> {
 		if (this._options.useMock) {
 			this._mock = new MockCopilotSDK();
@@ -173,6 +194,13 @@ export class CopilotSDKImpl implements ICopilotSDK {
 			}
 			if (this._options.cwd) {
 				clientOptions.cwd = this._options.cwd;
+			}
+			// Use the native binary directly to avoid the process.execPath problem
+			// in packaged Electron (see _resolveNativeBinaryPath docs).
+			const nativeBinary = this._resolveNativeBinaryPath();
+			if (nativeBinary) {
+				clientOptions.cliPath = nativeBinary;
+				console.warn('[CopilotSDKImpl] Using native binary:', nativeBinary);
 			}
 
 			this._client = new sdk.CopilotClient(clientOptions);

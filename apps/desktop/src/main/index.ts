@@ -63,6 +63,14 @@ for (let i = 0; i < process.argv.length; i++) {
   }
 }
 
+// Prevent multiple instances — critical on Windows where the SDK subprocess
+// issue (see copilotSDKImpl._resolveNativeBinaryPath) could otherwise spawn
+// duplicate Electron instances.
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
@@ -123,6 +131,14 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+    }
+  });
+
+  // Focus existing window when a second instance is launched
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
     }
   });
 });
