@@ -51,41 +51,57 @@ export function startSDKLifecycle(
   const sdkReady = new Promise<void>((resolve) => { _sdkReadyResolve = resolve; });
 
   void (async () => {
-    if (useMock) {
-      await sdk.start();
-      console.warn('[main] Agent started in Mock mode (--mock flag)');
-      _sdkReadyResolve?.();
-      return;
-    }
-
-    if (isOnboardingComplete(onboardingFilePath)) {
-      try {
-        const { stdout: token } = await execFileAsync('gh', ['auth', 'token']);
-        if (token.trim()) {
-          (sdk as any)._options.githubToken = token.trim();
-        }
-      } catch (err) {
-        console.warn('[main] Could not get gh auth token, SDK will use default auth:', err instanceof Error ? err.message : String(err));
-      }
-
-      try {
+    try {
+      if (useMock) {
         await sdk.start();
-        console.warn('[main] Agent started in Copilot SDK mode');
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error('[main] CRITICAL: Copilot SDK failed to start:', msg);
-        // Show error to user — never silently degrade to a broken state
-        const { dialog } = await import('electron');
-        dialog.showErrorBox(
-          'GHO Work — Agent Unavailable',
-          'The Copilot SDK failed to start. The AI agent will not work.\n\n'
-          + 'This usually means GitHub authentication is missing or expired.\n'
-          + 'Try: gh auth login\n\n'
-          + `Error: ${msg}`,
-        );
+        console.warn('[main] Agent started in Mock mode (--mock flag)');
+        _sdkReadyResolve?.();
+        return;
       }
-    } else {
-      console.warn('[main] SDK start deferred — waiting for onboarding to complete');
+
+      if (isOnboardingComplete(onboardingFilePath)) {
+        try {
+          const { stdout: token } = await execFileAsync('gh', ['auth', 'token']);
+          if (token.trim()) {
+            (sdk as any)._options.githubToken = token.trim();
+          }
+        } catch (err) {
+          console.warn('[main] Could not get gh auth token, SDK will use default auth:', err instanceof Error ? err.message : String(err));
+        }
+
+        try {
+          // Timeout SDK start to prevent hanging — native binary issues on Windows
+          // can cause the subprocess to hang indefinitely
+          const startPromise = sdk.start();
+          const timeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('SDK start timed out after 30s')), 30000));
+          await Promise.race([startPromise, timeout]);
+          console.warn('[main] Agent started in Copilot SDK mode');
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error('[main] CRITICAL: Copilot SDK failed to start:', msg);
+          // Stop any partially-started SDK to prevent ghost processes
+          try { await sdk.stop(); } catch { /* ignore */ }
+          // Show error to user — never silently degrade to a broken state
+          try {
+            const { dialog } = await import('electron');
+            dialog.showErrorBox(
+              'GHO Work — Agent Unavailable',
+              'The Copilot SDK failed to start. The AI agent will not work.\n\n'
+              + 'This usually means GitHub authentication is missing or expired.\n'
+              + 'Try: gh auth login\n\n'
+              + `Error: ${msg}`,
+            );
+          } catch (dialogErr) {
+            console.error('[main] Failed to show error dialog:', dialogErr instanceof Error ? dialogErr.message : String(dialogErr));
+          }
+        }
+      } else {
+        console.warn('[main] SDK start deferred — waiting for onboarding to complete');
+      }
+    } catch (outerErr) {
+      // Catch-all: no error from SDK lifecycle should ever crash the main process
+      console.error('[main] Unexpected error in SDK lifecycle:', outerErr instanceof Error ? outerErr.message : String(outerErr));
     }
     _sdkReadyResolve?.();
   })();

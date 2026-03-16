@@ -12,9 +12,14 @@ files:
 extraResources:
   - from: resources/icon.png
     to: icon.png
+  - from: ../../skills
+    to: skills
 asarUnpack:
   - "**/node_modules/better-sqlite3/**"
+  - "**/node_modules/@github/copilot/**"
+  - "**/node_modules/@github/copilot-*/**"
 win:
+  icon: resources/icon.ico
   executableName: gho-work
   target:
     - nsis
