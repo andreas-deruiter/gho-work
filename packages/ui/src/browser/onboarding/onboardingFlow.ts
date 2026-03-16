@@ -64,7 +64,7 @@ export class OnboardingFlow extends Disposable {
       }
       case 'verification': {
         const widget = new VerificationStep(stepContainer, this._ipc);
-        widget.onDidContinue(() => this._showStep('connectors'));
+        widget.onDidContinue(() => void this._finish());
         widget.onDidRequestSignOut(() => void this._switchAccount());
         this._currentWidget = widget;
         break;

@@ -29,13 +29,19 @@ console.error = (...args: unknown[]) => {
   logStream.write(`[${timestamp()}] ERROR: ${args.map(String).join(' ')}\n`);
 };
 console.warn('[main] Log file:', logPath);
+console.warn('[main] Version:', app.getVersion(), '| Platform:', process.platform, '| Arch:', process.arch);
+console.warn('[main] Packaged:', app.isPackaged, '| ResourcesPath:', process.resourcesPath);
 
 // Catch unhandled rejections to prevent crash loops (e.g. vscode-jsonrpc errors from Copilot SDK)
 process.on('unhandledRejection', (reason) => {
-  console.error('[main] Unhandled rejection:', reason instanceof Error ? reason.message : String(reason));
+  console.error('[main] Unhandled rejection:', reason instanceof Error ? reason.stack ?? reason.message : String(reason));
 });
 process.on('uncaughtException', (error) => {
-  console.error('[main] Uncaught exception:', error.message);
+  console.error('[main] Uncaught exception:', error.stack ?? error.message);
+});
+// Log process exit to help diagnose crash loops
+process.on('exit', (code) => {
+  logStream.write(`[${timestamp()}] EXIT: Process exiting with code ${code}\n`);
 });
 
 // --mock flag enables mock SDK mode (for testing without GitHub auth)
