@@ -76,13 +76,13 @@ test.describe('Agent orchestration', () => {
     await page.keyboard.press('Meta+Shift+b');
     await expect(panelContainer).toBeVisible({ timeout: 3000 });
 
-    // Should have ARIA attributes
+    // Should have ARIA attributes (panel auto-hides when empty but is still in DOM)
     const panel = page.locator('.info-panel');
     await expect(panel).toHaveAttribute('role', 'complementary');
     await expect(panel).toHaveAttribute('aria-label', 'Task info');
 
-    // Before any conversation, should show empty state
-    await expect(page.locator('.info-panel-empty')).toBeVisible();
+    // Before any conversation, panel auto-hides (all sections empty)
+    await expect(panel).toBeHidden();
 
     // Close info panel
     await page.keyboard.press('Meta+Shift+b');
@@ -109,34 +109,22 @@ test.describe('Agent orchestration', () => {
     const panelContainer = page.locator('.info-panel-container');
     await expect(panelContainer).toBeVisible({ timeout: 3000 });
 
-    // The info panel should now have data (empty state should be gone)
-    // The context section may or may not be visible depending on whether
-    // InstructionResolver found any instruction files. Take a screenshot
-    // for evidence either way.
+    // After sending a message, panel may have data (context_loaded fires on session creation).
+    // With auto-hide, the panel is visible only if at least one section has data.
     const panel = page.locator('.info-panel');
-    await expect(panel).toBeVisible();
 
-    // Take a screenshot of the info panel state
+    // Take a screenshot of the info panel state for evidence
     await page.screenshot({
       path: resolve(__dirname, 'screenshots/agent-orchestration-info-panel.png'),
     });
 
-    // The context section element exists in the DOM (even if hidden when empty)
-    const contextWrap = page.locator('.info-panel-context');
-    await expect(contextWrap).toBeAttached();
-
-    // Check if the context section has content (instruction sources or agents)
-    const contextSection = page.locator('.info-context-section');
+    // The context section container exists in the DOM
+    const contextSection = panel.locator('.info-section-container').filter({ hasText: 'Context' });
     const isContextVisible = await contextSection.isVisible().catch(() => false);
 
     if (isContextVisible) {
-      // Verify the section header says "Context"
-      const header = contextSection.locator('.info-section-header');
-      await expect(header).toHaveText('Context');
-
       // Check for instruction sources
-      const sourceList = contextSection.locator('.info-context-source-list');
-      const sourceCount = await sourceList.locator('li').count();
+      const sourceCount = await contextSection.locator('.info-context-source').count();
 
       // Take evidence screenshot
       await page.screenshot({
