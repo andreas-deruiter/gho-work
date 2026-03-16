@@ -30,6 +30,14 @@ console.error = (...args: unknown[]) => {
 };
 console.warn('[main] Log file:', logPath);
 
+// Catch unhandled rejections to prevent crash loops (e.g. vscode-jsonrpc errors from Copilot SDK)
+process.on('unhandledRejection', (reason) => {
+  console.error('[main] Unhandled rejection:', reason instanceof Error ? reason.message : String(reason));
+});
+process.on('uncaughtException', (error) => {
+  console.error('[main] Uncaught exception:', error.message);
+});
+
 // --mock flag enables mock SDK mode (for testing without GitHub auth)
 const useMockSDK = process.argv.includes('--mock');
 if (useMockSDK) {

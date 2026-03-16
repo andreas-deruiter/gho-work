@@ -1,6 +1,7 @@
 appId: com.gho-work.desktop
 productName: GHO Work
 directories:
+  buildResources: resources
   output: ../../release
 files:
   - out/**

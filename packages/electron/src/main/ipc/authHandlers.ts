@@ -366,17 +366,24 @@ export function registerAuthHandlers(deps: IpcHandlerDeps): void {
     // Write onboarding-complete flag
     fs.writeFileSync(onboardingFilePath, JSON.stringify({ complete: true }), 'utf-8');
 
-    // Ensure SDK is running with real token (may already be started by verification step)
+    // Start SDK with real token. Wrap in a timeout to prevent hanging.
+    // If it fails, the app continues in degraded mode — the user can still
+    // use the app and the SDK error dialog will show.
     if (!useMock) {
       try {
         const { stdout: token } = await execFileAsync('gh', ['auth', 'token']);
         const tokenStr = token.trim();
         if (tokenStr) {
-          await sdk.restart({ githubToken: tokenStr, useMock: false });
+          const sdkStart = sdk.restart({ githubToken: tokenStr, useMock: false });
+          const timeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('SDK start timed out after 20s')), 20000));
+          await Promise.race([sdkStart, timeout]);
           console.warn('[main] SDK restarted in real mode after onboarding');
         }
       } catch (err) {
         console.error('[main] Failed to restart SDK with real token:', err instanceof Error ? err.message : String(err));
+        // Stop any partially-started SDK to prevent ghost processes
+        try { await sdk.stop(); } catch { /* ignore */ }
       }
     }
 
