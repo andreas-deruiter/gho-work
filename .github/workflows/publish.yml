@@ -42,4 +42,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EB_PLATFORM: ${{ matrix.platform }}
-        run: cd apps/desktop && npx electron-builder --${EB_PLATFORM} --publish always --config ../../electron-builder.yml
+        run: cd apps/desktop && npx electron-builder --${{ matrix.platform }} --publish always --config ../../electron-builder.yml
