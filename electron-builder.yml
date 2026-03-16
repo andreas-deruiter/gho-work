@@ -18,8 +18,8 @@ asarUnpack:
   - "**/node_modules/better-sqlite3/**"
   - "**/node_modules/@github/copilot/**"
   - "**/node_modules/@github/copilot-*/**"
-icon: icon.ico
 win:
+  icon: icon.ico
   executableName: gho-work
   target:
     - nsis
