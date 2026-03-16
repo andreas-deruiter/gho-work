@@ -1,7 +1,6 @@
 appId: com.gho-work.desktop
 productName: GHO Work
 directories:
-  buildResources: ../../resources
   output: ../../release
 files:
   - out/**
@@ -10,32 +9,27 @@ files:
   - '!**/*.ts'
   - '!**/*.map'
 extraResources:
-  - from: ../../resources/icon.png
+  - from: resources/icon.png
     to: icon.png
 asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 win:
   executableName: gho-work
-  icon: ../../resources/icon.ico
   target:
     - nsis
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: GHO Work
   uninstallDisplayName: GHO Work
-  installerIcon: ../../resources/icon.ico
-  uninstallerIcon: ../../resources/icon.ico
   oneClick: false
   allowToChangeInstallationDirectory: true
 mac:
-  icon: ../../resources/icon.icns
   target:
     - dmg
   category: public.app-category.productivity
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
-  icon: ../../resources/icon.png
   target:
     - AppImage
   category: Office

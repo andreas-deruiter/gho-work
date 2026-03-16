@@ -53,11 +53,12 @@ let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
   // On Windows/Linux, set the window icon explicitly (macOS uses the .icns from the bundle).
-  // In packaged builds, extraResources are in process.resourcesPath; in dev, use repo root.
+  // In packaged builds, extraResources copies icon.png to process.resourcesPath.
+  // In dev, it's in apps/desktop/resources/.
   const windowIcon = process.platform !== 'darwin'
     ? (app.isPackaged
       ? join(process.resourcesPath, 'icon.png')
-      : join(__dirname, '../../../../resources/icon.png'))
+      : join(__dirname, '../../resources/icon.png'))
     : undefined;
 
   mainWindow = new BrowserWindow({

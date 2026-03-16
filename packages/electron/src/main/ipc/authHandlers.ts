@@ -264,6 +264,16 @@ export function registerAuthHandlers(deps: IpcHandlerDeps): void {
     });
   });
 
+  ipc.handle(IPC_CHANNELS.ONBOARDING_GH_LOGOUT, async () => {
+    try {
+      await execFileAsync('gh', ['auth', 'logout', '--hostname', 'github.com', '--yes']);
+      console.warn('[ONBOARDING_GH_LOGOUT] Logged out of gh CLI');
+    } catch (err) {
+      console.warn('[ONBOARDING_GH_LOGOUT] Logout failed (may already be logged out):', err instanceof Error ? err.message : String(err));
+    }
+    return {};
+  });
+
   ipc.handle(IPC_CHANNELS.ONBOARDING_CHECK_COPILOT, async (): Promise<CopilotCheckResponse> => {
     // Step 1: Get token from gh CLI
     let tokenStr: string;
@@ -340,44 +350,15 @@ export function registerAuthHandlers(deps: IpcHandlerDeps): void {
       return { hasSubscription: false, user, error: msg };
     }
 
-    // Step 3: Start SDK and list models
-    let models: Array<{ id: string; name: string }> | undefined;
-    let hasSubscription = true;
-    let sdkError: string | undefined;
-    if (!useMock) {
-      try {
-        const sdkTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
-          Promise.race([
-            promise,
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
-          ]);
-        console.warn('[COPILOT_CHECK] Starting SDK with real token...');
-        await sdkTimeout(sdk.restart({ githubToken: tokenStr, useMock: false }), 15000, 'sdk.restart');
-        console.warn('[COPILOT_CHECK] SDK started, listing models...');
-        const sdkModels = await sdkTimeout(sdk.listModels(), 15000, 'sdk.listModels');
-        models = sdkModels.map((m) => ({ id: m.id, name: m.name }));
-        hasSubscription = sdkModels.length > 0;
-        console.warn(`[COPILOT_CHECK] ${sdkModels.length} models available`);
-        if (!hasSubscription) {
-          sdkError = `SDK returned 0 models for @${userInfo.login}. This usually means no active Copilot subscription.`;
-        }
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        console.warn('[COPILOT_CHECK] SDK failed:', errMsg);
-        sdkError = `SDK error: ${errMsg}`;
-        hasSubscription = false;
-      }
-    }
-
-    const tier: CopilotCheckResponse['tier'] = !hasSubscription ? undefined
-      : (models && models.length > 3) ? 'pro' : 'free';
+    // Copilot scope is present — trust the API check. Don't start the SDK here;
+    // it will start after onboarding completes (in ONBOARDING_COMPLETE handler).
+    // Starting it here caused timeouts on Windows and duplicate SDK processes.
+    console.warn('[COPILOT_CHECK] Copilot scope confirmed for @' + userInfo.login);
 
     return {
-      hasSubscription,
-      tier,
+      hasSubscription: true,
+      tier: 'free', // Will be refined once SDK connects post-onboarding
       user,
-      models,
-      error: sdkError,
     };
   });
 

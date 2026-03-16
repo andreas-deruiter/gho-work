@@ -65,7 +65,7 @@ export class OnboardingFlow extends Disposable {
       case 'verification': {
         const widget = new VerificationStep(stepContainer, this._ipc);
         widget.onDidContinue(() => this._showStep('connectors'));
-        widget.onDidRequestSignOut(() => this._showStep('auth'));
+        widget.onDidRequestSignOut(() => void this._switchAccount());
         this._currentWidget = widget;
         break;
       }
@@ -76,6 +76,16 @@ export class OnboardingFlow extends Disposable {
         break;
       }
     }
+  }
+
+  private async _switchAccount(): Promise<void> {
+    // Log out of gh CLI so the auth step doesn't auto-advance
+    try {
+      await this._ipc.invoke(IPC_CHANNELS.ONBOARDING_GH_LOGOUT);
+    } catch (err) {
+      console.warn('[OnboardingFlow] Failed to logout of gh:', err);
+    }
+    this._showStep('auth');
   }
 
   private async _finish(): Promise<void> {

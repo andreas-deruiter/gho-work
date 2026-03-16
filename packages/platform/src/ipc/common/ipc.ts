@@ -24,6 +24,7 @@ export const IPC_CHANNELS = {
   ONBOARDING_GH_LOGIN: 'onboarding:gh-login',
   ONBOARDING_GH_LOGIN_EVENT: 'onboarding:gh-login-event',
   ONBOARDING_CHECK_COPILOT: 'onboarding:check-copilot',
+  ONBOARDING_GH_LOGOUT: 'onboarding:gh-logout',
   ONBOARDING_COMPLETE: 'onboarding:complete',
   ONBOARDING_STATUS: 'onboarding:status',
   // Connector channels
