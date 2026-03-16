@@ -2412,7 +2412,7 @@ html, body {
   align-items: flex-start;
   gap: 10px;
   position: relative;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
 }
 
 .info-timeline-circle {
@@ -2459,8 +2459,8 @@ html, body {
 .info-timeline-connector {
   position: absolute;
   left: 6px;
-  top: 16px;
-  bottom: 0;
+  top: 14px;
+  bottom: -2px;
   width: 2px;
   background: var(--info-timeline-connector);
 }
