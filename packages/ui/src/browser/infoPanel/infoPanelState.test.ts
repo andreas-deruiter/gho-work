@@ -101,3 +101,71 @@ describe('InfoPanelState todos', () => {
     expect(state.contextSources).toHaveLength(1);
   });
 });
+
+describe('InfoPanelState — agents', () => {
+  it('stores and retrieves agent entries', () => {
+    const state = new InfoPanelState();
+    state.setAgents([{ id: 'tc-1', name: 'reviewer', displayName: 'Code Reviewer', state: 'running' }]);
+    expect(state.agents).toHaveLength(1);
+    expect(state.agents[0].state).toBe('running');
+  });
+
+  it('clears agents on clear()', () => {
+    const state = new InfoPanelState();
+    state.setAgents([{ id: 'tc-1', name: 'reviewer', displayName: 'Code Reviewer', state: 'running' }]);
+    state.clear();
+    expect(state.agents).toHaveLength(0);
+  });
+});
+
+describe('InfoPanelState — skills', () => {
+  it('stores and retrieves skill entries', () => {
+    const state = new InfoPanelState();
+    state.setSkills([{ name: 'brainstorming', state: 'running' }]);
+    expect(state.skills).toHaveLength(1);
+  });
+
+  it('clears skills on clear()', () => {
+    const state = new InfoPanelState();
+    state.setSkills([{ name: 'brainstorming', state: 'running' }]);
+    state.clear();
+    expect(state.skills).toHaveLength(0);
+  });
+});
+
+describe('InfoPanelState — usage', () => {
+  it('stores usage data', () => {
+    const state = new InfoPanelState();
+    state.setUsageData({ used: 500, total: 1000, remainingPercentage: 50 });
+    expect(state.usageData?.used).toBe(500);
+  });
+
+  it('preserves usage data on clear()', () => {
+    const state = new InfoPanelState();
+    state.setUsageData({ used: 500, total: 1000, remainingPercentage: 50 });
+    state.clear();
+    expect(state.usageData).not.toBeNull();
+  });
+});
+
+describe('InfoPanelState — collapse state', () => {
+  it('tracks collapse per section', () => {
+    const state = new InfoPanelState();
+    state.setCollapsed('progress', true);
+    state.setCollapsed('agents', false);
+    expect(state.isCollapsed('progress')).toBe(true);
+    expect(state.isCollapsed('agents')).toBe(false);
+  });
+
+  it('preserves collapse state on clear()', () => {
+    const state = new InfoPanelState();
+    state.setCollapsed('progress', true);
+    state.clear();
+    expect(state.isCollapsed('progress')).toBe(true);
+  });
+
+  it('returns undefined for unset sections', () => {
+    const state = new InfoPanelState();
+    expect(state.isCollapsed('unknown')).toBeUndefined();
+  });
+});
