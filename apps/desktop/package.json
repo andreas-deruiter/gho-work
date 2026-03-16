@@ -2,6 +2,12 @@
   "name": "gho-work-desktop",
   "version": "0.0.1",
   "private": true,
+  "description": "GHO Work - AI-powered office productivity desktop app",
+  "author": "Andreas de Ruiter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andreas-deruiter/gho-work.git"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
