@@ -425,6 +425,8 @@ export class Workbench extends Disposable {
         // Navigate to settings panel — setActiveItem fires onDidSelectItem
         // which triggers the existing handler that manages panel visibility
         this._activityBar.setActiveItem('settings');
+      } else if (itemId === 'user') {
+        this._showUserMenu();
       }
     }));
   }
@@ -493,6 +495,51 @@ export class Workbench extends Disposable {
   private _autoShowInfoPanel(): void {
     if (!this._userCollapsedInfoPanel) {
       this._showInfoPanel();
+    }
+  }
+
+  private _showUserMenu(): void {
+    // Create a simple dropdown menu anchored to the user avatar
+    const existing = document.querySelector('.user-menu-dropdown');
+    if (existing) {
+      existing.remove();
+      return;
+    }
+
+    const menu = document.createElement('div');
+    menu.className = 'user-menu-dropdown';
+
+    const signOutBtn = document.createElement('button');
+    signOutBtn.className = 'user-menu-item';
+    signOutBtn.textContent = 'Sign out of GitHub';
+    signOutBtn.addEventListener('click', () => {
+      menu.remove();
+      void this._signOut();
+    });
+    menu.appendChild(signOutBtn);
+
+    document.body.appendChild(menu);
+
+    // Close on outside click
+    const onOutsideClick = (e: MouseEvent) => {
+      if (!menu.contains(e.target as Node)) {
+        menu.remove();
+        document.removeEventListener('click', onOutsideClick, true);
+      }
+    };
+    // Delay to avoid the current click closing it immediately
+    requestAnimationFrame(() => {
+      document.addEventListener('click', onOutsideClick, true);
+    });
+  }
+
+  private async _signOut(): Promise<void> {
+    try {
+      await this._ipc.invoke(IPC_CHANNELS.AUTH_LOGOUT);
+      // Reload the app to return to onboarding
+      window.location.reload();
+    } catch (err) {
+      console.error('[Workbench] Failed to sign out:', err);
     }
   }
 }

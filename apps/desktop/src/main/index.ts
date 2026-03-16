@@ -3,12 +3,32 @@
  */
 import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'path';
+import { createWriteStream } from 'fs';
+import { mkdirSync } from 'fs';
 import { createMainProcess } from '@gho-work/electron';
 
 // Allow tests to override userData directory for isolation
 if (process.env.GHO_USER_DATA_DIR) {
   app.setPath('userData', process.env.GHO_USER_DATA_DIR);
 }
+
+// File-based logging — writes main process logs to userData/logs/main.log
+const logsDir = join(app.getPath('userData'), 'logs');
+try { mkdirSync(logsDir, { recursive: true }); } catch { /* exists */ }
+const logPath = join(logsDir, 'main.log');
+const logStream = createWriteStream(logPath, { flags: 'a' });
+const originalWarn = console.warn;
+const originalError = console.error;
+const timestamp = () => new Date().toISOString();
+console.warn = (...args: unknown[]) => {
+  originalWarn(...args);
+  logStream.write(`[${timestamp()}] WARN: ${args.map(String).join(' ')}\n`);
+};
+console.error = (...args: unknown[]) => {
+  originalError(...args);
+  logStream.write(`[${timestamp()}] ERROR: ${args.map(String).join(' ')}\n`);
+};
+console.warn('[main] Log file:', logPath);
 
 // --mock flag enables mock SDK mode (for testing without GitHub auth)
 const useMockSDK = process.argv.includes('--mock');
@@ -32,14 +52,22 @@ for (let i = 0; i < process.argv.length; i++) {
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
+  // On Windows/Linux, set the window icon explicitly (macOS uses the .icns from the bundle).
+  // In packaged builds, extraResources are in process.resourcesPath; in dev, use repo root.
+  const windowIcon = process.platform !== 'darwin'
+    ? (app.isPackaged
+      ? join(process.resourcesPath, 'icon.png')
+      : join(__dirname, '../../../../resources/icon.png'))
+    : undefined;
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 600,
     minHeight: 400,
     title: 'GHO Work',
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 15, y: 12 },
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 15, y: 12 } } : {}),
+    ...(windowIcon ? { icon: windowIcon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

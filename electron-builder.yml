@@ -9,6 +9,9 @@ files:
   - '!**/src/*'
   - '!**/*.ts'
   - '!**/*.map'
+extraResources:
+  - from: ../../resources/icon.png
+    to: icon.png
 asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 win:
@@ -20,6 +23,8 @@ nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: GHO Work
   uninstallDisplayName: GHO Work
+  installerIcon: ../../resources/icon.ico
+  uninstallerIcon: ../../resources/icon.ico
   oneClick: false
   allowToChangeInstallationDirectory: true
 mac:

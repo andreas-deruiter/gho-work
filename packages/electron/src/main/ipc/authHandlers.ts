@@ -115,6 +115,12 @@ export function registerAuthHandlers(deps: IpcHandlerDeps): void {
 
   ipc.handle(IPC_CHANNELS.AUTH_LOGOUT, async () => {
     await authService.logout();
+    // Clear onboarding flag so re-authentication goes through onboarding
+    try {
+      fs.unlinkSync(onboardingFilePath);
+    } catch {
+      // File may not exist — that's fine
+    }
   });
 
   ipc.handle(IPC_CHANNELS.AUTH_STATE, async () => {
@@ -259,88 +265,120 @@ export function registerAuthHandlers(deps: IpcHandlerDeps): void {
   });
 
   ipc.handle(IPC_CHANNELS.ONBOARDING_CHECK_COPILOT, async (): Promise<CopilotCheckResponse> => {
+    // Step 1: Get token from gh CLI
+    let tokenStr: string;
     try {
       const { stdout: token } = await execFileAsync('gh', ['auth', 'token']);
-      const tokenStr = token.trim();
-      const https = await import('node:https');
+      tokenStr = token.trim();
+      console.warn('[COPILOT_CHECK] Got token from gh CLI (length:', tokenStr.length, ')');
+    } catch (err) {
+      const msg = 'Failed to get token from gh CLI: ' + (err instanceof Error ? err.message : String(err));
+      console.error('[COPILOT_CHECK]', msg);
+      return { hasSubscription: false, error: msg };
+    }
 
-      // Helper to make GitHub API requests
-      const ghApiGet = <T>(url: string): Promise<{ status: number; headers: Record<string, string>; body: T }> =>
-        new Promise((resolve, reject) => {
-          const req = https.get(url, {
-            headers: { Authorization: `token ${tokenStr}`, 'User-Agent': 'gho-work' },
-          }, (res) => {
-            let data = '';
-            res.on('data', (chunk: string) => { data += chunk; });
-            res.on('end', () => {
-              try {
-                const headers: Record<string, string> = {};
-                for (const [k, v] of Object.entries(res.headers)) {
-                  if (typeof v === 'string') { headers[k] = v; }
-                }
-                resolve({ status: res.statusCode ?? 0, headers, body: JSON.parse(data) });
-              } catch (err) {
-                console.warn('[ghApiRequest] Failed to parse JSON response:', err instanceof Error ? err.message : String(err));
-                resolve({ status: res.statusCode ?? 0, headers: {}, body: {} as T });
+    const https = await import('node:https');
+
+    // Helper to make GitHub API requests
+    const ghApiGet = <T>(url: string): Promise<{ status: number; headers: Record<string, string>; body: T }> =>
+      new Promise((resolve, reject) => {
+        const req = https.get(url, {
+          headers: { Authorization: `token ${tokenStr}`, 'User-Agent': 'gho-work' },
+        }, (res) => {
+          let data = '';
+          res.on('data', (chunk: string) => { data += chunk; });
+          res.on('end', () => {
+            try {
+              const headers: Record<string, string> = {};
+              for (const [k, v] of Object.entries(res.headers)) {
+                if (typeof v === 'string') { headers[k] = v; }
               }
-            });
+              resolve({ status: res.statusCode ?? 0, headers, body: JSON.parse(data) });
+            } catch (parseErr) {
+              console.warn('[COPILOT_CHECK] Failed to parse JSON from', url, ':', parseErr instanceof Error ? parseErr.message : String(parseErr));
+              resolve({ status: res.statusCode ?? 0, headers: {}, body: {} as T });
+            }
           });
-          req.on('error', reject);
-          req.setTimeout(10000, () => { req.destroy(); reject(new Error('timeout')); });
         });
+        req.on('error', reject);
+        req.setTimeout(10000, () => { req.destroy(); reject(new Error('timeout')); });
+      });
 
-      // Fetch user info + check scopes from response headers
-      const userResp = await ghApiGet<{ login: string; id: number; avatar_url: string; name?: string }>(
+    // Step 2: Fetch user info + check scopes
+    let userInfo: { login: string; id: number; avatar_url: string; name?: string };
+    let scopes: string[];
+    try {
+      const userResp = await ghApiGet<{ login: string; id: number; avatar_url: string; name?: string; message?: string }>(
         'https://api.github.com/user',
       );
-      const userInfo = userResp.body;
-      const scopes = (userResp.headers['x-oauth-scopes'] ?? '').split(',').map(s => s.trim());
-      const hasCopilotScope = scopes.includes('copilot');
-
-      // Start the real SDK with the user's token and list available models.
-      // This is the only reliable way to check subscription — there's no public REST API.
-      let models: Array<{ id: string; name: string }> | undefined;
-      let hasSubscription = hasCopilotScope;
-      if (hasCopilotScope && !useMock) {
-        try {
-          // (Re)start SDK with the real token so listModels hits the real API.
-          // Wrap in a timeout — SDK startup can hang on some platforms.
-          const sdkTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
-            Promise.race([
-              promise,
-              new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
-            ]);
-          await sdkTimeout(sdk.restart({ githubToken: tokenStr, useMock: false }), 15000, 'sdk.restart');
-          const sdkModels = await sdkTimeout(sdk.listModels(), 15000, 'sdk.listModels');
-          models = sdkModels.map((m) => ({ id: m.id, name: m.name }));
-          hasSubscription = sdkModels.length > 0;
-          console.warn(`[main] Copilot check: ${sdkModels.length} models available`);
-        } catch (err) {
-          console.warn('[main] Failed to list models from SDK:', err instanceof Error ? err.message : String(err));
-          // Copilot scope present but SDK can't list models — user may not have an active subscription
-          hasSubscription = false;
-        }
+      console.warn('[COPILOT_CHECK] GitHub API /user status:', userResp.status);
+      if (userResp.status !== 200) {
+        const msg = `GitHub API returned ${userResp.status}: ${(userResp.body as { message?: string }).message ?? 'unknown error'}`;
+        console.error('[COPILOT_CHECK]', msg);
+        return { hasSubscription: false, error: msg };
       }
-
-      // We can't reliably determine tier from REST API; report based on model count
-      const tier: CopilotCheckResponse['tier'] = !hasSubscription ? undefined
-        : (models && models.length > 3) ? 'pro' : 'free';
-
-      return {
-        hasSubscription,
-        tier,
-        user: {
-          githubId: String(userInfo.id),
-          githubLogin: userInfo.login,
-          avatarUrl: userInfo.avatar_url,
-          name: userInfo.name,
-        },
-        models,
-      };
+      userInfo = userResp.body;
+      scopes = (userResp.headers['x-oauth-scopes'] ?? '').split(',').map(s => s.trim());
+      console.warn('[COPILOT_CHECK] Logged in as:', userInfo.login, '| Scopes:', scopes.join(', '));
     } catch (err) {
-      console.error('[COPILOT_CHECK] Failed to check Copilot subscription:', err);
-      return { hasSubscription: false, error: 'Failed to check Copilot subscription.' };
+      const msg = 'Failed to fetch GitHub user: ' + (err instanceof Error ? err.message : String(err));
+      console.error('[COPILOT_CHECK]', msg);
+      return { hasSubscription: false, error: msg };
     }
+
+    const hasCopilotScope = scopes.includes('copilot');
+    const user = {
+      githubId: String(userInfo.id),
+      githubLogin: userInfo.login,
+      avatarUrl: userInfo.avatar_url,
+      name: userInfo.name,
+    };
+
+    if (!hasCopilotScope) {
+      const msg = `Token for @${userInfo.login} is missing the "copilot" scope. Current scopes: ${scopes.join(', ')}. Try: gh auth refresh -s copilot`;
+      console.warn('[COPILOT_CHECK]', msg);
+      return { hasSubscription: false, user, error: msg };
+    }
+
+    // Step 3: Start SDK and list models
+    let models: Array<{ id: string; name: string }> | undefined;
+    let hasSubscription = true;
+    let sdkError: string | undefined;
+    if (!useMock) {
+      try {
+        const sdkTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
+          Promise.race([
+            promise,
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+          ]);
+        console.warn('[COPILOT_CHECK] Starting SDK with real token...');
+        await sdkTimeout(sdk.restart({ githubToken: tokenStr, useMock: false }), 15000, 'sdk.restart');
+        console.warn('[COPILOT_CHECK] SDK started, listing models...');
+        const sdkModels = await sdkTimeout(sdk.listModels(), 15000, 'sdk.listModels');
+        models = sdkModels.map((m) => ({ id: m.id, name: m.name }));
+        hasSubscription = sdkModels.length > 0;
+        console.warn(`[COPILOT_CHECK] ${sdkModels.length} models available`);
+        if (!hasSubscription) {
+          sdkError = `SDK returned 0 models for @${userInfo.login}. This usually means no active Copilot subscription.`;
+        }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn('[COPILOT_CHECK] SDK failed:', errMsg);
+        sdkError = `SDK error: ${errMsg}`;
+        hasSubscription = false;
+      }
+    }
+
+    const tier: CopilotCheckResponse['tier'] = !hasSubscription ? undefined
+      : (models && models.length > 3) ? 'pro' : 'free';
+
+    return {
+      hasSubscription,
+      tier,
+      user,
+      models,
+      error: sdkError,
+    };
   });
 
   ipc.handle(IPC_CHANNELS.ONBOARDING_COMPLETE, async () => {
