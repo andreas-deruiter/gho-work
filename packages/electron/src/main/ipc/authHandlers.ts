@@ -303,9 +303,15 @@ export function registerAuthHandlers(deps: IpcHandlerDeps): void {
       let hasSubscription = hasCopilotScope;
       if (hasCopilotScope && !useMock) {
         try {
-          // (Re)start SDK with the real token so listModels hits the real API
-          await sdk.restart({ githubToken: tokenStr, useMock: false });
-          const sdkModels = await sdk.listModels();
+          // (Re)start SDK with the real token so listModels hits the real API.
+          // Wrap in a timeout — SDK startup can hang on some platforms.
+          const sdkTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
+            Promise.race([
+              promise,
+              new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+            ]);
+          await sdkTimeout(sdk.restart({ githubToken: tokenStr, useMock: false }), 15000, 'sdk.restart');
+          const sdkModels = await sdkTimeout(sdk.listModels(), 15000, 'sdk.listModels');
           models = sdkModels.map((m) => ({ id: m.id, name: m.name }));
           hasSubscription = sdkModels.length > 0;
           console.warn(`[main] Copilot check: ${sdkModels.length} models available`);
