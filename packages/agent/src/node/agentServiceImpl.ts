@@ -298,6 +298,7 @@ export class AgentServiceImpl implements IAgentService {
           parentToolCallId: (data.parentToolCallId as string) ?? '',
           name: (data.name as string) ?? '',
           displayName: (data.displayName as string) ?? (data.name as string) ?? '',
+          state: 'completed' as const,
         };
       case 'subagent.failed':
         return {
@@ -311,19 +312,6 @@ export class AgentServiceImpl implements IAgentService {
           type: 'skill_invoked',
           skillName: (data.skillName as string) ?? 'unknown',
           state: (data.state as 'running' | 'completed' | 'failed') ?? 'running',
-        };
-      case 'subagent.started':
-        return {
-          type: 'subagent_started',
-          subagentId: (data.subagentId as string) ?? generateUUID(),
-          subagentName: (data.subagentName as string) ?? (data.name as string) ?? 'subagent',
-        };
-      case 'subagent.completed':
-      case 'subagent.failed':
-        return {
-          type: 'subagent_completed',
-          subagentId: (data.subagentId as string) ?? '',
-          state: event.type === 'subagent.completed' ? 'completed' : 'failed',
         };
       case 'session.idle':
         return { type: 'done', messageId: generateUUID() };

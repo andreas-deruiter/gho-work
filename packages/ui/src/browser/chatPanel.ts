@@ -435,12 +435,12 @@ export class ChatPanel extends Disposable {
         break;
       }
       case 'subagent_started': {
-        this._currentThinkingSection.value?.addSubagent(event.subagentId, event.subagentName);
+        this._currentThinkingSection.value?.addSubagent(event.parentToolCallId, event.displayName ?? event.name);
         this._scrollToBottom();
         break;
       }
       case 'subagent_completed': {
-        this._currentThinkingSection.value?.updateSubagent(event.subagentId, event.state);
+        this._currentThinkingSection.value?.updateSubagent(event.parentToolCallId, event.state);
         this._scrollToBottom();
         break;
       }
