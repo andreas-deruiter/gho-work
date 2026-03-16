@@ -130,26 +130,19 @@ export function registerAuthHandlers(deps: IpcHandlerDeps): void {
   });
 
   ipc.handle(IPC_CHANNELS.ONBOARDING_CHECK_GH, async (): Promise<GhCheckResponse> => {
-    // Check if gh is installed
+    // Check if gh is installed by running it directly (cross-platform — `which` doesn't exist on Windows)
     let version: string | undefined;
-    try {
-      await execFileAsync('which', ['gh']);
-    } catch {
-      // gh not found on PATH — expected if not installed
-      return { installed: false, authenticated: false, hasCopilotScope: false };
-    }
-    const installed = true;
-
-    // Get version
     try {
       const { stdout } = await execFileAsync('gh', ['--version']);
       const match = stdout.match(/gh version ([\d.]+)/);
       if (match) {
         version = match[1];
       }
-    } catch (err) {
-      console.warn('[ONBOARDING_CHECK_GH] Failed to get gh version:', err instanceof Error ? err.message : String(err));
+    } catch {
+      // gh not found on PATH — expected if not installed
+      return { installed: false, authenticated: false, hasCopilotScope: false };
     }
+    const installed = true;
 
     // Check auth status
     let authenticated = false;

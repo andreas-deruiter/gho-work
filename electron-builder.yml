@@ -13,6 +13,7 @@ asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 win:
   executableName: gho-work
+  icon: ../../resources/icon.ico
   target:
     - nsis
 nsis:
@@ -22,12 +23,14 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
 mac:
+  icon: ../../resources/icon.icns
   target:
     - dmg
   category: public.app-category.productivity
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
+  icon: ../../resources/icon.png
   target:
     - AppImage
   category: Office
