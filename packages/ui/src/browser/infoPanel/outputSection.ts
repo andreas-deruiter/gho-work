@@ -12,8 +12,8 @@
  */
 import { Emitter } from '@gho-work/base';
 import type { Event } from '@gho-work/base';
-import { Widget } from '../widget.js';
-import { h, addDisposableListener } from '../dom.js';
+import { CollapsibleSection } from './collapsibleSection.js';
+import { addDisposableListener } from '../dom.js';
 import type { OutputEntry } from './infoPanelState.js';
 import { formatFileSize } from './infoPanelState.js';
 
@@ -29,38 +29,26 @@ interface EntryRecord {
   messageId: string;
 }
 
-export class OutputSection extends Widget {
+export class OutputSection extends CollapsibleSection {
   private readonly _onDidClickEntry = this._register(new Emitter<string>());
   readonly onDidClickEntry: Event<string> = this._onDidClickEntry.event;
 
   private readonly _onDidRequestReveal = this._register(new Emitter<string>());
   readonly onDidRequestReveal: Event<string> = this._onDidRequestReveal.event;
 
-  private readonly _bodyEl: HTMLElement;
-
   /** Map from path → entry record for deduplication and updates. */
   private readonly _entryMap = new Map<string, EntryRecord>();
 
   constructor() {
-    const layout = h('section.info-output-section@root', [
-      h('h3.info-section-header@header'),
-      h('div.info-section-body@body'),
-    ]);
+    super('Output', { defaultCollapsed: true });
 
-    super(layout.root);
-
-    const headerEl = layout['header'] as HTMLElement;
-    headerEl.textContent = 'Output';
-
-    this._bodyEl = layout['body'] as HTMLElement;
+    // Hidden until there is at least one entry
+    this.setVisible(false);
 
     // ARIA
     this.element.setAttribute('role', 'region');
     this.element.setAttribute('aria-label', 'Output files');
-    this._bodyEl.setAttribute('role', 'list');
-
-    // Hidden until there is at least one entry
-    this.element.style.display = 'none';
+    this.bodyElement.setAttribute('role', 'list');
   }
 
   /**
@@ -69,7 +57,7 @@ export class OutputSection extends Widget {
    */
   addEntry(entry: OutputEntry): void {
     // Show section
-    this.element.style.display = '';
+    this.setVisible(true);
 
     // Deduplicate by path — update existing entry if found
     const existing = this._entryMap.get(entry.path);
@@ -134,7 +122,7 @@ export class OutputSection extends Widget {
     entryEl.appendChild(badgeEl);
     entryEl.appendChild(revealEl);
 
-    this._bodyEl.appendChild(entryEl);
+    this.bodyElement.appendChild(entryEl);
 
     // Wire click events
     const messageId = entry.messageId;
@@ -164,5 +152,6 @@ export class OutputSection extends Widget {
     }));
 
     this._entryMap.set(path, { entryEl, sizeEl, badgeEl, messageId });
+    this.setBadge(String(this._entryMap.size));
   }
 }

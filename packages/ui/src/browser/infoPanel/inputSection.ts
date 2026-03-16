@@ -10,8 +10,8 @@
  */
 import { Emitter } from '@gho-work/base';
 import type { Event } from '@gho-work/base';
-import { Widget } from '../widget.js';
-import { h, addDisposableListener } from '../dom.js';
+import { CollapsibleSection } from './collapsibleSection.js';
+import { addDisposableListener } from '../dom.js';
 import type { InputEntry } from './infoPanelState.js';
 
 /** File icon SVG (simple document shape). */
@@ -19,35 +19,23 @@ const FILE_ICON = '📄';
 /** Tool icon (gear). */
 const TOOL_ICON = '⚙';
 
-export class InputSection extends Widget {
+export class InputSection extends CollapsibleSection {
   private readonly _onDidClickEntry = this._register(new Emitter<string>());
   readonly onDidClickEntry: Event<string> = this._onDidClickEntry.event;
-
-  private readonly _bodyEl: HTMLElement;
 
   /** Map from path → { entryEl, countEl, messageId } for updates. */
   private readonly _entryMap = new Map<string, { entryEl: HTMLElement; countEl: HTMLElement; messageId: string }>();
 
   constructor() {
-    const layout = h('section.info-input-section@root', [
-      h('h3.info-section-header@header'),
-      h('div.info-section-body@body'),
-    ]);
+    super('Input', { defaultCollapsed: true });
 
-    super(layout.root);
-
-    const headerEl = layout['header'] as HTMLElement;
-    headerEl.textContent = 'Input';
-
-    this._bodyEl = layout['body'] as HTMLElement;
+    // Hidden until there is at least one entry
+    this.setVisible(false);
 
     // ARIA
     this.element.setAttribute('role', 'region');
     this.element.setAttribute('aria-label', 'Input files and tools');
-    this._bodyEl.setAttribute('role', 'list');
-
-    // Hidden until there is at least one entry
-    this.element.style.display = 'none';
+    this.bodyElement.setAttribute('role', 'list');
   }
 
   /**
@@ -55,7 +43,7 @@ export class InputSection extends Widget {
    */
   addEntry(entry: InputEntry): void {
     // Show section
-    this.element.style.display = '';
+    this.setVisible(true);
 
     const entryEl = document.createElement('button');
     entryEl.className = `info-entry info-entry--${entry.kind}`;
@@ -85,7 +73,7 @@ export class InputSection extends Widget {
     entryEl.appendChild(nameEl);
     entryEl.appendChild(countEl);
 
-    this._bodyEl.appendChild(entryEl);
+    this.bodyElement.appendChild(entryEl);
 
     const messageId = entry.messageId;
     this._register(addDisposableListener(entryEl, 'click', () => {
@@ -100,6 +88,7 @@ export class InputSection extends Widget {
     }));
 
     this._entryMap.set(entry.path, { entryEl, countEl, messageId });
+    this.setBadge(String(this._entryMap.size));
   }
 
   /**
