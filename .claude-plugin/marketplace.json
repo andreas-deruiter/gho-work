@@ -1,0 +1,11 @@
+{
+  "name": "GHO Work Plugin Marketplace",
+  "owner": {
+    "name": "Andreas de Ruiter"
+  },
+  "metadata": {
+    "description": "Official plugin catalog for GHO Work",
+    "version": "0.1.0"
+  },
+  "plugins": []
+}
