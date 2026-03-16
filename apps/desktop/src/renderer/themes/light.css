@@ -24,4 +24,12 @@
   /* Borders */
   --border-primary: #d4d4d4;
   --border-secondary: #e0e0e0;
+
+  /* Info panel tokens (override dark-mode rgba(255,...) values) */
+  --info-section-border: rgba(0,0,0,0.08);
+  --info-section-bg: rgba(0,0,0,0.02);
+  --info-timeline-not-started-border: rgba(0,0,0,0.15);
+  --info-timeline-connector: rgba(0,0,0,0.08);
+  --info-ring-bg-stroke: rgba(0,0,0,0.06);
+  --info-usage-track-bg: rgba(0,0,0,0.06);
 }

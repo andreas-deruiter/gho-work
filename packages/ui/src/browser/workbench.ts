@@ -18,6 +18,7 @@ import { ThemeService } from './theme.js';
 import { FilesPanel } from './filesPanel.js';
 import { InfoPanel } from './infoPanel/index.js';
 import type { AgentEvent } from '@gho-work/base';
+import type { ConnectorStatusChanged, ConnectorListResponse, QuotaSnapshot } from '@gho-work/platform/common';
 
 export class Workbench extends Disposable {
   private readonly _activityBar: ActivityBar;
@@ -162,6 +163,13 @@ export class Workbench extends Disposable {
     this._infoPanel = this._register(new InfoPanel());
     infoPanelContainer.appendChild(this._infoPanel.getDomNode());
 
+    // Seed MCP server status into InfoPanel
+    void this._ipc.invoke<ConnectorListResponse>(IPC_CHANNELS.CONNECTOR_LIST).then((response) => {
+      for (const server of response.servers) {
+        this._infoPanel.handleConnectorStatus(server.name, server.status, server.config?.type ?? 'stdio', server.error);
+      }
+    });
+
     // Info panel resize handle (on the left side of info panel)
     const infoPanelResizeHandle = document.createElement('div');
     infoPanelResizeHandle.classList.add('info-panel-resize-handle');
@@ -200,6 +208,27 @@ export class Workbench extends Disposable {
       this._infoPanel.handleEvent(event);
     });
 
+    // Wire connector status changes to InfoPanel Context section
+    this._ipc.on(IPC_CHANNELS.CONNECTOR_STATUS_CHANGED, (...args: unknown[]) => {
+      const data = args[0] as ConnectorStatusChanged;
+      this._infoPanel.handleConnectorStatus(data.name, data.status, 'stdio', data.error);
+    });
+
+    // Wire quota changes to InfoPanel Usage section
+    this._ipc.on(IPC_CHANNELS.QUOTA_CHANGED, (...args: unknown[]) => {
+      const event = args[0] as { snapshots: QuotaSnapshot[] };
+      const snapshots = event?.snapshots ?? [];
+      const snap = snapshots.find(s => s.quotaType === 'premium_interactions') ?? snapshots[0];
+      if (snap) {
+        this._infoPanel.handleQuotaChanged({
+          used: snap.usedRequests,
+          total: snap.entitlementRequests,
+          remainingPercentage: snap.remainingPercentage,
+          resetDate: snap.resetDate,
+        });
+      }
+    });
+
     // Feed user attachments into InfoPanel Input section when a message is sent
     this._chatPanel.onDidSendMessage(evt => {
       if (evt.attachments && evt.attachments.length > 0) {
@@ -218,7 +247,13 @@ export class Workbench extends Disposable {
     this._infoPanel.onDidRequestRevealFile(filePath => {
       void this._ipc.invoke(IPC_CHANNELS.SHELL_SHOW_ITEM_IN_FOLDER, { path: filePath });
     });
-    this._infoPanel.onDidTodosReceived(() => this._autoShowInfoPanel());
+    this._infoPanel.onDidChangeVisibility((visible) => {
+      if (visible && !this._userCollapsedInfoPanel) {
+        this._showInfoPanel();
+      } else if (!visible) {
+        this._hideInfoPanel();
+      }
+    });
 
     // Store reference to main element for settings panel injection
     this._mainEl = layout.main;
@@ -490,12 +525,6 @@ export class Workbench extends Disposable {
   private _hideInfoPanel(): void {
     this._infoPanelVisible = false;
     this._infoPanelEl.style.display = 'none';
-  }
-
-  private _autoShowInfoPanel(): void {
-    if (!this._userCollapsedInfoPanel) {
-      this._showInfoPanel();
-    }
   }
 
   private _showUserMenu(): void {

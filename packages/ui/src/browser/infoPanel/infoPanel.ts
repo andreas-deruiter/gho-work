@@ -1,9 +1,9 @@
 /**
- * InfoPanel composite widget — brings together TodoListWidget, InputSection,
- * and OutputSection into a single panel with per-conversation state management.
+ * InfoPanel composite widget — brings together all 7 info sections into a
+ * single auto-hiding panel with per-conversation state management.
  *
  * Dispatches AgentEvent to the appropriate child section and manages
- * empty-state messaging, conversation switching, and aggregated events.
+ * visibility, conversation switching, and aggregated events.
  */
 import { Emitter, DisposableStore } from '@gho-work/base';
 import type { Event, AgentEvent } from '@gho-work/base';
@@ -13,15 +13,12 @@ import { TodoListWidget } from './todoListWidget.js';
 import { InputSection } from './inputSection.js';
 import { OutputSection } from './outputSection.js';
 import { ContextSection } from './contextSection.js';
+import { AgentsSection } from './agentsSection.js';
+import { SkillsSection } from './skillsSection.js';
+import { UsageSection } from './usageSection.js';
+import type { UsageData } from './usageSection.js';
 import { InfoPanelState, isInputTool, extractInputName } from './infoPanelState.js';
 import type { InputEntry, OutputEntry } from './infoPanelState.js';
-
-/** Remove all child nodes from an element. */
-function clearChildren(el: HTMLElement): void {
-  while (el.firstChild) {
-    el.removeChild(el.firstChild);
-  }
-}
 
 export class InfoPanel extends Widget {
   // --- Emitters ---
@@ -34,18 +31,17 @@ export class InfoPanel extends Widget {
   private readonly _onDidTodosReceived = this._register(new Emitter<void>());
   readonly onDidTodosReceived: Event<void> = this._onDidTodosReceived.event;
 
+  private readonly _onDidChangeVisibility = this._register(new Emitter<boolean>());
+  readonly onDidChangeVisibility: Event<boolean> = this._onDidChangeVisibility.event;
+
   // --- Child sections ---
   private _todoSection: TodoListWidget;
+  private _agentsSection: AgentsSection;
+  private _skillsSection: SkillsSection;
   private _inputSection: InputSection;
   private _outputSection: OutputSection;
   private _contextSection: ContextSection;
-
-  // --- Section wrappers (for CSS targeting / test queries) ---
-  private readonly _todoWrap: HTMLElement;
-  private readonly _inputWrap: HTMLElement;
-  private readonly _outputWrap: HTMLElement;
-  private readonly _contextWrap: HTMLElement;
-  private readonly _emptyEl: HTMLElement;
+  private _usageSection: UsageSection;
 
   // --- Per-conversation state ---
   private readonly _stateMap = new Map<string, InfoPanelState>();
@@ -56,34 +52,24 @@ export class InfoPanel extends Widget {
   private _sectionStore = this._register(new DisposableStore());
 
   constructor() {
-    const layout = h('div.info-panel@root', [
-      h('div.info-panel-todo@todo'),
-      h('div.info-panel-input@input'),
-      h('div.info-panel-output@output'),
-      h('div.info-panel-context@context'),
-      h('div.info-panel-empty@empty'),
-    ]);
-
+    const layout = h('div.info-panel@root');
     super(layout.root);
-
-    this._contextWrap = layout['context'];
-    this._todoWrap = layout['todo'];
-    this._inputWrap = layout['input'];
-    this._outputWrap = layout['output'];
-    this._emptyEl = layout['empty'];
 
     // ARIA
     this.element.setAttribute('role', 'complementary');
     this.element.setAttribute('aria-label', 'Task info');
 
-    // Empty state
-    this._emptyEl.textContent = 'Panel will populate as the agent works';
-
-    // Create child sections
-    this._contextSection = this._createContextSection();
+    // Create all 7 sections
     this._todoSection = this._createTodoSection();
+    this._agentsSection = this._createSection(new AgentsSection(), 'agents');
+    this._skillsSection = this._createSection(new SkillsSection(), 'skills');
     this._inputSection = this._createInputSection();
     this._outputSection = this._createOutputSection();
+    this._contextSection = this._createSection(new ContextSection(), 'context');
+    this._usageSection = this._createSection(new UsageSection(), 'usage');
+
+    // Auto-hide initially (no data)
+    this.element.style.display = 'none';
   }
 
   // ---------------------------------------------------------------------------
@@ -97,7 +83,7 @@ export class InfoPanel extends Widget {
         const hadTodos = this._currentState.todos.length > 0;
         this._currentState.setTodos(event.todos);
         this._todoSection.setTodos(event.todos);
-        this._updateEmptyState();
+        this._updateVisibility();
         if (!hadTodos && event.todos.length > 0) {
           this._onDidTodosReceived.fire();
         }
@@ -124,7 +110,7 @@ export class InfoPanel extends Widget {
           };
           this._currentState.addInput(entry);
           this._inputSection.addEntry({ ...entry, count: 1 });
-          this._updateEmptyState();
+          this._updateVisibility();
         }
         break;
       }
@@ -133,17 +119,16 @@ export class InfoPanel extends Widget {
         if (event.fileMeta) {
           const { path, size, action } = event.fileMeta;
           const name = path.split(/[/\\]/).pop() || path;
-          // Use tool call ID to find the messageId — fall back to empty string
           const outputEntry: OutputEntry = {
             name,
             path,
             size,
             action,
-            messageId: '', // tool_call_result doesn't carry messageId directly
+            messageId: '',
           };
           this._currentState.addOutput(outputEntry);
           this._outputSection.addEntry(outputEntry);
-          this._updateEmptyState();
+          this._updateVisibility();
         }
         break;
       }
@@ -158,7 +143,35 @@ export class InfoPanel extends Widget {
         };
         this._currentState.addInput(entry);
         this._inputSection.addEntry({ ...entry, count: 1 });
-        this._updateEmptyState();
+        this._updateVisibility();
+        break;
+      }
+
+      case 'skill_invoked': {
+        this._skillsSection.updateSkill(event.skillName, event.state);
+        this._currentState.setSkills(this._skillsSection.getSkillEntries());
+        this._updateVisibility();
+        break;
+      }
+
+      case 'subagent_started': {
+        this._agentsSection.addAgent(event.parentToolCallId, event.name, event.displayName);
+        this._currentState.setAgents(this._agentsSection.getAgentEntries());
+        this._updateVisibility();
+        break;
+      }
+
+      case 'subagent_completed': {
+        this._agentsSection.updateAgent(event.parentToolCallId, event.state);
+        this._currentState.setAgents(this._agentsSection.getAgentEntries());
+        this._updateVisibility();
+        break;
+      }
+
+      case 'subagent_failed': {
+        this._agentsSection.updateAgent(event.parentToolCallId, 'failed', event.error);
+        this._currentState.setAgents(this._agentsSection.getAgentEntries());
+        this._updateVisibility();
         break;
       }
 
@@ -167,14 +180,33 @@ export class InfoPanel extends Widget {
         this._currentState.setRegisteredAgents(event.agents);
         this._contextSection.setSources(event.sources);
         this._contextSection.setAgents(event.agents);
-        this._updateEmptyState();
+        if (event.skills) {
+          this._contextSection.setSkills(event.skills);
+        }
+        this._updateVisibility();
         break;
       }
 
-      // Other event types (text, thinking, error, done, subagent_*) are not handled by InfoPanel
       default:
         break;
     }
+  }
+
+  /**
+   * Handle quota/usage data update from workbench.
+   */
+  handleQuotaChanged(data: UsageData): void {
+    this._usageSection.update(data);
+    this._currentState.setUsageData(data);
+    this._updateVisibility();
+  }
+
+  /**
+   * Handle MCP connector status update from workbench.
+   */
+  handleConnectorStatus(name: string, status: string, type: string, error?: string): void {
+    this._contextSection.updateServer(name, status, type, error);
+    this._updateVisibility();
   }
 
   /**
@@ -200,39 +232,63 @@ export class InfoPanel extends Widget {
 
     // Re-render sections from loaded state
     this._rebuildSections();
-    this._updateEmptyState();
+    this._updateVisibility();
   }
 
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  private _createContextSection(): ContextSection {
-    const section = this._sectionStore.add(new ContextSection());
-    this._contextWrap.appendChild(section.getDomNode());
+  /**
+   * Generic section helper: registers in sectionStore, appends to panel,
+   * and wires collapse-state tracking if section has `onDidToggle`.
+   */
+  private _createSection<T extends { getDomNode(): HTMLElement; onDidToggle?: Event<boolean> }>(
+    section: T,
+    name: string,
+  ): T {
+    this._sectionStore.add(section as any);
+    this.element.appendChild(section.getDomNode());
+
+    if ('onDidToggle' in section && typeof section.onDidToggle === 'function') {
+      this._sectionStore.add(
+        (section.onDidToggle as Event<boolean>)((collapsed) => {
+          this._currentState.setCollapsed(name, collapsed);
+        }),
+      );
+    }
+
     return section;
   }
 
   private _createTodoSection(): TodoListWidget {
     const section = this._sectionStore.add(new TodoListWidget());
-    this._todoWrap.appendChild(section.getDomNode());
+    this.element.appendChild(section.getDomNode());
     return section;
   }
 
   private _createInputSection(): InputSection {
     const section = this._sectionStore.add(new InputSection());
-    this._inputWrap.appendChild(section.getDomNode());
+    this.element.appendChild(section.getDomNode());
 
     this._sectionStore.add(section.onDidClickEntry((messageId) => {
       this._onDidRequestScrollToMessage.fire(messageId);
     }));
+
+    if ('onDidToggle' in section && typeof section.onDidToggle === 'function') {
+      this._sectionStore.add(
+        (section.onDidToggle as Event<boolean>)((collapsed) => {
+          this._currentState.setCollapsed('input', collapsed);
+        }),
+      );
+    }
 
     return section;
   }
 
   private _createOutputSection(): OutputSection {
     const section = this._sectionStore.add(new OutputSection());
-    this._outputWrap.appendChild(section.getDomNode());
+    this.element.appendChild(section.getDomNode());
 
     this._sectionStore.add(section.onDidClickEntry((messageId) => {
       this._onDidRequestScrollToMessage.fire(messageId);
@@ -240,6 +296,14 @@ export class InfoPanel extends Widget {
     this._sectionStore.add(section.onDidRequestReveal((path) => {
       this._onDidRequestRevealFile.fire(path);
     }));
+
+    if ('onDidToggle' in section && typeof section.onDidToggle === 'function') {
+      this._sectionStore.add(
+        (section.onDidToggle as Event<boolean>)((collapsed) => {
+          this._currentState.setCollapsed('output', collapsed);
+        }),
+      );
+    }
 
     return section;
   }
@@ -252,28 +316,56 @@ export class InfoPanel extends Widget {
     // Dispose old section widgets and their event subscriptions
     this._sectionStore.clear();
 
-    // Clear DOM wrappers
-    clearChildren(this._contextWrap);
-    clearChildren(this._todoWrap);
-    clearChildren(this._inputWrap);
-    clearChildren(this._outputWrap);
+    // Clear DOM
+    while (this.element.firstChild) {
+      this.element.removeChild(this.element.firstChild);
+    }
 
     // Recreate section widgets
-    this._contextSection = this._createContextSection();
     this._todoSection = this._createTodoSection();
+    this._agentsSection = this._createSection(new AgentsSection(), 'agents');
+    this._skillsSection = this._createSection(new SkillsSection(), 'skills');
     this._inputSection = this._createInputSection();
     this._outputSection = this._createOutputSection();
+    this._contextSection = this._createSection(new ContextSection(), 'context');
+    this._usageSection = this._createSection(new UsageSection(), 'usage');
 
-    // Replay state into sections
     const state = this._currentState;
 
-    // Context data survives clear() — replay it
+    // Restore collapse state
+    for (const [sectionName, collapsed] of state.collapseState) {
+      switch (sectionName) {
+        case 'agents': this._agentsSection.setCollapsed(collapsed); break;
+        case 'skills': this._skillsSection.setCollapsed(collapsed); break;
+        case 'context': this._contextSection.setCollapsed(collapsed); break;
+        case 'usage': this._usageSection.setCollapsed(collapsed); break;
+        // input/output collapse state wired via their sections' own setCollapsed if they support it
+      }
+    }
+
+    // Replay agents
+    if (state.agents.length > 0) {
+      this._agentsSection.setAgents([...state.agents]);
+    }
+
+    // Replay skills
+    if (state.skills.length > 0) {
+      this._skillsSection.setSkills([...state.skills]);
+    }
+
+    // Replay usage
+    if (state.usageData) {
+      this._usageSection.update(state.usageData);
+    }
+
+    // Context data — replay sources, agents, servers
     if (state.contextSources.length > 0) {
       this._contextSection.setSources([...state.contextSources]);
     }
     if (state.registeredAgents.length > 0) {
       this._contextSection.setAgents([...state.registeredAgents]);
     }
+    // NOTE: MCP servers are global — ContextSection keeps them internally across rebuilds
 
     // Replay todos
     if (state.todos.length > 0) {
@@ -289,10 +381,22 @@ export class InfoPanel extends Widget {
     }
   }
 
-  /** Show or hide the empty state message based on section data. */
-  private _updateEmptyState(): void {
-    const state = this._currentState;
-    const hasData = state.todos.length > 0 || state.inputs.length > 0 || state.outputs.length > 0 || state.contextSources.length > 0 || state.registeredAgents.length > 0;
-    this._emptyEl.style.display = hasData ? 'none' : '';
+  /** Show or hide the panel based on whether any section has data. */
+  private _updateVisibility(): void {
+    const sections = [
+      this._todoSection,
+      this._agentsSection,
+      this._skillsSection,
+      this._inputSection,
+      this._outputSection,
+      this._contextSection,
+      this._usageSection,
+    ];
+    const anyVisible = sections.some(s => s.getDomNode().style.display !== 'none');
+    const wasVisible = this.element.style.display !== 'none';
+    this.element.style.display = anyVisible ? '' : 'none';
+    if (wasVisible !== anyVisible) {
+      this._onDidChangeVisibility.fire(anyVisible);
+    }
   }
 }

@@ -153,15 +153,14 @@ export type AgentEvent =
       attachment: { name: string; path: string; source: string };
     }
   | { type: 'skill_invoked'; skillName: string; state: 'running' | 'completed' | 'failed' }
-  | { type: 'subagent_started'; subagentId: string; subagentName: string }
   | { type: 'subagent_started'; parentToolCallId: string; name: string; displayName: string }
-  | { type: 'subagent_completed'; subagentId: string; state: 'completed' | 'failed' }
-  | { type: 'subagent_completed'; parentToolCallId: string; name: string; displayName: string }
+  | { type: 'subagent_completed'; parentToolCallId: string; name: string; displayName: string; state: 'completed' | 'failed' }
   | { type: 'subagent_failed'; parentToolCallId: string; name: string; error: string }
   | {
       type: 'context_loaded';
       sources: Array<{ path: string; origin: 'user' | 'project'; format: string }>;
       agents: Array<{ name: string; plugin: string }>;
+      skills: Array<{ name: string; source: string }>;
     };
 
 // --- Agent Context ---

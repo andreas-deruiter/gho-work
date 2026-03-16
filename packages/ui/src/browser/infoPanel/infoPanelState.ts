@@ -74,6 +74,16 @@ export interface RegisteredAgentEntry {
   plugin: string;
 }
 
+export type AgentState = 'running' | 'completed' | 'failed';
+export type SkillState = 'running' | 'completed' | 'failed';
+
+export interface UsageData {
+  used: number;
+  total: number;
+  remainingPercentage: number;
+  resetDate?: string;
+}
+
 export class InfoPanelState {
   private _todos: TodoItem[] = [];
   private _inputs: InputEntry[] = [];
@@ -82,12 +92,22 @@ export class InfoPanelState {
   /** Per-session context — survives clear() calls. */
   private _contextSources: ContextSourceEntry[] = [];
   private _registeredAgents: RegisteredAgentEntry[] = [];
+  /** Per-conversation agent/skill tracking — cleared on clear(). */
+  private _agents: Array<{ id: string; name: string; displayName: string; state: AgentState }> = [];
+  private _skills: Array<{ name: string; state: SkillState }> = [];
+  /** Cross-conversation data — survives clear() calls. */
+  private _usageData: UsageData | null = null;
+  private _collapseState: Map<string, boolean> = new Map();
 
   get todos(): readonly TodoItem[] { return this._todos; }
   get inputs(): readonly InputEntry[] { return this._inputs; }
   get outputs(): readonly OutputEntry[] { return this._outputs; }
   get contextSources(): readonly ContextSourceEntry[] { return this._contextSources; }
   get registeredAgents(): readonly RegisteredAgentEntry[] { return this._registeredAgents; }
+  get agents(): readonly Array<{ id: string; name: string; displayName: string; state: AgentState }> { return this._agents; }
+  get skills(): readonly Array<{ name: string; state: SkillState }> { return this._skills; }
+  get usageData(): UsageData | null { return this._usageData; }
+  get collapseState(): ReadonlyMap<string, boolean> { return this._collapseState; }
 
   setContextSources(sources: ContextSourceEntry[]): void {
     this._contextSources = [...sources];
@@ -98,6 +118,26 @@ export class InfoPanelState {
   }
 
   setTodos(todos: TodoItem[]): void { this._todos = [...todos]; }
+
+  setAgents(agents: Array<{ id: string; name: string; displayName: string; state: AgentState }>): void {
+    this._agents = [...agents];
+  }
+
+  setSkills(skills: Array<{ name: string; state: SkillState }>): void {
+    this._skills = [...skills];
+  }
+
+  setUsageData(data: UsageData): void {
+    this._usageData = data;
+  }
+
+  setCollapsed(section: string, collapsed: boolean): void {
+    this._collapseState.set(section, collapsed);
+  }
+
+  isCollapsed(section: string): boolean | undefined {
+    return this._collapseState.get(section);
+  }
 
   addInput(entry: Omit<InputEntry, 'count'>): void {
     const existing = this._inputs.find(e => e.path === entry.path);
@@ -121,5 +161,7 @@ export class InfoPanelState {
 
   clear(): void {
     this._todos = []; this._inputs = []; this._outputs = []; this._toolCalls.clear();
+    this._agents = []; this._skills = [];
+    // _usageData and _collapseState are preserved across conversation switches
   }
 }

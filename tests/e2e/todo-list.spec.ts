@@ -41,21 +41,21 @@ test('todo list appears for complex prompts', async () => {
 
   // Open info panel
   await page.keyboard.press('Meta+Shift+b');
-  const panel = page.locator('.info-panel');
-  await expect(panel).toBeVisible({ timeout: 3000 });
+  const panelContainer = page.locator('.info-panel-container');
+  await expect(panelContainer).toBeVisible({ timeout: 3000 });
 
-  // Todo list should appear
-  const todoSection = page.locator('.info-todo-section');
+  // Todo list section should appear (panel auto-shows when data arrives)
+  const todoSection = page.locator('.info-section-container').filter({ hasText: 'Progress' });
   await expect(todoSection).toBeVisible({ timeout: 5000 });
 
-  // Should have todo items
-  const todoItems = todoSection.locator('.info-todo-item');
-  const todoCount = await todoItems.count();
+  // Should have timeline nodes (todo items)
+  const todoNodes = todoSection.locator('.info-timeline-node');
+  const todoCount = await todoNodes.count();
   expect(todoCount).toBeGreaterThan(0);
 
-  // Header should show counter
+  // Header should show "Progress"
   const header = todoSection.locator('.info-section-header');
-  await expect(header).toContainText('Todos');
+  await expect(header).toContainText('Progress');
 
   // Take screenshot evidence
   mkdirSync(resolve(__dirname, 'screenshots'), { recursive: true });
