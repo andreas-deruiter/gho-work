@@ -1,7 +1,6 @@
 appId: com.gho-work.desktop
 productName: GHO Work
 directories:
-  buildResources: resources
   output: ../../release
 files:
   - out/**
@@ -10,7 +9,7 @@ files:
   - '!**/*.ts'
   - '!**/*.map'
 extraResources:
-  - from: resources/icon.png
+  - from: build/icon.png
     to: icon.png
   - from: ../../skills
     to: skills
@@ -19,7 +18,6 @@ asarUnpack:
   - "**/node_modules/@github/copilot/**"
   - "**/node_modules/@github/copilot-*/**"
 win:
-  icon: icon.png
   executableName: gho-work
   target:
     - nsis

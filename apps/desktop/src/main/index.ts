@@ -72,7 +72,7 @@ function createWindow(): void {
   const windowIcon = process.platform !== 'darwin'
     ? (app.isPackaged
       ? join(process.resourcesPath, 'icon.png')
-      : join(__dirname, '../../resources/icon.png'))
+      : join(__dirname, '../../build/icon.png'))
     : undefined;
 
   mainWindow = new BrowserWindow({
