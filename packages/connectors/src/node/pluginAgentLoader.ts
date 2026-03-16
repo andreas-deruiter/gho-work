@@ -80,8 +80,9 @@ export class PluginAgentLoader {
     let entries: string[];
     try {
       entries = await fs.readdir(agentsDir);
-    } catch {
-      // No agents directory — that's fine
+    } catch (err) {
+      // No agents directory — expected for plugins without agents
+      console.warn(`[PluginAgentLoader] No agents dir for "${plugin.name}":`, err instanceof Error ? err.message : String(err));
       return results;
     }
 
@@ -94,8 +95,9 @@ export class PluginAgentLoader {
       if (parsed.mcpServers && Object.keys(parsed.mcpServers).length > 0) {
         mcpServers = parsed.mcpServers;
       }
-    } catch {
-      // No .mcp.json — that's fine
+    } catch (err) {
+      // No .mcp.json — expected for plugins without MCP servers
+      console.warn(`[PluginAgentLoader] No .mcp.json for "${plugin.name}":`, err instanceof Error ? err.message : String(err));
     }
 
     for (const entry of entries) {

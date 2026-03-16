@@ -161,7 +161,9 @@ export class PluginInstaller {
       // Copy to destination
       await fs.promises.cp(pkgDir, destPath, { recursive: true });
     } finally {
-      await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+      await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch((err) => {
+        console.warn(`[PluginInstaller] Failed to clean up temp dir ${tmpDir}:`, err instanceof Error ? err.message : String(err));
+      });
     }
   }
 
@@ -433,7 +435,8 @@ export class PluginInstaller {
     let manifest: Record<string, unknown>;
     try {
       manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    } catch {
+    } catch (err) {
+      console.warn('[PluginInstaller] Invalid JSON in plugin.json:', err instanceof Error ? err.message : String(err));
       errors.push('Invalid JSON in plugin.json');
       return { errors, warnings };
     }
@@ -597,8 +600,8 @@ export class PluginInstaller {
               }
             }
           }
-        } catch {
-          // Skip unreadable files
+        } catch (err) {
+          console.warn(`[PluginInstaller] Skipping unreadable file ${path.join(dir, entry.name)}:`, err instanceof Error ? err.message : String(err));
         }
       }
     }

@@ -47,8 +47,8 @@ export class MCPClientManagerImpl extends Disposable implements IMCPClientManage
 
     try {
       await conn.connect();
-    } catch {
-      // MCPConnection sets status to 'error' internally
+    } catch (err) {
+      console.warn(`[MCPClientManager] Failed to connect "${name}":`, err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -109,7 +109,9 @@ export class MCPClientManagerImpl extends Disposable implements IMCPClientManage
   }
 
   override dispose(): void {
-    this.disconnectAll().catch(() => {});
+    this.disconnectAll().catch((err) => {
+      console.warn('[MCPClientManager] Cleanup error:', err instanceof Error ? err.message : String(err));
+    });
     super.dispose();
   }
 }
