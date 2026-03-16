@@ -27,7 +27,7 @@ test.afterAll(async () => {
 });
 
 test.describe('Info Panel', () => {
-  test('starts hidden', async () => {
+  test('panel container starts hidden', async () => {
     await expect(page.locator('.workbench')).toBeVisible();
     const panelContainer = page.locator('.info-panel-container');
     await expect(panelContainer).toBeHidden();
@@ -39,10 +39,11 @@ test.describe('Info Panel', () => {
     // Toggle on
     await page.keyboard.press('Meta+Shift+b');
     await expect(panelContainer).toBeVisible();
-
-    // Has correct structure
     await expect(page.locator('.info-panel')).toBeVisible();
-    await expect(page.locator('.info-panel-empty')).toBeVisible();
+
+    // Should have 7 section containers
+    const sections = page.locator('.info-section-container');
+    expect(await sections.count()).toBe(7);
 
     // Toggle off
     await page.keyboard.press('Meta+Shift+b');
