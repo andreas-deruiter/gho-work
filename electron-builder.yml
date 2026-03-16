@@ -19,7 +19,7 @@ asarUnpack:
   - "**/node_modules/@github/copilot/**"
   - "**/node_modules/@github/copilot-*/**"
 win:
-  icon: icon.ico
+  icon: icon.png
   executableName: gho-work
   target:
     - nsis
