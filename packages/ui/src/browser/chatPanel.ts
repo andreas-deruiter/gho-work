@@ -695,9 +695,7 @@ export class ChatPanel extends Disposable {
   }
 
   private _renderAttachments(): void {
-    while (this._attachmentListEl.firstChild) {
-      this._attachmentListEl.removeChild(this._attachmentListEl.firstChild);
-    }
+    clearElement(this._attachmentListEl);
     for (let i = 0; i < this._attachments.length; i++) {
       const pill = document.createElement('span');
       pill.className = 'attachment-pill';
@@ -731,9 +729,7 @@ export class ChatPanel extends Disposable {
       ].filter((c) => c.name.includes(query) || query === '');
 
       if (commands.length > 0) {
-        while (this._slashDropdownEl.firstChild) {
-          this._slashDropdownEl.removeChild(this._slashDropdownEl.firstChild);
-        }
+        clearElement(this._slashDropdownEl);
         for (const cmd of commands) {
           const item = document.createElement('div');
           item.className = 'slash-dropdown-item';

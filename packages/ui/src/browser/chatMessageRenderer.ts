@@ -19,8 +19,8 @@ export interface ChatMessage {
  * Renders markdown content into an element using renderChatMarkdown
  * (marked + highlight.js + DOMPurify). All output is sanitized to prevent XSS attacks.
  */
-export function setSanitizedMarkdown(el: Element, markdownText: string, isStreaming = false): void {
-  renderChatMarkdown(el, markdownText, { isStreaming });
+export function setSanitizedMarkdown(el: Element, markdownText: string): void {
+  renderChatMarkdown(el, markdownText, { isStreaming: false });
 }
 
 /**
