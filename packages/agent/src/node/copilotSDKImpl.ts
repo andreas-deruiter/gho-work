@@ -164,14 +164,22 @@ export class CopilotSDKImpl implements ICopilotSDK {
 	 */
 	private _resolveNativeBinaryPath(): string | undefined {
 		const pkgName = `@github/copilot-${process.platform}-${process.arch}`;
+		console.warn('[CopilotSDKImpl] Resolving native binary for', pkgName);
 		try {
 			// The platform package's main export points directly at the binary.
 			// In packaged Electron, require.resolve returns the ASAR-virtual path;
 			// native binaries live in app.asar.unpacked (due to asarUnpack config).
 			let resolved = require.resolve(pkgName);
+			console.warn('[CopilotSDKImpl] require.resolve returned:', resolved);
 			resolved = resolved.replace('app.asar', 'app.asar.unpacked');
-			return resolved;
-		} catch {
+
+			// Verify the file actually exists on disk
+			const fs = require('node:fs');
+			const exists = fs.existsSync(resolved);
+			console.warn('[CopilotSDKImpl] Binary path after ASAR rewrite:', resolved, '| exists:', exists);
+			return exists ? resolved : undefined;
+		} catch (err) {
+			console.warn('[CopilotSDKImpl] Failed to resolve native binary:', err instanceof Error ? err.message : String(err));
 			return undefined;
 		}
 	}
@@ -184,8 +192,11 @@ export class CopilotSDKImpl implements ICopilotSDK {
 			return;
 		}
 
+		console.warn('[CopilotSDKImpl] Starting real SDK | process.execPath:', process.execPath, '| platform:', process.platform, '| arch:', process.arch);
+
 		try {
 			const sdk = await this._loadSDK();
+			console.warn('[CopilotSDKImpl] SDK module loaded successfully');
 			const clientOptions: import('@github/copilot-sdk').CopilotClientOptions = {
 				autoStart: false,
 			};
@@ -209,13 +220,18 @@ export class CopilotSDKImpl implements ICopilotSDK {
 				clientOptions.env = { ...process.env, ELECTRON_RUN_AS_NODE: '1' };
 			}
 
+			console.warn('[CopilotSDKImpl] Creating CopilotClient with cliPath:', clientOptions.cliPath ?? '(default)');
 			this._client = new sdk.CopilotClient(clientOptions);
+			console.warn('[CopilotSDKImpl] CopilotClient created, calling start()...');
 			await this._client.start();
+			console.warn('[CopilotSDKImpl] SDK started successfully');
 		} catch (error) {
 			// Do NOT silently fall back to mock — surface the error so it can be diagnosed.
 			this._client = null;
 			const msg = error instanceof Error ? error.message : String(error);
+			const stack = error instanceof Error ? error.stack : undefined;
 			console.error('[CopilotSDKImpl] Real SDK failed to start:', msg);
+			if (stack) console.error('[CopilotSDKImpl] Stack:', stack);
 			throw new Error(`Copilot SDK failed to start: ${msg}`);
 		}
 	}
