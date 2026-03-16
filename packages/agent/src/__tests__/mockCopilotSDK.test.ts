@@ -122,8 +122,8 @@ describe('MockCopilotSDK', () => {
 
     await new Promise((r) => setTimeout(r, 50));
 
-    // Verify the session actually received some events before abort
-    expect(events.length).toBeGreaterThanOrEqual(0);
+    // Verify the session received events before abort
+    expect(events.length).toBeGreaterThan(0);
 
     await sdk.stop();
   });
