@@ -214,10 +214,8 @@ export function createMainProcess(
   });
 
   // --- Connector Services ---
-  const mcpJsonPath = path.join(
-    options?.userDataPath ?? app.getPath('userData'),
-    'mcp.json',
-  );
+  const userDataPath = options?.userDataPath ?? app.getPath('userData');
+  const mcpJsonPath = path.join(userDataPath, 'mcp.json');
   const configStore = new ConnectorConfigStoreImpl(mcpJsonPath);
   const mcpClientManager = new MCPClientManagerImpl(configStore);
 
@@ -238,7 +236,6 @@ export function createMainProcess(
   });
 
   // --- Plugin Services (setup delegated to pluginReconciler.ts) ---
-  const userDataPath = options?.userDataPath ?? app.getPath('userData');
   const { pluginService, marketplaceRegistry, pluginInstaller } = setupPlugins({
     storageService,
     configStore,
